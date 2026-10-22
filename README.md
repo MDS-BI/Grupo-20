@@ -1,3 +1,26 @@
+# Customer Relationship Management (CRM)
+
+**Módulo:** Gestión de Relaciones con los Clientes  
+**Equipo:** Grupo 20  
+**Asignatura:** Modelación de Sistemas, 2026-2  
+**Universidad de Concepción**
+
+## Integrantes
+
+| Nombre | Usuario de GitHub |
+| --- | --- |
+| Amira Paz Díaz Palma | amira-diaz |
+| Alfonso Esteban Innocenti Salgado | innoaeis |
+| Anthonella Ignacia Muñoz Cifuentes | anthonellamunoz |
+| Camelia Paz Barriga Acuña | cameliabarriga |
+| Gabriela Lisette Almonacid Vargas | Galmonacid19 |
+| Valentina Ignacia Pinela Navarro | valpinela |
+
+## Propósito del proyecto
+
+Nuestro proyecto tiene como propósito diseñar y desarrollar un módulo de Customer Relationship Management (CRM) para un sistema ERP, orientado a facilitar la gestión de las relaciones entre una empresa y sus clientes. Buscamos reunir de forma organizada la información de los clientes y sus interacciones con la empresa, para que los equipos de ventas y atención al cliente puedan consultar antecedentes, dar seguimiento a sus contactos e identificar oportunidades de mejora en la atención. Con ello, queremos contribuir a una gestión comercial más ordenada, una atención más oportuna y una mejor experiencia para los clientes.
+
+Para lograrlo, nos proponemos construir un producto mínimo viable (MVP) como prototipo funcional de frontend, a partir del template del curso y mediante desarrollo guiado por especificaciones (Spec Driven Development). Definiremos un modelo entidad-relación coherente con los datos compartidos entre los módulos del ERP y una interfaz que permita demostrar las funciones básicas de nuestro CRM. Este prototipo servirá para evaluar la utilidad de la propuesta y sentar las bases para futuras mejoras, considerando la facilidad de uso, la posibilidad de integración con otros módulos y el manejo responsable de la información de los clientes.
 # ERP Software Base Module (Vite + Vanilla JS)
 
 Minimal single-page app serving as an Enterprise Resource Planning (ERP) software base module. It provides the common foundation for building custom ERP modules: master data management (Entities) and linked transactional documents (Documents) with create/edit/delete/search, validation, and browser localStorage persistence — using Vite and vanilla HTML, CSS, and JavaScript.
