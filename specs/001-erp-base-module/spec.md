@@ -21,17 +21,20 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
-### Historia de Usuario 1 - Crear y organizar entidades (Prioridad: P1)
- Como usuario de negocio, quiero crear entradas de entidad con detalles claros para poder construir y mantener los datos maestros del módulo.
+### Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
+ Como analista de sistemas ERP, quiero definir un modelo de datos con identificadores y campos comunes para facilitar futuras integraciones del CRM.
 
-**Por qué esta prioridad**: Este es el valor central del producto porque, sin crear entidades, el resto de la experiencia no puede aportar valor.
+**Por qué esta prioridad**: Se registra en esta prioridad dado que establece cómo se organizarán y relacionarán los clientes, las interacciones y los seguimientos. Las demás funciones necesitan esa base para guardar y consultar la información correctamente.
 
-**Prueba Independiente**: Un usuario puede abrir el módulo, añadir una nueva entidad y verla aparecer en la lista.
+**Prueba Independiente**: un analista registra un cliente de prueba y le asocia una interacción; el sistema guarda la relación y rechaza un identificador de cliente repetido con un mensaje claro.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que un usuario está viendo la lista de entidades, **cuando** crea una nueva entidad con un nombre y un código, **entonces** la nueva entidad se guarda y aparece en la lista.
-2. **Dado** que un usuario está creando una entidad, **cuando** deja la información obligatoria en blanco, **entonces** el sistema impide guardar y explica qué se necesita.
+1. **Dado** que el cliente tiene los datos obligatorios, **cuando** se registra, **entonces** se guarda con un identificador único.
+2. **Dado** que existe un cliente registrado, **cuando** se intenta registrar otro con el mismo identificador, **entonces** se rechaza y se explica el motivo.
+3. **Dado** que existe un cliente, **cuando** se registra una interacción o un seguimiento asociado a él, **entonces** queda vinculado al cliente correcto.
+4. **Dado** que un identificador no corresponde a ningún cliente, **cuando** se intenta asociarle una interacción o un seguimiento, **entonces** se rechaza con un mensaje claro.
+5. **Dado** que están documentados los campos comunes del ERP, **cuando** el analista revisa el modelo del CRM, **entonces** los nombres, tipos de datos e identificadores coinciden con lo acordado.
 
 ---
 
