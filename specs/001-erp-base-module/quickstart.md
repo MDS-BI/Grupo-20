@@ -17,10 +17,15 @@
 ## Validación
 
 - Verifique que los campos obligatorios muestran errores de validación.
+- Verifique que un `code` duplicado se rechaza con una explicación, incluso si solo difiere en mayúsculas o espacios.
 - Verifique que un documento exige folio entero positivo y que el descuento no puede superar el subtotal.
 - Verifique que un correo electrónico con formato inválido se rechaza con una explicación.
 - Verifique que los resultados de búsqueda se actualizan a medida que el usuario escribe.
 - Verifique que la lista permanece consistente tras las acciones de edición y eliminación.
+- Verifique que eliminar una entidad pide confirmación e indica cuántos documentos asociados se eliminarán.
+- Verifique que sin `statusLifecycle` configurado el estado del documento acepta texto libre.
+- Verifique que una configuración inválida arranca con los valores predeterminados y muestra una advertencia visible.
+- Verifique que al retirar un campo personalizado de la configuración sus valores guardados se conservan y se ocultan, y reaparecen al volver a declararlo.
 - Verifique que las estadísticas del panel coinciden con el número de registros almacenados.
 
 ## Extender el Módulo Base

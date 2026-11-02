@@ -19,6 +19,14 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 **Restricciones**: Huella mínima de librerías, despliegue simple, sin backend requerido; la estructura debe mantenerse extensible para módulos personalizados  
 **Escala/Alcance**: Módulo base con CRUD de datos maestros (Entidad) y documentos transaccionales (Documento), búsqueda y capacidades de navegación
 
+### Aclaraciones integradas (sesión 2026-11-01)
+
+- El `code` de entidad es obligatorio y único, comparado sin distinguir mayúsculas ni espacios.
+- Sin ciclo de vida configurado, el estado del documento es texto libre (sin lista fija de valores).
+- Una configuración inválida o conflictiva hace que la aplicación arranque con los valores predeterminados y muestre una advertencia visible, sin bloquear el uso.
+- Los valores de campos personalizados que ya no están declarados se conservan en el almacenamiento y se ocultan de la interfaz; si el campo se vuelve a declarar, los valores reaparecen.
+- La eliminación de una entidad exige confirmación explícita e indica cuántos documentos asociados se eliminarán en cascada.
+
 ## Verificación de la Constitución
 
 *COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar tras el diseño de la Fase 1.*
@@ -27,6 +35,8 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - Pruebas: Los flujos centrales de crear, editar, eliminar y buscar estarán cubiertos por pruebas automatizadas antes de completar.
 - Experiencia de Usuario: La interfaz proporcionará mensajes de validación claros, estados vacíos y comportamiento de formulario consistente, presentados dentro de un marco de espacio de trabajo ERP con marca (barra superior + barra lateral) que se ve y se comporta idénticamente en todas las pantallas.
 - Rendimiento: La búsqueda y el renderizado de listas se optimizarán para colecciones de hasta 500 registros usando actualizaciones ligeras del DOM.
+
+**Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. No se introducen violaciones de la constitución.
 
 ## Estructura del Proyecto
 

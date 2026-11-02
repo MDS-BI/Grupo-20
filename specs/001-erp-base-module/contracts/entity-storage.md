@@ -11,7 +11,7 @@ Cada registro de entidad debe incluir:
 - `id`: cadena única
 - `entity_id`: cadena única, generada automáticamente, usada para vincular documentos
 - `name`: cadena no vacía
-- `code`: cadena no vacía
+- `code`: cadena no vacía y única entre todas las entidades (comparación sin distinguir mayúsculas ni espacios)
 - `taxId`: cadena opcional (identificación fiscal)
 - `email`: cadena opcional con formato de correo válido cuando está presente
 - `phone`: cadena opcional
@@ -66,6 +66,7 @@ Operaciones:
 ## Expectativas de Validación
 
 - Un `name` o `code` faltante debe rechazarse antes de la persistencia.
+- Un `code` duplicado debe rechazarse antes de la persistencia (comparación sin distinguir mayúsculas ni espacios).
 - Un `email` presente debe tener formato de correo válido y un `creditLimit` presente debe ser un número no negativo.
 - Un documento sin `folio` entero positivo debe rechazarse; un `discount` mayor que el `subtotal` debe rechazarse.
 - Un entity_id debe generarse automáticamente y debe ser único.
@@ -76,4 +77,5 @@ Operaciones:
 ## Expectativas de Extensibilidad
 
 - Los campos adicionales añadidos por módulos personalizados deben persistirse junto a los campos base sin manejo especial en la capa de almacenamiento.
+- Los valores de campos personalizados que ya no están declarados en la configuración deben conservarse en el almacenamiento y ocultarse de la interfaz; si el campo se vuelve a declarar, los valores reaparecen.
 - Las operaciones base anteriores permanecen estables para que los módulos personalizados puedan construir sobre ellas sin modificación.

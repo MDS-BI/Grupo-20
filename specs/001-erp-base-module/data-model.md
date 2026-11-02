@@ -9,7 +9,7 @@ Representa el dato maestro central del módulo (p. ej., cliente, proveedor, art�
 | id | string | Identificador interno único del registro de entidad | Obligatorio, generado automáticamente |
 | entity_id | string | Identificador público usado para vincular documentos a esta entidad | Obligatorio, generado automáticamente, único |
 | name | string | Nombre o razón social de la entidad | Obligatorio, no vacío |
-| code | string | Código o clave de negocio que identifica la entidad | Obligatorio, no vacío |
+| code | string | Código o clave de negocio que identifica la entidad | Obligatorio, no vacío, único (comparación sin distinguir mayúsculas ni espacios) |
 | taxId | string | Identificación fiscal de la entidad (p. ej., RFC, NIT, CUIT) | Opcional; se almacena recortada cuando se proporciona |
 | email | string | Correo electrónico principal de contacto | Opcional; debe tener formato de correo válido si se proporciona |
 | phone | string | Teléfono de contacto | Opcional |
@@ -42,7 +42,7 @@ Representa un documento transaccional vinculado a una entidad (p. ej., pedido, f
 | currency | string | Código de moneda para los importes del documento (p. ej., MXN, USD, EUR) | Opcional |
 | paymentTerms | string | Condiciones de pago del documento (p. ej., contado, neto 30) | Opcional |
 | notes | string | Notas u observaciones libres del documento | Opcional |
-| status | string | Estado del documento como borrador, pendiente, aprobado o cancelado | Opcional |
+| status | string | Estado del documento como texto libre; los módulos personalizados pueden imponer un ciclo de vida (p. ej., borrador, pendiente, aprobado, cancelado son solo ejemplos) | Opcional |
 | createdAt | string | Marca de tiempo de cuándo se creó el documento | Obligatorio |
 | updatedAt | string | Marca de tiempo de la última actualización del documento | Obligatorio |
 
@@ -62,9 +62,10 @@ Objeto de configuración cargado al arrancar que adapta el módulo base en un m�
 
 - La configuración se carga una vez al arrancar y se aplica en todas las pantallas.
 - Cuando la configuración está ausente, se aplican los valores predeterminados integrados: etiquetas Entidad/Documento, sin campos personalizados, estado de texto libre, color de acento predeterminado.
-- Los valores inválidos o conflictivos deben informarse con claridad en lugar de fallar silenciosamente.
+- Los valores inválidos o conflictivos deben informarse con claridad en lugar de fallar silenciosamente; la aplicación arranca con los valores predeterminados integrados y muestra una advertencia visible.
 - Las claves de campos personalizados no deben chocar con los nombres de campos base (`id`, `entity_id`, `name`, `code`, `taxId`, `email`, `phone`, `address`, `category`, `description`, `targetDate`, `creditLimit`, `paymentTerms`, `series`, `folio`, `startDate`, `endDate`, `quantity`, `subtotal`, `discount`, `taxAmount`, `totalAmount`, `currency`, `notes`, `status`).
 - Los valores de campos personalizados se persisten junto a los campos base sin cambios de esquema en el almacenamiento.
+- Los valores de campos personalizados que ya no están declarados en la configuración se conservan en el almacenamiento y se ocultan de la interfaz; si el campo se vuelve a declarar, los valores reaparecen.
 - Un ciclo de vida configurado reemplaza la entrada de estado de texto libre; sin uno, el estado permanece como texto libre.
 
 ## Reglas de Validación
@@ -72,7 +73,7 @@ Objeto de configuración cargado al arrancar que adapta el módulo base en un m�
 ### Entidad
 
 - Una entidad debe incluir un nombre no vacío.
-- Una entidad debe incluir un código no vacío.
+- Una entidad debe incluir un código no vacío y único entre todas las entidades, comparado sin distinguir mayúsculas ni espacios.
 - La identificación fiscal, teléfono, dirección, categoría, descripción y condiciones de pago son opcionales pero deben almacenarse como cadenas recortadas.
 - El correo electrónico es opcional pero, cuando está presente, debe tener formato de correo válido.
 - El límite de crédito es opcional pero, cuando está presente, debe ser un número no negativo.
