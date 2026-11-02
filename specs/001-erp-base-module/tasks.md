@@ -48,11 +48,11 @@
 
 ---
 
-## Fase 3: Historia de Usuario 1 - Crear y organizar entidades (Prioridad: P1) 🎯 MVP
+## Fase 3: Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
 
-**Objetivo**: Permitir crear entidades con nombre, código único y verlas en la lista.
+**Objetivo**: Como analista de sistemas ERP, quiero definir un modelo de datos con identificadores y campos comunes para facilitar futuras integraciones del CRM.
 
-**Prueba Independiente**: Un usuario abre el módulo, crea una entidad y la ve aparecer; un código duplicado se rechaza con explicación.
+**Prueba Independiente**: Un analista registra un cliente de prueba y le asocia un contacto; el sistema guarda la relación y rechaza un identificador de cliente repetido con un mensaje claro.
 
 ### Pruebas para la Historia de Usuario 1
 
