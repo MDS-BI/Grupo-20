@@ -29,6 +29,9 @@ Las siguientes tablas en markdown definen las entidades principales del módulo 
 | `interaction_date` | DATE | NOT NULL | Fecha en que ocurrió la interacción. |
 | `description` | TEXT | | Descripción detallada de la interacción. |
 | `next_action` | TEXT | | Acción de seguimiento planificada. |
+| `assigned_to` | INT | FK → `users.user_id`, NULLABLE | Empleado responsable del seguimiento. |
+| `status_seguimiento` | ENUM('pendiente','en_progreso','completado','atrasado') | NOT NULL | Estado actual del seguimiento. |
+| `fecha_vencimiento` | DATE | NULLABLE | Fecha límite para completar el seguimiento. |
 | `created_at` | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Marca de tiempo de creación del registro. |
 
 ### 3. `support_tickets`
