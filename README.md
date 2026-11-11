@@ -23,17 +23,20 @@ Nuestro proyecto tiene como propósito diseñar y desarrollar un módulo de Cust
 Para lograrlo, nos proponemos construir un producto mínimo viable (MVP) como prototipo funcional de frontend, a partir del template del curso y mediante desarrollo guiado por especificaciones (Spec Driven Development). Definiremos un modelo entidad-relación coherente con los datos compartidos entre los módulos del ERP y una interfaz que permita demostrar las funciones básicas de nuestro CRM. Este prototipo servirá para evaluar la utilidad de la propuesta y sentar las bases para futuras mejoras, considerando la facilidad de uso, la posibilidad de integración con otros módulos y el manejo responsable de la información de los clientes.
 # ERP Software Base Module (Vite + Vanilla JS)
 
-Minimal single-page app serving as an Enterprise Resource Planning (ERP) software base module. It provides the common foundation for building custom ERP modules: master data management (Entities) and linked transactional documents (Documents) with create/edit/delete/search, validation, and browser localStorage persistence — using Vite and vanilla HTML, CSS, and JavaScript.
+Minimal single-page app serving as an Enterprise Resource Planning (ERP) software base module. It provides the common foundation for building custom ERP modules: master data management (Entities) and linked transactional documents (Documents) with create/edit/delete/search, validation, and browser localStorage persistence — using Vite and vanilla HTML, CSS, and JavaScript. See `specs/001-erp-base-module/` for the full specification (15 user stories, functional requirements, data model).
 
 The user interface is fully in **Spanish** (default terms: Entidad / Documento; module name: Módulo Base ERP), including labels, validation messages, empty states, and dialogs.
 
-Entities carry standard ERP master-data fields (name, code, tax ID, email, phone, address, category, target date, credit limit, payment terms). Documents use series + folio numbering and carry a monetary breakdown (subtotal, discount, tax, total), currency, payment terms, notes, quantity, dates, and status.
+Entities carry base master-data fields (name, code, category, description, target date). Documents link to exactly one entity and carry base fields (start/end date, notes, status). Any domain-specific field (tax ID, credit limit, interaction type, invoice folio, etc.) is added by a custom module through `customFields`, without changing the storage layer (see `specs/001-erp-base-module/data-model.md`).
 
 The app presents itself as a coherent ERP workspace:
 
-- **Workspace shell** — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar of module buttons (Panel, Entidades, Documentos, Búsqueda). The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports.
-- **Home dashboard** — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management areas, find records) and live statistic cards showing record counts.
-- **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding changes apply globally.
+- **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Entidades, Documentos, Buscar and Resumen. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
+- **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management area, find records) and live statistic cards showing record counts.
+- **Management screen** (`src/app.js`, `manage-entity` / `manage-document`) — a dedicated screen with an Entidades/Documentos tab to create, edit and delete records; it does not show the full entity list (that lives in Search), per the base module's navigation model.
+- **Search screen** — finds entities by name, code, category, description, target date or custom field values, updating results as you type; selecting a result opens its **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
+- **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents with a "pendiente" status, grouped by entity.
+- **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding (including `theme.accentColor`) applies globally.
 
 ## Setup
 
@@ -48,16 +51,10 @@ Open http://localhost:5173 (or the URL Vite prints).
 
 ## Tests
 
-Run the full test suite (unit + integration) with:
+Run the full test suite (unit + integration, Vitest + jsdom) with:
 
 ```bash
 npm test
-```
-
-Or a one-off run without watch mode:
-
-```bash
-npx vitest run
 ```
 
 ## Building Custom Modules
@@ -65,25 +62,42 @@ npx vitest run
 Custom ERP modules built on this base define:
 
 - What an **Entity** represents (e.g., customer, product, asset) plus domain-specific fields.
-- What a **Document** represents (e.g., order, invoice, contract).
-- Module-specific labels and validation rules.
+- What a **Document** represents (e.g., order, invoice, contract, interaction).
+- Module-specific labels, custom fields and status lifecycle.
 
-The base module handles identity generation, timestamps, referential integrity between entities and documents, cascade deletion, navigation, and search. See `specs/001-erp-base-module/` for the full specification.
+The base module handles identity generation, timestamps, referential integrity between entities and documents, cascade deletion, navigation, and search. Custom modules never edit `src/storage.js`, `src/app.js` or any component file — only `src/module-config.js`.
 
 ## Tailoring via Configuration
 
-All tailoring lives in one place: the `userConfig` object at the top of `src/module-config.js`. Developers edit this single export; no core code changes are required. Available knobs:
+All tailoring lives in one place: the `MODULE_CONFIG` export at the top of `src/module-config.js` (`null` by default, meaning "use the base module as-is"). A custom module replaces it with an object such as:
+
+```js
+export const MODULE_CONFIG = {
+  moduleName: 'Ventas',
+  labels: { entity: 'Cliente', entityPlural: 'Clientes', document: 'Pedido de Venta', documentPlural: 'Pedidos de Venta' },
+  customFields: {
+    entity: [{ key: 'creditLimit', label: 'Límite de crédito', type: 'number', required: true }],
+    document: [{ key: 'folio', label: 'Folio', type: 'number', required: true }],
+  },
+  statusLifecycle: {
+    states: ['cotizacion', 'pedido', 'facturado'],
+    transitions: { cotizacion: ['pedido'], pedido: ['facturado'] },
+  },
+  theme: { accentColor: '#1a73e8' },
+};
+```
 
 - `moduleName` — display name shown in the top bar, dashboard, and document title; also derives the logo monogram.
-- `labels` — rename Entity/Document terms across every screen, including sidebar buttons, quick actions, forms, and messages. Spanish articles and agreements (el/la, seleccionado/a) are derived from the first word of each configured term.
-- `customFields` — declare extra fields per record type with `target` (`entity` or `document`), `key`, `label`, `type` (`text`, `number`, `date`, or `select`), optional `required`, and `options` for selects. Keys must not collide with base field names (see `specs/001-erp-base-module/data-model.md`). Values persist alongside records and appear in search results.
-- `statusLifecycle` — restrict document statuses to a configured list of `statuses` with permitted `transitions` between them. Without it, status stays a free-form field.
-- `theme.accentColor` — a hex color (e.g., `"#0f62fe"`) applied across the shell as highlights and primary controls. Invalid values fall back to the default.
+- `labels` — rename Entity/Document terms (`entity`, `entityPlural`, `document`, `documentPlural`, `dashboard`, `manage`, `search`, `summary`) across every screen.
+- `customFields.entity` / `customFields.document` — extra fields per record type: `key`, `label`, `type` (`text`, `number`, `date`, `select`, or `boolean`), optional `required`, and `options` for `select`. Keys must not collide with base field names.
+- `statusLifecycle` — restrict document `status` to a declared list of `states` with permitted `transitions` between them. Without it, status stays a free-form field. A state named `pendiente` feeds the Resumen de Gestión Comercial's pending count.
+- `theme.accentColor` — a hex color (e.g., `"#0f62fe"`) applied across the shell. An invalid value falls back to the default silently, without affecting the rest of the configuration.
 
-If the configuration is invalid (unknown types, bad keys, transitions referencing unknown statuses, non-hex accent colors), the app shows the problems in a banner and falls back to defaults instead of breaking.
+If the rest of the configuration is invalid (unknown field types, custom field keys colliding with base fields, status transitions referencing undeclared states), the app shows the problem in a banner and falls back to the full base defaults instead of breaking.
 
 ## Notes
 
-- Data is persisted to `localStorage` under the keys `erp_base_module:entities` and `erp_base_module:documents`.
-- Deleting an entity also deletes its documents (cascade).
+- Data is persisted to `localStorage` under the keys `erp_entities` and `erp_documents`.
+- Deleting an entity also deletes its documents (cascade), after a confirmation that states how many documents will be removed.
+- User-entered text is escaped before being rendered (`src/utils/sanitize.js`) to prevent XSS via localStorage-sourced content.
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.

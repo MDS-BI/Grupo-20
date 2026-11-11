@@ -143,7 +143,6 @@ Como desarrollador de módulos, quiero que todas las etiquetas visibles para el 
 2. **Dado** que las etiquetas han sido remapeadas, **cuando** el usuario navega entre pantallas, **entonces** el comportamiento de navegación no cambia.
 3. **Dado** que no se proporcionan mapeos, **cuando** cualquier pantalla carga, **entonces** se muestran los términos predeterminados Entidad/Documento.
 
-<<<<<<< HEAD
 ---
 
 ### Historia de Usuario 8 - Declarar campos personalizados para los registros (Prioridad: P1)
@@ -247,7 +246,7 @@ Como desarrollador de módulos, quiero definir los estados permitidos de los doc
 
 Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, con una barra superior con marca y una barra lateral de módulos presentes en cada pantalla, para que la aplicación se sienta como un sistema empresarial coherente en lugar de páginas sueltas.
 
-**Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 3 y 4).
+**Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 15 y 4).
 
 **Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Entidades, Documentos y Buscar con el módulo activo resaltado visualmente, y navegar entre módulos nunca pierde datos.
 
@@ -259,8 +258,23 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 4. **Dado** que la ventana gráfica es estrecha, **cuando** se usa la aplicación en una pantalla pequeña, **entonces** la barra lateral se contrae a una columna de iconos manteniéndose utilizable y etiquetada de forma accesible.
 5. **Dada** una configuración que define un color de acento, **cuando** cualquier pantalla carga, **entonces** el marco lo usa consistentemente para resaltados y controles principales; sin valor configurado o con un valor inválido, se usan los valores predeterminados integrados sin errores.
 6. **Dado** que el usuario navega entre módulos mediante la barra lateral, **cuando** inspecciona sus datos después, **entonces** todas las entidades y documentos almacenados permanecen intactos.
-=======
->>>>>>> 0eeeb18aa46ad579c3f16861dafbe6e755178fae
+
+---
+
+### Historia de Usuario 15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
+
+Como usuario de negocio, quiero un panel de inicio con accesos directos a las tareas clave y estadísticas de registros, para empezar a trabajar de inmediato sin buscar la acción correcta.
+
+**Por qué esta prioridad**: El panel es la pantalla de entrada de todo el espacio de trabajo (Historia de Usuario 14); sin accesos rápidos ni estadísticas visibles, un usuario nuevo no tiene un punto de partida claro para crear, gestionar o buscar registros.
+
+**Prueba Independiente**: Un usuario abre la aplicación, ve el panel con al menos cuatro acciones rápidas y tarjetas de estadísticas, y cada acción lo lleva al destino correcto con un formulario vacío o la búsqueda enfocada.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cuatro botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, buscar registros).
+2. **Dado** que el usuario activa la acción rápida de nueva entidad o nuevo documento, **cuando** se ejecuta, **entonces** se abre el área de gestión correspondiente con un formulario vacío listo para introducir datos.
+3. **Dado** que existen entidades y documentos almacenados, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas reflejan el número actual de cada uno.
+4. **Dado** que no existen entidades ni documentos, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas muestran cero sin errores.
 
 ---
 
@@ -282,6 +296,9 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 - ¿Qué ocurre cuando el panel se abre con cero entidades o cero documentos (valores estadísticos)?
 - ¿Qué ocurre cuando el color de acento configurado no es un valor de color válido?
 - ¿Cómo mantiene la barra lateral contraída las etiquetas de módulo accesibles en ventanas gráficas estrechas?
+- ¿Qué ocurre cuando una entidad no tiene ningún documento asociado al abrir su ficha de detalle?
+- ¿Cómo identifica el resumen de indicadores los documentos "pendientes" cuando el módulo no tiene un ciclo de vida de estados configurado (estado de texto libre)?
+- ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
 
 ## Requisitos *(obligatorio)*
 
@@ -327,6 +344,12 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 - **FR-038**: La configuración PUEDE definir un color de acento; el sistema DEBE aplicarlo consistentemente en todo el marco y retroceder de forma segura a los valores integrados cuando esté ausente o sea inválido.
 - **FR-039**: En ventanas gráficas estrechas, la barra lateral DEBE contraerse a una columna de iconos manteniéndose operable.
 - **FR-040**: Los valores de campos personalizados que ya no están declarados en la configuración DEBEN conservarse en el almacenamiento y ocultarse de la interfaz; si el campo se vuelve a declarar, sus valores vuelven a mostrarse.
+- **FR-041**: El sistema DEBE ofrecer una vista de detalle de entidad ("ficha"), accesible al seleccionar una entidad desde los resultados de búsqueda, que muestre los datos de la entidad junto con sus documentos asociados.
+- **FR-042**: La vista de detalle de entidad DEBE ordenar los documentos asociados por fecha para presentar el historial de forma cronológica.
+- **FR-043**: La vista de detalle de entidad DEBE reflejar las actualizaciones realizadas desde la pantalla de gestión (creación, edición o eliminación de la entidad o de sus documentos) la próxima vez que se consulte.
+- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos cuyo estado corresponda a "pendiente" según el ciclo de vida configurado, identificados por entidad.
+- **FR-045**: El resumen de indicadores DEBE actualizarse cada vez que se crea, edita o elimina una entidad o un documento, y DEBE permitir seleccionar una entidad listada para abrir su ficha de detalle (FR-041).
+- **FR-046**: Cuando no existan entidades, documentos ni documentos pendientes, el resumen de indicadores DEBE mostrar un estado vacío con los valores en cero e indicar cómo comenzar a registrar información.
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -341,7 +364,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 ### Entidades Clave *(incluir si la funcionalidad implica datos)*
 
 - **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional y un entity_id autogenerado. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
-- **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato).
+- **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión); su tipo se declara como campo personalizado (Historia de Usuario 8) y su estado (p. ej., pendiente, en_progreso, completado, atrasado) se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base.
 - **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -358,6 +381,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-008**: Un desarrollador puede producir un módulo adaptado usando solo el archivo de configuración, con cero modificaciones en archivos fuente centrales.
 - **SC-009**: Cada pantalla presenta el mismo marco con marca, y los usuarios pueden identificar en qué módulo están de un vistazo.
 - **SC-010**: Las estadísticas de registros mostradas en el panel siempre coinciden con el número de entidades y documentos almacenados.
+- **SC-011**: Los indicadores del resumen de Gestión Comercial (total de entidades, total de documentos y documentos pendientes por entidad) siempre coinciden con los registros de entidades y documentos almacenados.
 
 ## Suposiciones
 
