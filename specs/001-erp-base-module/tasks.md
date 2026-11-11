@@ -1,19 +1,19 @@
-- [ ] T001 Create Vite project structure per implementation plan
-- [ ] T002 Initialize npm project with dependencies (vitest, jsdom)
-- [ ] T003 Configure eslint and prettier for vanilla JS
-- [ ] T004 Implement storage layer (localStorage) in src/storage.js
-- [ ] T005 [P] Implement entity model structure in src/models/entity.js
-- [ ] T006 [P] Implement document model structure in src/models/document.js
-- [ ] T007 Configure module-config.js structure with default values
-- [ ] T008 [P] Implement basic validation framework
-- [ ] T009 Setup basic HTML structure (index.html, main.js entry point)
-- [ ] T010 [US1] Create client entity model with code validation in src/models/client.js
-- [ ] T011 [US1] Implement create client operation with unique code validation
-- [ ] T012 [P] [US1] Implement search clients by name/code functionality
-- [ ] T013 [US1] Implement client list display in dashboard
-- [ ] T014 [US3] Implement client search by name, code, keyword
-- [ ] T015 [US3] Implement client detail view with interaction history
-- [ ] T016 [US3] Implement navigation from dashboard to client detail view
+- [x] T001 Create Vite project structure per implementation plan
+- [x] T002 Initialize npm project with dependencies (vitest, jsdom)
+- [x] T003 Configure eslint and prettier for vanilla JS
+- [x] T004 Implement storage layer (localStorage) in src/storage.js
+- [x] T005 [P] Implement entity model structure in src/models/entity.js
+- [x] T006 [P] Implement document model structure in src/models/document.js
+- [x] T007 Configure module-config.js structure with default values
+- [x] T008 [P] Implement basic validation framework
+- [x] T009 Setup basic HTML structure (index.html, main.js entry point)
+- [x] T010 [US1] Create client entity model with code validation in src/models/client.js
+- [x] T011 [US1] Implement create client operation with unique code validation
+- [x] T012 [P] [US1] Implement search clients by name/code functionality
+- [x] T013 [US1] Implement client list display in dashboard
+- [x] T014 [US3] Implement client search by name, code, keyword
+- [x] T015 [US3] Implement client detail view with interaction history
+- [x] T016 [US3] Implement navigation from dashboard to client detail view
 - [ ] T017 [US4] Implement entity management screen (src/components/entity-form.js)
 - [ ] T018 [US4] Implement document management within entity screen
 - [ ] T019 [US4] Implement entity creation form with validation
