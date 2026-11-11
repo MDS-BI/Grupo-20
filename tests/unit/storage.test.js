@@ -38,6 +38,17 @@ describe('entity storage', () => {
     expect(loadEntities()[0].entity_id).toBe(e1.entity_id);
   });
 
+  it('rejects a duplicate code regardless of case and whitespace', () => {
+    addEntity({name:'Acme', code:'AC-001'});
+    expect(validateEntity({name:'Otra', code:'ac-001'}).valid).toBe(false);
+    expect(validateEntity({name:'Otra', code:'AC-001'}).errors.code).toContain('único');
+    expect(validateEntity({name:'Otra', code:'AC - 001'}).valid).toBe(false);
+    expect(validateEntity({name:'Otra', code:' ac-001 '}).valid).toBe(false);
+    expect(validateEntity({name:'Otra', code:'AC-002'}).valid).toBe(true);
+    expect(() => addEntity({name:'Otra', code:'ac-001'})).toThrow();
+    expect(loadEntities().length).toBe(1);
+  });
+
   it('updates an entity', () => {
     const e = addEntity({name:'X', code:'X-1'});
     const updated = updateEntity(e.id, { name: 'X2' });

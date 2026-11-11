@@ -75,6 +75,22 @@ describe('User Story 1 - create and organize entities', () => {
     expect(qs('error-email').textContent).toContain('correo electrónico');
   });
 
+  it('rejects a duplicate code with an explanation', () => {
+    qs('nav-entities').click();
+    qs('name').value = 'Acme';
+    qs('code').value = 'AC-001';
+    qs('entity-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    expect(loadEntities().length).toBe(1);
+
+    qs('name').value = 'Otra';
+    qs('code').value = 'ac-001';
+    qs('entity-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(loadEntities().length).toBe(1);
+    expect(loadEntities()[0].name).toBe('Acme');
+    expect(qs('error-code').textContent).toContain('único');
+  });
+
   it('prevents saving when required information is blank and explains what is needed', () => {
     qs('nav-entities').click();
     qs('name').value = '';

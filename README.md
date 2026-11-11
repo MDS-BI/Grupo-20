@@ -33,6 +33,7 @@ The app presents itself as a coherent ERP workspace:
 
 - **Workspace shell** — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar of module buttons (Panel, Entidades, Documentos, Búsqueda). The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports.
 - **Home dashboard** — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management areas, find records) and live statistic cards showing record counts.
+- **Entity profile and history** — selecting a search result opens the entity profile with its master data and a document history sorted by date, read fresh from storage on every open.
 - **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding changes apply globally.
 
 ## Setup
@@ -84,6 +85,7 @@ If the configuration is invalid (unknown types, bad keys, transitions referencin
 
 ## Notes
 
-- Data is persisted to `localStorage` under the keys `erp_base_module:entities` and `erp_base_module:documents`.
-- Deleting an entity also deletes its documents (cascade).
+- Data is persisted to `localStorage` under the keys `erp.entities` and `erp.documents`.
+- Deleting an entity also deletes its documents (cascade); the confirmation dialog reports how many documents will be removed.
+- Custom-field values are preserved in storage even if their declaration is removed from the configuration. They are hidden from the interface and reappear automatically when the field is declared again.
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.
