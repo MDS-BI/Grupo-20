@@ -1,54 +1,56 @@
-import { escapeHtml } from '../utils/sanitize.js';
-import { getLabel } from '../module-config.js';
+import { labelFor } from '../module-config.js';
 
-function monogramSvg(moduleName) {
-  const initial = escapeHtml((moduleName || 'E').trim().charAt(0).toUpperCase() || 'E');
-  return `
-    <svg class="module-logo" viewBox="0 0 32 32" role="img" aria-label="Logotipo de ${escapeHtml(moduleName)}">
-      <rect width="32" height="32" rx="8" fill="var(--accent-color, #1a73e8)" />
-      <text x="16" y="21" text-anchor="middle" font-size="16" font-family="sans-serif" fill="#ffffff">${initial}</text>
-    </svg>
-  `;
+function byId(id) {
+  return document.getElementById(id);
 }
 
-// FR-012: la barra lateral ofrece botones separados para Panel, Entidades,
-// Documentos y Buscar; Entidades/Documentos navegan a la misma pantalla de
-// gestión preseleccionando su pestaña (FR-013, FR-014). El botón de Resumen
-// es adicional (Historia de Usuario 6), más allá del mínimo exigido por FR-012.
-const NAV_ITEMS = [
-  { key: 'dashboard', labelKey: 'dashboard', icon: '⌂' },
-  { key: 'manage-entity', labelKey: 'entityPlural', icon: '🏷' },
-  { key: 'manage-document', labelKey: 'documentPlural', icon: '📄' },
-  { key: 'search', labelKey: 'search', icon: '🔍' },
-  { key: 'summary', labelKey: 'summary', icon: '📊' },
-];
+export function moduleInitials(name) {
+  const words = String(name == null ? '' : name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return '?';
+  const initials = words
+    .map(word => word.charAt(0))
+    .join('')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .slice(0, 2)
+    .toUpperCase();
+  return initials || '?';
+}
 
-export function renderShellHtml(config, activeNavKey) {
-  const navButtons = NAV_ITEMS.map((item) => {
-    const label = getLabel(config, item.labelKey);
-    const isActive = item.key === activeNavKey;
-    return `
-      <button
-        type="button"
-        class="sidebar-button${isActive ? ' active' : ''}"
-        data-action="navigate"
-        data-view="${item.key}"
-        aria-current="${isActive ? 'page' : 'false'}"
-        aria-label="${escapeHtml(label)}"
-      >
-        <span class="sidebar-icon" aria-hidden="true">${item.icon}</span>
-        <span class="sidebar-label">${escapeHtml(label)}</span>
-      </button>`;
-  }).join('');
+export function renderLogo(name) {
+  const logo = byId('logo-mark');
+  if (!logo) return;
+  const initials = moduleInitials(name);
+  logo.innerHTML = [
+    '<svg viewBox="0 0 40 40" role="img" aria-label="Logotipo del módulo" focusable="false">',
+    '<rect x="1" y="1" width="38" height="38" rx="10" fill="var(--accent, #2563eb)" />',
+    `<text x="20" y="25" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="16" font-weight="700" fill="#ffffff">${initials}</text>`,
+    '</svg>'
+  ].join('');
+}
 
-  return `
-    <header class="topbar">
-      ${monogramSvg(config.moduleName)}
-      <span class="module-name">${escapeHtml(config.moduleName)}</span>
-    </header>
-    <nav class="sidebar" aria-label="Navegación de módulos">
-      ${navButtons}
-    </nav>
-    <main id="view-root" class="view-root"></main>
-  `;
+export function renderShell(config) {
+  const moduleName = config && config.moduleName ? config.moduleName : 'Módulo Base ERP';
+
+  renderLogo(moduleName);
+
+  const brandName = byId('brand-name');
+  if (brandName) brandName.textContent = moduleName;
+  document.title = moduleName;
+
+  const labels = {
+    'nav-entities-label': labelFor('entities'),
+    'nav-documents-label': labelFor('documents')
+  };
+  for (const [id, text] of Object.entries(labels)) {
+    const element = byId(id);
+    if (element) element.textContent = text;
+  }
+
+  const dashboardLabel = byId('nav-dashboard-label');
+  if (dashboardLabel) dashboardLabel.textContent = 'Panel';
+  const searchLabel = byId('nav-search-label');
+  if (searchLabel) searchLabel.textContent = 'Búsqueda';
 }

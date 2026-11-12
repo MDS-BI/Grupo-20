@@ -1,32 +1,53 @@
-import { renderFieldsHtml, collectFormData } from './form-fields.js';
-import { getLabel } from '../module-config.js';
+import { getConfig } from '../module-config.js';
+import { declaredFields, readCustomFields, fillCustomFields, clearCustomFields, clearCustomFieldErrors, renderCustomFields } from './entity-form.js';
 
-export function getDocumentFieldDefs(config) {
-  const statusField = config.statusLifecycle
-    ? { key: 'status', label: 'Estado', type: 'select', options: config.statusLifecycle.states }
-    : { key: 'status', label: 'Estado', type: 'text' };
-  const base = [
-    { key: 'startDate', label: 'Fecha', type: 'date' },
-    { key: 'endDate', label: 'Fecha de término', type: 'date' },
-    { key: 'notes', label: 'Notas', type: 'textarea' },
-  ];
-  return [...base, statusField, ...(config.customFields?.document || [])];
+function byId(id) {
+  return document.getElementById(id);
 }
 
-export function renderDocumentFormHtml(config, document = {}, errors = {}) {
-  const defs = getDocumentFieldDefs(config);
-  const label = getLabel(config, 'document');
-  return `
-    <form id="document-form" novalidate aria-label="Formulario de ${label}">
-      ${renderFieldsHtml(defs, document, errors)}
-      <div class="form-actions">
-        <button type="submit">Guardar</button>
-        <button type="button" data-action="cancel-document-form">Cancelar</button>
-      </div>
-    </form>
-  `;
+function buildStatusInput() {
+  const input = document.createElement('input');
+  input.id = 'status';
+  input.name = 'status';
+  input.type = 'text';
+  input.autocomplete = 'off';
+  return input;
 }
 
-export function collectDocumentFormData(formEl, config) {
-  return collectFormData(formEl, getDocumentFieldDefs(config));
+function buildStatusSelect(lifecycle, currentStatus, isEditing) {
+  const select = document.createElement('select');
+  select.id = 'status';
+  select.name = 'status';
+
+  let statuses;
+  if (isEditing && currentStatus && lifecycle.statuses.includes(currentStatus)) {
+    const next = lifecycle.transitions[currentStatus] || [];
+    statuses = [currentStatus, ...next.filter(status => status !== currentStatus)];
+  } else {
+    statuses = ['', ...lifecycle.statuses];
+  }
+
+  for (const status of statuses) {
+    const option = document.createElement('option');
+    option.value = status;
+    option.textContent = status === '' ? '--' : status;
+    select.appendChild(option);
+  }
+  return select;
 }
+
+export function renderStatusControl(isEditing, currentStatus) {
+  const existing = byId('status');
+  if (!existing) return null;
+
+  const config = getConfig();
+  const lifecycle = config ? config.statusLifecycle : null;
+  const next = lifecycle
+    ? buildStatusSelect(lifecycle, currentStatus, isEditing)
+    : buildStatusInput();
+
+  existing.replaceWith(next);
+  return next;
+}
+
+export { declaredFields, readCustomFields, fillCustomFields, clearCustomFields, clearCustomFieldErrors, renderCustomFields };
