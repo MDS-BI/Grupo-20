@@ -1,34 +1,25 @@
-import { labelFor } from '../module-config.js';
-import { loadEntities, loadDocuments } from '../storage.js';
+import { escapeHtml } from '../utils/sanitize.js';
+import { getLabel } from '../module-config.js';
 
-function byId(id) {
-  return document.getElementById(id);
-}
+export function renderDashboardHtml(config, stats) {
+  const entityLabel = getLabel(config, 'entity');
+  const documentLabel = getLabel(config, 'document');
+  const entityPlural = getLabel(config, 'entityPlural');
+  const documentPlural = getLabel(config, 'documentPlural');
 
-function setText(id, text) {
-  const element = byId(id);
-  if (element) element.textContent = text;
-}
-
-export function renderDashboard(config) {
-  const entityLabel = labelFor('entity');
-  const documentLabel = labelFor('document');
-
-  const newEntityTitle = entityLabel === 'Entidad' ? 'Nueva Entidad' : `Nuevo ${entityLabel}`;
-  setText('action-new-entity-title', newEntityTitle);
-  setText('action-new-document-title', `Nuevo ${documentLabel}`);
-  setText('action-open-entities-title', labelFor('entities'));
-  setText('action-find-title', 'Buscar registros');
-  setText('stat-entities-label', labelFor('entities'));
-  setText('stat-documents-label', labelFor('documents'));
-
-  const heading = byId('dashboard-heading');
-  if (heading && config && config.moduleName) heading.textContent = config.moduleName;
-
-  refreshStats();
-}
-
-export function refreshStats() {
-  setText('stat-entities', String(loadEntities().length));
-  setText('stat-documents', String(loadDocuments().length));
+  return `
+    <section class="dashboard">
+      <h1>${escapeHtml(config.moduleName)}</h1>
+      <div class="quick-actions">
+        <button type="button" data-action="quick-new-entity">Nueva ${escapeHtml(entityLabel.toLowerCase())}</button>
+        <button type="button" data-action="quick-new-document">Nueva ${escapeHtml(documentLabel.toLowerCase())}</button>
+        <button type="button" data-action="quick-manage">Abrir gestión de ${escapeHtml(entityPlural.toLowerCase())}</button>
+        <button type="button" data-action="quick-search">Buscar registros</button>
+      </div>
+      <div class="summary-cards">
+        <div class="stat-card"><span class="stat-value">${stats.entityCount}</span><span class="stat-label">${escapeHtml(entityPlural)}</span></div>
+        <div class="stat-card"><span class="stat-value">${stats.documentCount}</span><span class="stat-label">${escapeHtml(documentPlural)}</span></div>
+      </div>
+    </section>
+  `;
 }

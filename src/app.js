@@ -1,687 +1,413 @@
-import { getConfig, labelFor, loadModuleConfig, setActiveConfig, DEFAULT_CONFIG } from './module-config.js';
+import { escapeHtml } from './utils/sanitize.js';
+import { loadModuleConfig, getLabel } from './module-config.js';
 import {
-  addDocument,
-  addEntity,
-  deleteDocument,
-  deleteEntity,
-  documentsForEntity,
-  loadDocuments,
   loadEntities,
-  searchEntities,
-  updateDocument,
+  loadDocuments,
+  addEntity,
   updateEntity,
-  validateDocument,
-  validateEntity
+  deleteEntity,
+  countDocumentsForEntity,
+  addDocument,
+  updateDocument,
+  deleteDocument,
+  getEntityDocuments,
+  searchEntities,
+  computeSummary,
+  ValidationError,
 } from './storage.js';
-import { renderShell } from './components/shell.js';
-import { refreshStats, renderDashboard } from './components/dashboard.js';
-import {
-  clearCustomFields,
-  clearCustomFieldErrors,
-  declaredFields,
-  fillCustomFields,
-  readCustomFields,
-  renderCustomFields
-} from './components/entity-form.js';
-import { renderStatusControl } from './components/document-form.js';
+import { renderShellHtml } from './components/shell.js';
+import { renderDashboardHtml } from './components/dashboard.js';
+import { renderEntityFormHtml, collectEntityFormData } from './components/entity-form.js';
+import { renderDocumentFormHtml, collectDocumentFormData } from './components/document-form.js';
+import { renderEntityListHtml } from './components/entity-list.js';
+import { renderDocumentListHtml } from './components/document-list.js';
+import { renderSearchBarHtml } from './components/search-bar.js';
+import { renderEntityDetailHtml } from './components/entity-detail.js';
+import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
 
-const ENTITY_BASE_INPUT_IDS = [
-  'name', 'code', 'taxId', 'email', 'phone', 'address', 'category',
-  'description', 'targetDate', 'creditLimit', 'paymentTerms'
-];
+export function initApp(rootEl, { rawConfig } = {}) {
+  const { config, warning } = loadModuleConfig(rawConfig);
 
-const DOCUMENT_BASE_INPUT_IDS = [
-  'series', 'folio', 'startDate', 'endDate', 'quantity', 'subtotal',
-  'discount', 'taxAmount', 'totalAmount', 'currency', 'docPaymentTerms', 'notes'
-];
+  const state = {
+    config,
+    warning,
+    entities: [],
+    documents: [],
+    view: 'dashboard',
+    manageTab: 'entity',
+    editingEntityId: null,
+    editingDocumentId: null,
+    documentEntityId: null,
+    detailEntityId: null,
+    searchQuery: '',
+    entityFormErrors: {},
+    documentFormErrors: {},
+    entityFormDraft: null,
+    documentFormDraft: null,
+    focusSearchOnRender: false,
+  };
 
-const VIEWS = ['dashboard', 'entities', 'documents', 'search'];
-
-function byId(id) {
-  return document.getElementById(id);
-}
-
-function valueOf(id) {
-  const element = byId(id);
-  return element ? element.value : '';
-}
-
-function setValue(id, value) {
-  const element = byId(id);
-  if (element) element.value = value === undefined || value === null ? '' : String(value);
-}
-
-function setText(id, text) {
-  const element = byId(id);
-  if (element) element.textContent = text;
-}
-
-function setError(id, message) {
-  const element = byId(id);
-  if (element) element.textContent = message || '';
-}
-
-function clearErrors(prefixIds) {
-  for (const id of prefixIds) setError(id, '');
-}
-
-function documentErrorIds() {
-  return [
-    'error-document-entity', 'error-series', 'error-folio', 'error-startDate',
-    'error-endDate', 'error-quantity', 'error-subtotal', 'error-discount',
-    'error-taxAmount', 'error-totalAmount', 'error-currency',
-    'error-paymentTerms', 'error-notes', 'error-status'
-  ];
-}
-
-function applyDocumentErrors(errors) {
-  const mapping = { entityId: 'error-document-entity' };
-  for (const [key, message] of Object.entries(errors || {})) {
-    const targetId = mapping[key] || `error-${key}`;
-    const target = byId(targetId) || byId(`error-cf-${key}`);
-    if (target) target.textContent = message;
-  }
-}
-
-function applyEntityErrors(errors) {
-  for (const [key, message] of Object.entries(errors || {})) {
-    const target = byId(`error-${key}`) || byId(`error-cf-${key}`);
-    if (target) target.textContent = message;
-  }
-}
-
-function applyTheme(config) {
-  const color = config && config.theme && config.theme.accentColor
-    ? config.theme.accentColor
-    : DEFAULT_CONFIG.theme.accentColor;
-  if (document.documentElement && document.documentElement.style) {
-    document.documentElement.style.setProperty('--accent', color);
-  }
-}
-
-function showConfigWarning(errors) {
-  const warning = byId('config-warning');
-  if (!warning) return;
-  if (errors && errors.length > 0) {
-    warning.hidden = false;
-    warning.textContent = `Configuración del módulo inválida. Se usan los valores predeterminados. ${errors.join(' ')}`;
-  } else {
-    warning.hidden = true;
-    warning.textContent = '';
-  }
-}
-
-function applyLabels() {
-  const entity = labelFor('entity');
-  const entities = labelFor('entities');
-  const documentLabel = labelFor('document');
-  const documents = labelFor('documents');
-  const entityLower = entity.toLocaleLowerCase('es');
-  const documentLower = documentLabel.toLocaleLowerCase('es');
-
-  setText('entities-view-heading', entities);
-  setText('documents-view-heading', documents);
-  setText('entity-form-heading', `Agregar / Editar ${entity}`);
-  setText('document-form-heading', `Agregar / Editar ${documentLabel}`);
-  setText('edit-entity-heading', `Editar o eliminar ${entity === 'Entidad' ? 'la' : 'el'} ${entityLower}`);
-  setText('edit-document-heading', `Editar o eliminar el ${documentLower}`);
-  setText('delete-entity', entity === 'Entidad'
-    ? 'Eliminar la entidad seleccionada'
-    : `Eliminar el ${entityLower} seleccionado`);
-  setText('delete-document', `Eliminar el ${documentLower} seleccionado`);
-  setText('search-view-heading', `Buscar ${entities}`);
-  setText('search-empty', 'No hay coincidencias. Pruebe con otro término.');
-
-  renderDashboard(getConfig());
-  renderShell(getConfig());
-}
-
-function showView(name) {
-  if (!VIEWS.includes(name)) name = 'dashboard';
-
-  for (const view of VIEWS) {
-    const element = byId(`view-${view}`);
-    if (element) element.hidden = view !== name;
+  function refreshData() {
+    state.entities = loadEntities();
+    state.documents = loadDocuments();
   }
 
-  for (const button of document.querySelectorAll('.nav-module')) {
-    if (button.dataset.module === name) {
-      button.setAttribute('aria-current', 'page');
+  function activeNavKey() {
+    if (state.view === 'manage') return `manage-${state.manageTab}`;
+    return state.view;
+  }
+
+  function customFieldKeys(kind) {
+    return (state.config.customFields?.[kind] || []).map((f) => f.key);
+  }
+
+  // -- View renderers --------------------------------------------------
+
+  function renderDashboardView() {
+    return renderDashboardHtml(state.config, {
+      entityCount: state.entities.length,
+      documentCount: state.documents.length,
+    });
+  }
+
+  function renderManageView() {
+    const entityLabel = getLabel(state.config, 'entity');
+    const documentLabel = getLabel(state.config, 'document');
+    const tabsHtml = `
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-action="manage-tab" data-tab="entity"
+          class="tab-button${state.manageTab === 'entity' ? ' active' : ''}"
+          aria-selected="${state.manageTab === 'entity'}">${escapeHtml(entityLabel)}</button>
+        <button type="button" role="tab" data-action="manage-tab" data-tab="document"
+          class="tab-button${state.manageTab === 'document' ? ' active' : ''}"
+          aria-selected="${state.manageTab === 'document'}">${escapeHtml(documentLabel)}</button>
+      </div>`;
+
+    let content;
+    if (state.manageTab === 'entity') {
+      const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
+      const values = state.entityFormDraft || editing || {};
+      content = `
+        <h2>${editing ? 'Editar' : 'Nueva'} ${escapeHtml(entityLabel.toLowerCase())}</h2>
+        ${renderEntityFormHtml(state.config, values, state.entityFormErrors)}
+        ${
+          editing
+            ? `<button type="button" data-action="delete-entity" data-id="${escapeHtml(editing.id)}">Eliminar ${escapeHtml(entityLabel.toLowerCase())}</button>`
+            : ''
+        }
+      `;
     } else {
-      button.removeAttribute('aria-current');
+      const options = state.entities
+        .map(
+          (e) =>
+            `<option value="${escapeHtml(e.entity_id)}" ${e.entity_id === state.documentEntityId ? 'selected' : ''}>${escapeHtml(e.name)} (${escapeHtml(e.code)})</option>`,
+        )
+        .join('');
+      const editingDoc = state.editingDocumentId ? state.documents.find((d) => d.id === state.editingDocumentId) : null;
+      const docValues = state.documentFormDraft || editingDoc || {};
+      const docsForEntity = state.documentEntityId ? getEntityDocuments(state.documentEntityId, state.documents) : [];
+      content = `
+        <h2>${editingDoc ? 'Editar' : 'Nuevo'} ${escapeHtml(documentLabel.toLowerCase())}</h2>
+        <div class="form-field">
+          <label for="document-entity-select">${escapeHtml(entityLabel)}</label>
+          <select id="document-entity-select" ${state.entities.length === 0 ? 'disabled' : ''}>
+            <option value="">-- Selecciona --</option>
+            ${options}
+          </select>
+        </div>
+        ${
+          state.entities.length === 0
+            ? `<p class="empty-state">Crea una ${escapeHtml(entityLabel.toLowerCase())} primero.</p>`
+            : ''
+        }
+        ${state.documentEntityId ? renderDocumentFormHtml(state.config, docValues, state.documentFormErrors) : ''}
+        ${
+          editingDoc
+            ? `<button type="button" data-action="delete-document" data-id="${escapeHtml(editingDoc.id)}">Eliminar ${escapeHtml(documentLabel.toLowerCase())}</button>`
+            : ''
+        }
+        ${
+          state.documentEntityId
+            ? `<h3>${escapeHtml(documentLabel)}s de esta ${escapeHtml(entityLabel.toLowerCase())}</h3>${renderDocumentListHtml(docsForEntity, state.config)}`
+            : ''
+        }
+      `;
+    }
+    return `<div class="manage-view">${tabsHtml}${content}</div>`;
+  }
+
+  function currentSearchResults() {
+    return searchEntities(state.searchQuery, {
+      entities: state.entities,
+      documents: state.documents,
+      customFieldKeys: customFieldKeys('entity'),
+    });
+  }
+
+  function renderSearchView() {
+    return `
+      <div class="search-view">
+        ${renderSearchBarHtml(state.config, state.searchQuery)}
+        <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config)}</div>
+      </div>
+    `;
+  }
+
+  function renderDetailView() {
+    const entity = state.entities.find((e) => e.entity_id === state.detailEntityId) || null;
+    const docs = entity ? getEntityDocuments(entity.entity_id, state.documents) : [];
+    return renderEntityDetailHtml(state.config, entity, docs);
+  }
+
+  function renderSummaryView() {
+    const summary = computeSummary({
+      entities: state.entities,
+      documents: state.documents,
+      statusLifecycle: state.config.statusLifecycle,
+    });
+    return renderCommercialSummaryHtml(state.config, summary);
+  }
+
+  function renderCurrentView() {
+    switch (state.view) {
+      case 'manage':
+        return renderManageView();
+      case 'search':
+        return renderSearchView();
+      case 'detail':
+        return renderDetailView();
+      case 'summary':
+        return renderSummaryView();
+      case 'dashboard':
+      default:
+        return renderDashboardView();
     }
   }
 
-  if (name === 'dashboard') {
-    refreshStats();
-  } else if (name === 'entities') {
-    refreshEntityControls();
-  } else if (name === 'documents') {
-    refreshEntityControls();
-    refreshDocumentControls();
-  } else if (name === 'search') {
-    renderSearch(valueOf('search-input'));
-  }
-}
+  // -- Main render -------------------------------------------------------
 
-function optionElement(value, text) {
-  const option = document.createElement('option');
-  option.value = value;
-  option.textContent = text;
-  return option;
-}
+  function render() {
+    refreshData();
+    rootEl.innerHTML = `
+      ${state.warning ? `<div class="config-warning" role="alert">${escapeHtml(state.warning)}</div>` : ''}
+      ${renderShellHtml(state.config, activeNavKey())}
+    `;
+    rootEl.style.setProperty('--accent-color', state.config.theme?.accentColor || '');
+    const viewRoot = rootEl.querySelector('#view-root');
+    viewRoot.innerHTML = renderCurrentView();
 
-function refreshEntityControls() {
-  const entities = loadEntities();
-
-  const editSelect = byId('edit-entity');
-  if (editSelect) {
-    const selected = editSelect.value;
-    editSelect.replaceChildren(optionElement('', '--'));
-    for (const entity of entities) {
-      editSelect.appendChild(optionElement(entity.id, `${entity.name} — ${entity.code}`));
+    if (state.focusSearchOnRender) {
+      state.focusSearchOnRender = false;
+      rootEl.querySelector('#search-input')?.focus();
     }
-    if (entities.some(entity => entity.id === selected)) editSelect.value = selected;
   }
 
-  const documentEntity = byId('document-entity');
-  if (documentEntity) {
-    const selected = documentEntity.value;
-    documentEntity.replaceChildren(optionElement('', '--'));
-    for (const entity of entities) {
-      documentEntity.appendChild(optionElement(entity.entity_id, `${entity.name} — ${entity.code}`));
-    }
-    if (entities.some(entity => entity.entity_id === selected)) documentEntity.value = selected;
-  }
-}
-
-function refreshDocumentControls() {
-  const select = byId('edit-document');
-  if (!select) return;
-
-  const documents = loadDocuments();
-  const entities = loadEntities();
-  const nameByEntityId = new Map(entities.map(entity => [entity.entity_id, entity.name]));
-  const selected = select.value;
-
-  select.replaceChildren(optionElement('', '--'));
-  for (const document of documents) {
-    const number = document.series ? `${document.series}-${document.folio}` : String(document.folio);
-    const entityName = nameByEntityId.get(document.entity_id) || '';
-    select.appendChild(optionElement(document.id, `${number} — ${entityName}`));
-  }
-  if (documents.some(document => document.id === selected)) select.value = selected;
-}
-
-function readEntityForm() {
-  const data = {};
-  for (const id of ENTITY_BASE_INPUT_IDS) data[id] = valueOf(id);
-  const id = valueOf('entity-id');
-  if (id) data.id = id;
-  Object.assign(data, readCustomFields('entity'));
-  return data;
-}
-
-function fillEntityForm(entity) {
-  setValue('entity-id', entity.id);
-  for (const id of ENTITY_BASE_INPUT_IDS) setValue(id, entity[id]);
-  fillCustomFields('entity', entity);
-  setText('submit-button', 'Actualizar');
-  const editSelect = byId('edit-entity');
-  if (editSelect) editSelect.value = entity.id;
-}
-
-function clearEntityForm() {
-  const form = byId('entity-form');
-  if (form) form.reset();
-  setValue('entity-id', '');
-  setText('submit-button', 'Guardar');
-  clearErrors(['error-name', 'error-code', 'error-taxId', 'error-email', 'error-phone',
-    'error-address', 'error-category', 'error-description', 'error-targetDate',
-    'error-creditLimit', 'error-paymentTerms']);
-  clearCustomFields('entity');
-  const editSelect = byId('edit-entity');
-  if (editSelect) editSelect.value = '';
-}
-
-function readDocumentForm() {
-  const data = { entityId: valueOf('document-entity') };
-  for (const id of DOCUMENT_BASE_INPUT_IDS) {
-    data[id === 'docPaymentTerms' ? 'paymentTerms' : id] = valueOf(id);
-  }
-  data.status = valueOf('status');
-  const id = valueOf('document-id');
-  if (id) data.id = id;
-  Object.assign(data, readCustomFields('document'));
-  return data;
-}
-
-function fillDocumentForm(documentRecord) {
-  setValue('document-id', documentRecord.id);
-  setValue('document-entity', documentRecord.entity_id);
-  setValue('series', documentRecord.series);
-  setValue('folio', documentRecord.folio);
-  setValue('startDate', documentRecord.startDate);
-  setValue('endDate', documentRecord.endDate);
-  setValue('quantity', documentRecord.quantity);
-  setValue('subtotal', documentRecord.subtotal);
-  setValue('discount', documentRecord.discount);
-  setValue('taxAmount', documentRecord.taxAmount);
-  setValue('totalAmount', documentRecord.totalAmount);
-  setValue('currency', documentRecord.currency);
-  setValue('docPaymentTerms', documentRecord.paymentTerms);
-  setValue('notes', documentRecord.notes);
-  renderStatusControl(true, documentRecord.status);
-  setValue('status', documentRecord.status);
-  fillCustomFields('document', documentRecord);
-  setText('document-submit-button', 'Actualizar Documento');
-  clearErrors(documentErrorIds());
-  clearCustomFieldErrors('document');
-  const select = byId('edit-document');
-  if (select) select.value = documentRecord.id;
-}
-
-function clearDocumentForm() {
-  const form = byId('document-form');
-  if (form) form.reset();
-  setValue('document-id', '');
-  renderStatusControl(false, '');
-  clearErrors(documentErrorIds());
-  clearCustomFields('document');
-  setText('document-submit-button', 'Guardar Documento');
-  const select = byId('edit-document');
-  if (select) select.value = '';
-}
-
-function handleEntitySubmit(event) {
-  event.preventDefault();
-
-  clearErrors(['error-name', 'error-code', 'error-taxId', 'error-email', 'error-phone',
-    'error-address', 'error-category', 'error-description', 'error-targetDate',
-    'error-creditLimit', 'error-paymentTerms']);
-  clearCustomFieldErrors('entity');
-
-  const data = readEntityForm();
-  const { valid, errors } = validateEntity(data);
-  if (!valid) {
-    applyEntityErrors(errors);
-    return;
+  function updateSearchResults() {
+    const resultsEl = rootEl.querySelector('#search-results');
+    if (!resultsEl) return;
+    resultsEl.innerHTML = renderEntityListHtml(currentSearchResults(), state.config);
   }
 
-  let saved;
-  try {
-    if (data.id) {
-      saved = updateEntity(data.id, data);
+  // -- Navigation ----------------------------------------------------------
+
+  function navigate(key) {
+    if (key === 'manage-entity') {
+      state.view = 'manage';
+      state.manageTab = 'entity';
+    } else if (key === 'manage-document') {
+      state.view = 'manage';
+      state.manageTab = 'document';
     } else {
-      saved = addEntity(data);
+      state.view = key;
     }
-  } catch (error) {
-    if (error && error.errors) applyEntityErrors(error.errors);
-    return;
+    render();
   }
 
-  refreshEntityControls();
-  refreshDocumentControls();
-  refreshStats();
-  if (data.id && saved) {
-    fillEntityForm(saved);
-  } else {
-    clearEntityForm();
-  }
-}
+  // -- Actions ---------------------------------------------------------
 
-function handleDocumentSubmit(event) {
-  event.preventDefault();
-
-  clearErrors(documentErrorIds());
-  clearCustomFieldErrors('document');
-
-  const data = readDocumentForm();
-  const { valid, errors } = validateDocument(data);
-  if (!valid) {
-    applyDocumentErrors(errors);
-    return;
-  }
-
-  let saved;
-  try {
-    if (data.id) {
-      saved = updateDocument(data.id, data);
-    } else {
-      saved = addDocument(data);
-    }
-  } catch (error) {
-    if (error && error.errors) {
-      applyDocumentErrors(error.errors);
-    } else {
-      setError('error-status', error && error.message ? error.message : 'No se pudo guardar el documento.');
-    }
-    return;
-  }
-
-  refreshDocumentControls();
-  refreshEntityControls();
-  refreshStats();
-  if (data.id && saved) {
-    fillDocumentForm(saved);
-  } else {
-    clearDocumentForm();
-  }
-}
-
-function handleEntitySelection() {
-  const id = valueOf('edit-entity');
-  if (!id) {
-    clearEntityForm();
-    return;
-  }
-  const entity = loadEntities().find(item => item.id === id);
-  if (!entity) {
-    clearEntityForm();
-    return;
-  }
-  clearErrors(['error-name', 'error-code', 'error-taxId', 'error-email', 'error-phone',
-    'error-address', 'error-category', 'error-description', 'error-targetDate',
-    'error-creditLimit', 'error-paymentTerms']);
-  clearCustomFieldErrors('entity');
-  fillEntityForm(entity);
-}
-
-function handleDocumentSelection() {
-  const id = valueOf('edit-document');
-  if (!id) {
-    clearDocumentForm();
-    return;
-  }
-  const documentRecord = loadDocuments().find(item => item.id === id);
-  if (!documentRecord) {
-    clearDocumentForm();
-    return;
-  }
-  refreshEntityControls();
-  fillDocumentForm(documentRecord);
-}
-
-function handleDeleteEntity() {
-  const id = valueOf('entity-id') || valueOf('edit-entity');
-  const entity = loadEntities().find(item => item.id === id);
-  if (!entity) {
-    if (typeof globalThis.alert === 'function') globalThis.alert('Seleccione una entidad para eliminar.');
-    return;
-  }
-
-  const documentCount = documentsForEntity(entity.entity_id).length;
-  const message = `¿Eliminar "${entity.name}"? Se eliminarán ${documentCount} documento(s) asociado(s).`;
-  if (typeof globalThis.confirm === 'function' && !globalThis.confirm(message)) return;
-
-  deleteEntity(entity.id);
-  clearEntityForm();
-  refreshEntityControls();
-  refreshDocumentControls();
-  refreshStats();
-}
-
-function handleDeleteDocument() {
-  const id = valueOf('document-id') || valueOf('edit-document');
-  const documentRecord = loadDocuments().find(item => item.id === id);
-  if (!documentRecord) {
-    if (typeof globalThis.alert === 'function') globalThis.alert('Seleccione un documento para eliminar.');
-    return;
-  }
-
-  if (typeof globalThis.confirm === 'function' && !globalThis.confirm('¿Eliminar el documento seleccionado?')) return;
-
-  deleteDocument(documentRecord.id);
-  clearDocumentForm();
-  refreshDocumentControls();
-  refreshEntityControls();
-  refreshStats();
-}
-
-function renderSearch(term) {
-  const list = byId('search-results-list');
-  const empty = byId('search-empty');
-  if (!list) return;
-
-  list.replaceChildren();
-
-  const query = String(term == null ? '' : term).trim();
-  if (!query) {
-    if (empty) empty.hidden = false;
-    return;
-  }
-
-  const results = searchEntities(query);
-  const fields = declaredFields('entity');
-
-  for (const entity of results) {
-    const item = document.createElement('div');
-    item.className = 'entity-item';
-    item.dataset.entityId = entity.id;
-    item.tabIndex = 0;
-    item.setAttribute('role', 'button');
-
-    const title = document.createElement('div');
-    title.className = 'entity-title';
-    title.textContent = `${entity.name} — ${entity.code}`;
-    item.appendChild(title);
-
-    if (entity.category) {
-      const category = document.createElement('div');
-      category.className = 'entity-detail';
-      category.textContent = `Categoría: ${entity.category}`;
-      item.appendChild(category);
-    }
-    if (entity.targetDate) {
-      const target = document.createElement('div');
-      target.className = 'entity-detail';
-      target.textContent = `Fecha objetivo: ${entity.targetDate}`;
-      item.appendChild(target);
-    }
-
-    for (const field of fields) {
-      const value = entity[field.key];
-      if (value === undefined || value === null || value === '') continue;
-      const detail = document.createElement('div');
-      detail.className = 'entity-detail';
-      detail.textContent = `${field.label}: ${value}`;
-      item.appendChild(detail);
-    }
-
-    for (const documentRecord of documentsForEntity(entity.entity_id)) {
-      if (!documentRecord.status) continue;
-      const badge = document.createElement('span');
-      badge.className = 'status-badge';
-      badge.textContent = documentRecord.status;
-      item.appendChild(badge);
-    }
-
-    list.appendChild(item);
-  }
-
-  if (empty) empty.hidden = results.length > 0;
-}
-
-function addDetailRow(container, label, value) {
-  if (value === undefined || value === null || value === '') return;
-  const row = document.createElement('div');
-  row.className = 'entity-detail';
-  row.textContent = `${label}: ${value}`;
-  container.appendChild(row);
-}
-
-function documentDate(documentRecord) {
-  return documentRecord.startDate || (documentRecord.createdAt || '').slice(0, 10);
-}
-
-function renderEntityDetail(entity) {
-  const panel = byId('entity-detail');
-  if (!panel || !entity) return;
-
-  panel.hidden = false;
-  setText('entity-detail-title', `${entity.name} — ${entity.code}`);
-
-  const info = byId('entity-detail-info');
-  if (info) {
-    info.replaceChildren();
-    addDetailRow(info, 'Identificación fiscal', entity.taxId);
-    addDetailRow(info, 'Correo electrónico', entity.email);
-    addDetailRow(info, 'Teléfono', entity.phone);
-    addDetailRow(info, 'Dirección', entity.address);
-    addDetailRow(info, 'Categoría', entity.category);
-    addDetailRow(info, 'Descripción', entity.description);
-    addDetailRow(info, 'Fecha objetivo', entity.targetDate);
-    addDetailRow(info, 'Límite de crédito', entity.creditLimit);
-    addDetailRow(info, 'Condiciones de pago', entity.paymentTerms);
-    for (const field of declaredFields('entity')) {
-      addDetailRow(info, field.label, entity[field.key]);
-    }
-  }
-
-  const history = byId('entity-history');
-  const historyEmpty = byId('entity-history-empty');
-  if (history) {
-    history.replaceChildren();
-    const documents = documentsForEntity(entity.entity_id).sort((a, b) =>
-      documentDate(b).localeCompare(documentDate(a))
-    );
-    for (const documentRecord of documents) {
-      const row = document.createElement('div');
-      row.className = 'history-item';
-      row.dataset.documentId = documentRecord.id;
-      const number = documentRecord.series
-        ? `${documentRecord.series}-${documentRecord.folio}`
-        : String(documentRecord.folio);
-      const parts = [documentDate(documentRecord), number];
-      if (documentRecord.status) parts.push(documentRecord.status);
-      row.textContent = parts.join(' — ');
-      history.appendChild(row);
-    }
-    if (historyEmpty) historyEmpty.hidden = documents.length > 0;
-  }
-}
-
-function openEntityFromSearch(event) {
-  const item = event.target && event.target.closest ? event.target.closest('.entity-item') : null;
-  if (!item) return;
-  const id = item.dataset.entityId;
-  const entity = loadEntities().find(record => record.id === id);
-  if (entity) renderEntityDetail(entity);
-}
-
-function bindEvents() {
-  if (document.body && document.body.dataset.appBooted === 'true') return;
-  if (document.body) document.body.dataset.appBooted = 'true';
-
-  for (const view of VIEWS) {
-    const button = byId(`nav-${view}`);
-    if (button) button.addEventListener('click', () => {
-      showView(view);
-      if (view === 'search') {
-        const field = byId('search-input');
-        if (field) field.focus();
+  function onEntityFormSubmit(formEl) {
+    const data = collectEntityFormData(formEl, state.config);
+    try {
+      if (state.editingEntityId) {
+        updateEntity(state.editingEntityId, data, { customFieldDefs: state.config.customFields.entity });
+      } else {
+        addEntity(data, { customFieldDefs: state.config.customFields.entity });
       }
-    });
+      state.entityFormErrors = {};
+      state.entityFormDraft = null;
+      state.editingEntityId = null;
+      render();
+    } catch (err) {
+      if (!(err instanceof ValidationError)) throw err;
+      state.entityFormErrors = err.errors;
+      state.entityFormDraft = data;
+      render();
+    }
   }
 
-  const newEntity = byId('action-new-entity');
-  if (newEntity) {
-    newEntity.addEventListener('click', () => {
-      showView('entities');
-      clearEntityForm();
-      const field = byId('name');
-      if (field) field.focus();
-    });
-  }
-
-  const newDocument = byId('action-new-document');
-  if (newDocument) {
-    newDocument.addEventListener('click', () => {
-      showView('documents');
-      clearDocumentForm();
-      const field = byId('document-entity');
-      if (field) field.focus();
-    });
-  }
-
-  const openEntities = byId('action-open-entities');
-  if (openEntities) openEntities.addEventListener('click', () => showView('entities'));
-
-  const find = byId('action-find');
-  if (find) {
-    find.addEventListener('click', () => {
-      showView('search');
-      const field = byId('search-input');
-      if (field) field.focus();
-    });
-  }
-
-  const entityForm = byId('entity-form');
-  if (entityForm) entityForm.addEventListener('submit', handleEntitySubmit);
-
-  const documentForm = byId('document-form');
-  if (documentForm) documentForm.addEventListener('submit', handleDocumentSubmit);
-
-  const editEntity = byId('edit-entity');
-  if (editEntity) editEntity.addEventListener('change', handleEntitySelection);
-
-  const editDocument = byId('edit-document');
-  if (editDocument) editDocument.addEventListener('change', handleDocumentSelection);
-
-  const deleteEntityButton = byId('delete-entity');
-  if (deleteEntityButton) deleteEntityButton.addEventListener('click', handleDeleteEntity);
-
-  const deleteDocumentButton = byId('delete-document');
-  if (deleteDocumentButton) deleteDocumentButton.addEventListener('click', handleDeleteDocument);
-
-  const searchInput = byId('search-input');
-  if (searchInput) searchInput.addEventListener('input', () => renderSearch(searchInput.value));
-
-  const results = byId('search-results-list');
-  if (results) {
-    results.addEventListener('click', openEntityFromSearch);
-    results.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        openEntityFromSearch(event);
+  function onDocumentFormSubmit(formEl) {
+    const data = { ...collectDocumentFormData(formEl, state.config), entity_id: state.documentEntityId };
+    try {
+      if (state.editingDocumentId) {
+        updateDocument(state.editingDocumentId, data, {
+          customFieldDefs: state.config.customFields.document,
+          statusLifecycle: state.config.statusLifecycle,
+        });
+      } else {
+        addDocument(data, {
+          customFieldDefs: state.config.customFields.document,
+          statusLifecycle: state.config.statusLifecycle,
+        });
       }
-    });
-  }
-}
-
-export async function initApp(result) {
-  let config;
-  let errors = [];
-
-  if (result && result.config) {
-    config = result.config;
-    errors = result.errors || [];
-  } else if (result && typeof result === 'object' && (result.moduleName || result.labels || result.customFields)) {
-    config = result;
-  } else {
-    const loaded = await loadModuleConfig();
-    config = loaded.config;
-    errors = loaded.errors;
+      state.documentFormErrors = {};
+      state.documentFormDraft = null;
+      state.editingDocumentId = null;
+      render();
+    } catch (err) {
+      if (!(err instanceof ValidationError)) throw err;
+      state.documentFormErrors = err.errors;
+      state.documentFormDraft = data;
+      render();
+    }
   }
 
-  setActiveConfig(config);
-  const active = getConfig();
+  function onDeleteEntity(id) {
+    const entity = state.entities.find((e) => e.id === id);
+    if (!entity) return;
+    const docCount = countDocumentsForEntity(entity.entity_id, state.documents);
+    const label = getLabel(state.config, 'entity').toLowerCase();
+    const docLabel = getLabel(state.config, 'documentPlural').toLowerCase();
+    const message =
+      docCount > 0
+        ? `¿Eliminar esta ${label}? También se eliminarán ${docCount} ${docLabel} asociados.`
+        : `¿Eliminar esta ${label}?`;
+    if (!window.confirm(message)) return;
+    deleteEntity(id);
+    if (state.editingEntityId === id) state.editingEntityId = null;
+    if (state.detailEntityId === entity.entity_id) state.view = 'search';
+    if (state.documentEntityId === entity.entity_id) state.documentEntityId = null;
+    render();
+  }
 
-  applyTheme(active);
-  renderShell(active);
-  renderCustomFields(byId('entity-custom-fields'), 'entity');
-  renderCustomFields(byId('document-custom-fields'), 'document');
-  renderStatusControl(false, '');
-  applyLabels();
-  bindEvents();
-  showConfigWarning(errors);
-  refreshEntityControls();
-  refreshDocumentControls();
-  showView('dashboard');
-  return active;
-}
+  function onDeleteDocument(id) {
+    const label = getLabel(state.config, 'document').toLowerCase();
+    if (!window.confirm(`¿Eliminar este ${label}?`)) return;
+    deleteDocument(id);
+    if (state.editingDocumentId === id) state.editingDocumentId = null;
+    render();
+  }
 
-export async function boot() {
-  const loaded = await loadModuleConfig();
-  return initApp(loaded);
+  function handleClick(event) {
+    const target = event.target.closest('[data-action]');
+    if (!target) return;
+    const { action } = target.dataset;
+    switch (action) {
+      case 'navigate':
+        navigate(target.dataset.view);
+        break;
+      case 'quick-new-entity':
+        state.editingEntityId = null;
+        state.entityFormDraft = null;
+        state.entityFormErrors = {};
+        navigate('manage-entity');
+        break;
+      case 'quick-new-document':
+        state.editingDocumentId = null;
+        state.documentFormDraft = null;
+        state.documentFormErrors = {};
+        navigate('manage-document');
+        break;
+      case 'quick-manage':
+        navigate('manage-entity');
+        break;
+      case 'quick-search':
+        state.focusSearchOnRender = true;
+        navigate('search');
+        break;
+      case 'manage-tab':
+        state.manageTab = target.dataset.tab;
+        render();
+        break;
+      case 'view-entity':
+        state.detailEntityId = target.dataset.entityId;
+        navigate('detail');
+        break;
+      case 'edit-entity':
+        state.editingEntityId = target.dataset.id;
+        state.entityFormDraft = null;
+        state.entityFormErrors = {};
+        navigate('manage-entity');
+        break;
+      case 'delete-entity':
+        onDeleteEntity(target.dataset.id);
+        break;
+      case 'cancel-entity-form':
+        state.editingEntityId = null;
+        state.entityFormDraft = null;
+        state.entityFormErrors = {};
+        render();
+        break;
+      case 'edit-document': {
+        const doc = state.documents.find((d) => d.id === target.dataset.id);
+        state.editingDocumentId = target.dataset.id;
+        state.documentEntityId = doc ? doc.entity_id : state.documentEntityId;
+        state.documentFormDraft = null;
+        state.documentFormErrors = {};
+        navigate('manage-document');
+        break;
+      }
+      case 'delete-document':
+        onDeleteDocument(target.dataset.id);
+        break;
+      case 'cancel-document-form':
+        state.editingDocumentId = null;
+        state.documentFormDraft = null;
+        state.documentFormErrors = {};
+        render();
+        break;
+      default:
+        break;
+    }
+  }
+
+  function handleSubmit(event) {
+    if (event.target.id === 'entity-form') {
+      event.preventDefault();
+      onEntityFormSubmit(event.target);
+    } else if (event.target.id === 'document-form') {
+      event.preventDefault();
+      onDocumentFormSubmit(event.target);
+    } else if (event.target.id === 'search-form') {
+      event.preventDefault();
+    }
+  }
+
+  function handleInput(event) {
+    if (event.target.id === 'search-input') {
+      state.searchQuery = event.target.value;
+      updateSearchResults();
+    }
+  }
+
+  function handleChange(event) {
+    if (event.target.id === 'document-entity-select') {
+      state.documentEntityId = event.target.value || null;
+      state.editingDocumentId = null;
+      state.documentFormDraft = null;
+      state.documentFormErrors = {};
+      render();
+    }
+  }
+
+  rootEl.addEventListener('click', handleClick);
+  rootEl.addEventListener('submit', handleSubmit);
+  rootEl.addEventListener('input', handleInput);
+  rootEl.addEventListener('change', handleChange);
+
+  render();
+
+  return {
+    navigate,
+    getState: () => state,
+  };
 }
