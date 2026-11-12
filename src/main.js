@@ -1,10 +1,8 @@
 import './styles.css';
-import { boot } from './app.js';
+import { initApp } from './app.js';
+import { MODULE_CONFIG } from './module-config.js';
 
-if (typeof document !== 'undefined' && document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    boot();
-  });
-} else {
-  boot();
-}
+const root = document.getElementById('app');
+const app = initApp(root, { rawConfig: MODULE_CONFIG });
+
+document.title = app.getState().config.moduleName;

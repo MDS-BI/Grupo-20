@@ -1,31 +1,19 @@
-import { getConfig } from './module-config.js';
+import { sanitizeText } from './utils/sanitize.js';
 
-const ENTITIES_KEY = 'erp.entities';
-const DOCUMENTS_KEY = 'erp.documents';
+const ENTITIES_KEY = 'erp_entities';
+const DOCUMENTS_KEY = 'erp_documents';
 
-const BASE_ENTITY_FIELDS = [
-  'id', 'entity_id', 'name', 'code', 'taxId', 'email', 'phone', 'address',
-  'category', 'description', 'targetDate', 'creditLimit', 'paymentTerms',
-  'createdAt', 'updatedAt'
-];
-
-const BASE_DOCUMENT_FIELDS = [
-  'id', 'entity_id', 'series', 'folio', 'startDate', 'endDate', 'quantity',
-  'subtotal', 'discount', 'taxAmount', 'totalAmount', 'currency',
-  'paymentTerms', 'notes', 'status', 'createdAt', 'updatedAt'
-];
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function store() {
-  return globalThis.localStorage;
+export class ValidationError extends Error {
+  constructor(errors) {
+    super('Validation failed');
+    this.name = 'ValidationError';
+    this.errors = errors;
+  }
 }
 
-function readList(key) {
-  const storage = store();
-  if (!storage) return [];
+function readJson(key) {
   try {
-    const raw = storage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -34,448 +22,352 @@ function readList(key) {
   }
 }
 
-function writeList(key, list) {
-  const storage = store();
-  if (!storage) return;
-  storage.setItem(key, JSON.stringify(list));
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function randomId(prefix) {
-  const cryptoObj = globalThis.crypto;
-  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
-    return `${prefix}-${cryptoObj.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function trimString(value) {
-  return typeof value === 'string' ? value.trim() : value;
-}
-
-function normalizeCode(value) {
-  return String(value == null ? '' : value)
-    .replace(/\s+/g, '')
-    .toLowerCase();
-}
-
-function isEmpty(value) {
-  return value === undefined || value === null || value === '';
-}
-
-function toNumber(value) {
-  if (isEmpty(value)) return undefined;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : value;
-}
-
-function isCalendarDate(value) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year
-    && date.getUTCMonth() === month - 1
-    && date.getUTCDate() === day;
-}
-
-function customFieldsFor(target) {
-  const config = getConfig();
-  const fields = config && Array.isArray(config.customFields) ? config.customFields : [];
-  return fields.filter(field => field.target === target);
-}
-
-function validateCustomFields(target, record, errors) {
-  for (const field of customFieldsFor(target)) {
-    const value = record[field.key];
-    const blank = isEmpty(value) || (typeof value === 'string' && value.trim() === '');
-
-    if (field.required && blank) {
-      errors[field.key] = `El campo ${field.label} es obligatorio.`;
-      continue;
-    }
-    if (blank) continue;
-
-    if (field.type === 'number' && !Number.isFinite(Number(value))) {
-      errors[field.key] = `El campo ${field.label} debe ser un número.`;
-    } else if (field.type === 'date' && !isCalendarDate(String(value))) {
-      errors[field.key] = `El campo ${field.label} debe ser una fecha válida.`;
-    } else if (field.type === 'select' && !Array.isArray(field.options)) {
-      errors[field.key] = `El campo ${field.label} no tiene opciones válidas declaradas.`;
-    } else if (field.type === 'select' && !field.options.includes(String(value))) {
-      errors[field.key] = `El campo ${field.label} debe ser uno de: ${field.options.join(', ')}.`;
-    }
-  }
-}
-
-function convertCustomValue(field, value) {
-  if (isEmpty(value)) return undefined;
-  if (field.type === 'number') {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : value;
-  }
-  if (typeof value === 'string') return value.trim();
-  return value;
-}
-
-function applyBaseFields(target, source, targetRecord) {
-  const fields = target === 'entity' ? BASE_ENTITY_FIELDS : BASE_DOCUMENT_FIELDS;
-  for (const field of fields) {
-    if (source[field] !== undefined) {
-      targetRecord[field] = source[field];
-    }
-  }
-}
-
-function applyCustomFields(target, source, targetRecord) {
-  for (const field of customFieldsFor(target)) {
-    const converted = convertCustomValue(field, source[field.key]);
-    if (converted === undefined) {
-      delete targetRecord[field.key];
-    } else {
-      targetRecord[field.key] = converted;
-    }
-  }
-}
-
-function buildEntityRecord(source, existing) {
-  const record = existing ? { ...existing } : {};
-  applyBaseFields('entity', source, record);
-
-  record.name = trimString(record.name) || '';
-  record.code = trimString(record.code) || '';
-  for (const key of ['taxId', 'email', 'phone', 'address', 'category', 'description', 'targetDate', 'paymentTerms']) {
-    if (record[key] !== undefined && record[key] !== null) {
-      record[key] = trimString(record[key]);
-    }
-  }
-  if (!isEmpty(record.creditLimit)) {
-    record.creditLimit = toNumber(record.creditLimit);
-  } else {
-    delete record.creditLimit;
-  }
-
-  applyCustomFields('entity', source, record);
-  return record;
-}
-
-function buildDocumentRecord(source, existing) {
-  const record = existing ? { ...existing } : {};
-  applyBaseFields('document', source, record);
-
-  if (record.entityId !== undefined && record.entity_id === undefined) {
-    record.entity_id = record.entityId;
-  }
-  delete record.entityId;
-
-  for (const key of ['series', 'startDate', 'endDate', 'currency', 'paymentTerms', 'notes', 'status']) {
-    if (record[key] !== undefined && record[key] !== null) {
-      record[key] = trimString(record[key]);
-    }
-  }
-  for (const key of ['folio', 'quantity', 'subtotal', 'discount', 'taxAmount', 'totalAmount']) {
-    if (!isEmpty(record[key])) {
-      record[key] = toNumber(record[key]);
-    } else {
-      delete record[key];
-    }
-  }
-
-  applyCustomFields('document', source, record);
-  return record;
+function writeJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 export function loadEntities() {
-  return readList(ENTITIES_KEY);
+  return readJson(ENTITIES_KEY);
 }
 
 export function saveEntities(entities) {
-  writeList(ENTITIES_KEY, Array.isArray(entities) ? entities : []);
+  writeJson(ENTITIES_KEY, entities);
 }
 
 export function loadDocuments() {
-  return readList(DOCUMENTS_KEY);
+  return readJson(DOCUMENTS_KEY);
 }
 
 export function saveDocuments(documents) {
-  writeList(DOCUMENTS_KEY, Array.isArray(documents) ? documents : []);
+  writeJson(DOCUMENTS_KEY, documents);
 }
 
-export function validateEntity(entity) {
-  const errors = {};
-  const data = entity || {};
+let idCounter = 0;
+function generateId(prefix) {
+  idCounter += 1;
+  return `${prefix}_${Date.now().toString(36)}${idCounter.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
 
-  if (!trimString(data.name)) {
-    errors.name = 'El nombre es obligatorio.';
+export function generateEntityId() {
+  return generateId('ent');
+}
+
+function generateRecordId() {
+  return generateId('rec');
+}
+
+function normalizeCode(code) {
+  return String(code || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+export function isValidDate(value) {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateCustomFields(definitions, data, errors) {
+  for (const def of definitions || []) {
+    const value = data[def.key];
+    const isEmpty = value === undefined || value === null || value === '';
+    if (def.required && isEmpty) {
+      errors[def.key] = `${def.label || def.key} es obligatorio.`;
+      continue;
+    }
+    if (isEmpty) continue;
+    if (def.type === 'number' && Number.isNaN(Number(value))) {
+      errors[def.key] = `${def.label || def.key} debe ser un número.`;
+      continue;
+    }
+    if (def.type === 'date' && !isValidDate(value)) {
+      errors[def.key] = `${def.label || def.key} debe ser una fecha válida (AAAA-MM-DD).`;
+      continue;
+    }
+    if (def.key === 'email' && !EMAIL_RE.test(value)) {
+      errors[def.key] = 'El correo electrónico no tiene un formato válido.';
+    }
+    if (def.key === 'creditLimit' && Number(value) < 0) {
+      errors[def.key] = 'El límite de crédito no puede ser negativo.';
+    }
   }
-  if (!trimString(data.code)) {
+}
+
+function pickCustomFieldValues(definitions, data) {
+  const values = {};
+  for (const def of definitions || []) {
+    if (Object.prototype.hasOwnProperty.call(data, def.key)) {
+      values[def.key] = data[def.key];
+    }
+  }
+  return values;
+}
+
+// ---------------------------------------------------------------------------
+// Entities
+// ---------------------------------------------------------------------------
+
+export function validateEntityData(data, { entities = [], editingId = null, customFieldDefs = [] } = {}) {
+  const errors = {};
+  const name = sanitizeText(data.name);
+  const code = sanitizeText(data.code);
+  if (!name) errors.name = 'El nombre es obligatorio.';
+  if (!code) {
     errors.code = 'El código es obligatorio.';
   } else {
-    const codeKey = normalizeCode(data.code);
-    const duplicate = loadEntities().some(existing =>
-      existing.id !== data.id && normalizeCode(existing.code) === codeKey
-    );
-    if (duplicate) {
-      errors.code = 'El código ya existe. Debe ser único entre todas las entidades.';
-    }
+    const normalized = normalizeCode(code);
+    const duplicate = entities.some((e) => e.id !== editingId && normalizeCode(e.code) === normalized);
+    if (duplicate) errors.code = 'Ya existe una entidad con ese código.';
   }
-
-  if (!isEmpty(data.email) && !EMAIL_PATTERN.test(String(data.email).trim())) {
-    errors.email = 'El correo electrónico no tiene un formato válido.';
+  if (data.targetDate && !isValidDate(data.targetDate)) {
+    errors.targetDate = 'La fecha objetivo no es una fecha de calendario válida.';
   }
-
-  if (!isEmpty(data.creditLimit)) {
-    const limit = Number(data.creditLimit);
-    if (!Number.isFinite(limit) || limit < 0) {
-      errors.creditLimit = 'El límite de crédito debe ser un número no negativo.';
-    }
-  }
-
-  if (!isEmpty(data.targetDate) && !isCalendarDate(String(data.targetDate))) {
-    errors.targetDate = 'La fecha objetivo debe ser una fecha de calendario válida (YYYY-MM-DD).';
-  }
-
-  validateCustomFields('entity', data, errors);
-
-  return { valid: Object.keys(errors).length === 0, errors };
+  validateCustomFields(customFieldDefs, data, errors);
+  return errors;
 }
 
-export function addEntity(entity) {
-  const { valid, errors } = validateEntity(entity);
-  if (!valid) {
-    const error = new Error(Object.values(errors)[0] || 'Entidad inválida.');
-    error.errors = errors;
-    throw error;
-  }
-
-  const record = buildEntityRecord(entity, null);
-  record.id = randomId('ent');
-  record.entity_id = randomId('eid');
-  record.createdAt = nowIso();
-  record.updatedAt = record.createdAt;
-
+export function addEntity(data, { customFieldDefs = [] } = {}) {
   const entities = loadEntities();
-  entities.push(record);
+  const errors = validateEntityData(data, { entities, customFieldDefs });
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const now = new Date().toISOString();
+  const entity = {
+    id: generateRecordId(),
+    entity_id: generateEntityId(),
+    name: sanitizeText(data.name),
+    code: sanitizeText(data.code),
+    category: sanitizeText(data.category || ''),
+    description: sanitizeText(data.description || ''),
+    targetDate: data.targetDate || '',
+    createdAt: now,
+    updatedAt: now,
+    ...pickCustomFieldValues(customFieldDefs, data),
+  };
+  entities.push(entity);
   saveEntities(entities);
-  return record;
+  return entity;
 }
 
-export function updateEntity(id, updates) {
+export function updateEntity(id, updates, { customFieldDefs = [] } = {}) {
   const entities = loadEntities();
-  const index = entities.findIndex(entity => entity.id === id);
-  if (index === -1) return null;
-
-  const merged = { ...entities[index], ...(updates || {}) };
-  const { valid, errors } = validateEntity(merged);
-  if (!valid) {
-    const error = new Error(Object.values(errors)[0] || 'Entidad inválida.');
-    error.errors = errors;
-    throw error;
-  }
-
-  const record = buildEntityRecord(merged, entities[index]);
-  record.id = entities[index].id;
-  record.entity_id = entities[index].entity_id;
-  record.createdAt = entities[index].createdAt;
-  record.updatedAt = nowIso();
-
-  entities[index] = record;
+  const existing = entities.find((e) => e.id === id);
+  if (!existing) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
+  const merged = { ...existing, ...updates };
+  const errors = validateEntityData(merged, { entities, editingId: id, customFieldDefs });
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const now = new Date().toISOString();
+  const updated = {
+    ...existing,
+    ...updates,
+    ...pickCustomFieldValues(customFieldDefs, updates),
+    name: sanitizeText(merged.name),
+    code: sanitizeText(merged.code),
+    category: sanitizeText(merged.category || ''),
+    description: sanitizeText(merged.description || ''),
+    targetDate: merged.targetDate || '',
+    id: existing.id,
+    entity_id: existing.entity_id,
+    createdAt: existing.createdAt,
+    updatedAt: now,
+  };
+  const index = entities.findIndex((e) => e.id === id);
+  entities[index] = updated;
   saveEntities(entities);
-  return record;
+  return updated;
 }
 
 export function deleteEntity(id) {
   const entities = loadEntities();
-  const index = entities.findIndex(entity => entity.id === id);
-  if (index === -1) return false;
-
-  const entity = entities[index];
-  entities.splice(index, 1);
-  saveEntities(entities);
-  deleteDocumentsForEntity(entity.entity_id);
-  return true;
+  const entity = entities.find((e) => e.id === id);
+  if (!entity) return { deletedDocumentCount: 0 };
+  saveEntities(entities.filter((e) => e.id !== id));
+  const deletedDocumentCount = deleteDocumentsForEntity(entity.entity_id);
+  return { deletedDocumentCount };
 }
 
-export function searchEntities(term) {
-  const query = String(term == null ? '' : term)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!query) return [];
-
-  const declared = customFieldsFor('entity').map(field => field.key);
-
-  return loadEntities().filter(entity => {
-    const values = [];
-    for (const [key, value] of Object.entries(entity)) {
-      if (key === 'id' || key === 'createdAt' || key === 'updatedAt') continue;
-      if (declared.includes(key) || BASE_ENTITY_FIELDS.includes(key)) {
-        values.push(value);
-      }
-    }
-    return values.some(value => String(value == null ? '' : value)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .includes(query));
-  });
+export function countDocumentsForEntity(entityId, documents = loadDocuments()) {
+  return documents.filter((d) => d.entity_id === entityId).length;
 }
 
-function documentEntityId(document) {
-  return document.entityId !== undefined ? document.entityId : document.entity_id;
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+export function isValidTransition(lifecycle, fromStatus, toStatus) {
+  if (!lifecycle || !Array.isArray(lifecycle.states)) return true;
+  if (!fromStatus) return lifecycle.states.includes(toStatus);
+  if (fromStatus === toStatus) return true;
+  const allowed = (lifecycle.transitions && lifecycle.transitions[fromStatus]) || [];
+  return allowed.includes(toStatus);
 }
 
-export function validateDocument(document) {
+export function validateDocumentData(
+  data,
+  { entities = [], documents = [], editingId = null, customFieldDefs = [], statusLifecycle = null } = {},
+) {
   const errors = {};
-  const data = document || {};
-  const entityId = documentEntityId(data);
-
-  if (isEmpty(entityId) || !loadEntities().some(entity => entity.entity_id === entityId)) {
-    errors.entityId = 'Debe seleccionar una entidad existente para el documento.';
+  if (!data.entity_id) {
+    errors.entity_id = 'El documento debe estar asociado a una entidad.';
+  } else if (!entities.some((e) => e.entity_id === data.entity_id)) {
+    errors.entity_id = 'La entidad asociada no existe.';
   }
-
-  if (isEmpty(data.folio)) {
-    errors.folio = 'El folio es obligatorio.';
-  } else {
-    const folio = Number(data.folio);
-    if (!Number.isInteger(folio) || folio <= 0) {
-      errors.folio = 'El folio debe ser un entero positivo.';
+  if (data.startDate && !isValidDate(data.startDate)) {
+    errors.startDate = 'La fecha de inicio no es válida.';
+  }
+  if (data.endDate && !isValidDate(data.endDate)) {
+    errors.endDate = 'La fecha de término no es válida.';
+  }
+  if (
+    data.startDate &&
+    data.endDate &&
+    isValidDate(data.startDate) &&
+    isValidDate(data.endDate) &&
+    data.endDate < data.startDate
+  ) {
+    errors.endDate = 'La fecha de término debe ser igual o posterior a la fecha de inicio.';
+  }
+  if (statusLifecycle && data.status) {
+    const existing = editingId ? documents.find((d) => d.id === editingId) : null;
+    const fromStatus = existing ? existing.status : null;
+    if (!isValidTransition(statusLifecycle, fromStatus, data.status)) {
+      errors.status = 'Transición de estado inválida.';
     }
   }
-
-  if (isEmpty(data.startDate) || !isCalendarDate(String(data.startDate))) {
-    errors.startDate = 'La fecha de inicio debe ser una fecha de calendario válida.';
-  }
-  if (isEmpty(data.endDate) || !isCalendarDate(String(data.endDate))) {
-    errors.endDate = 'La fecha de fin debe ser una fecha de calendario válida.';
-  }
-  if (!errors.startDate && !errors.endDate && String(data.endDate) < String(data.startDate)) {
-    errors.endDate = 'La fecha de fin debe ser igual o posterior a la fecha de inicio.';
-  }
-
-  if (!isEmpty(data.quantity)) {
-    const quantity = Number(data.quantity);
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-      errors.quantity = 'La cantidad debe ser un entero positivo.';
-    }
-  }
-
-  for (const key of ['subtotal', 'discount', 'taxAmount', 'totalAmount']) {
-    if (!isEmpty(data[key])) {
-      const amount = Number(data[key]);
-      if (!Number.isFinite(amount) || amount < 0) {
-        errors[key] = 'El importe debe ser un número no negativo.';
-      }
-    }
-  }
-
-  if (!errors.subtotal && !errors.discount
-    && !isEmpty(data.subtotal) && !isEmpty(data.discount)
-    && Number(data.discount) > Number(data.subtotal)) {
+  if (data.subtotal !== undefined && data.discount !== undefined && Number(data.discount) > Number(data.subtotal)) {
     errors.discount = 'El descuento no puede superar el subtotal.';
   }
-
-  const lifecycle = getConfig() ? getConfig().statusLifecycle : null;
-  if (lifecycle && !isEmpty(data.status) && !lifecycle.statuses.includes(String(data.status))) {
-    errors.status = `El estado debe ser uno de: ${lifecycle.statuses.join(', ')}.`;
-  }
-
-  validateCustomFields('document', data, errors);
-
-  return { valid: Object.keys(errors).length === 0, errors };
+  validateCustomFields(customFieldDefs, data, errors);
+  return errors;
 }
 
-function assertTransitionAllowed(existing, nextStatus) {
-  const config = getConfig();
-  const lifecycle = config ? config.statusLifecycle : null;
-  if (!lifecycle || isEmpty(nextStatus)) return;
-  if (nextStatus === existing.status) return;
-  if (isEmpty(existing.status)) return;
-
-  const allowed = lifecycle.transitions[existing.status] || [];
-  if (!allowed.includes(nextStatus)) {
-    throw new Error(`Transición de estado inválida: ${existing.status} → ${nextStatus}.`);
-  }
-}
-
-export function addDocument(document) {
-  const { valid, errors } = validateDocument(document);
-  if (!valid) {
-    const error = new Error(Object.values(errors)[0] || 'Documento inválido.');
-    error.errors = errors;
-    throw error;
-  }
-
-  const record = buildDocumentRecord(document, null);
-  record.id = randomId('doc');
-  record.entity_id = documentEntityId(document);
-  record.createdAt = nowIso();
-  record.updatedAt = record.createdAt;
-
+export function addDocument(data, { customFieldDefs = [], statusLifecycle = null } = {}) {
+  const entities = loadEntities();
   const documents = loadDocuments();
-  documents.push(record);
+  const errors = validateDocumentData(data, { entities, documents, customFieldDefs, statusLifecycle });
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const now = new Date().toISOString();
+  const document = {
+    id: generateRecordId(),
+    entity_id: data.entity_id,
+    startDate: data.startDate || '',
+    endDate: data.endDate || '',
+    notes: sanitizeText(data.notes || ''),
+    status: data.status || '',
+    createdAt: now,
+    updatedAt: now,
+    ...pickCustomFieldValues(customFieldDefs, data),
+  };
+  documents.push(document);
   saveDocuments(documents);
-  return record;
+  return document;
 }
 
-export function updateDocument(id, updates) {
+export function updateDocument(id, updates, { customFieldDefs = [], statusLifecycle = null } = {}) {
+  const entities = loadEntities();
   const documents = loadDocuments();
-  const index = documents.findIndex(document => document.id === id);
-  if (index === -1) return null;
-
-  const merged = { ...documents[index], ...(updates || {}) };
-  if (merged.entityId !== undefined) {
-    merged.entity_id = merged.entityId;
-    delete merged.entityId;
-  }
-
-  assertTransitionAllowed(documents[index], merged.status);
-
-  const { valid, errors } = validateDocument(merged);
-  if (!valid) {
-    const error = new Error(Object.values(errors)[0] || 'Documento inválido.');
-    error.errors = errors;
-    throw error;
-  }
-
-  const record = buildDocumentRecord(merged, documents[index]);
-  record.id = documents[index].id;
-  record.entity_id = documents[index].entity_id;
-  record.createdAt = documents[index].createdAt;
-  record.updatedAt = nowIso();
-
-  documents[index] = record;
+  const existing = documents.find((d) => d.id === id);
+  if (!existing) throw new ValidationError({ _document: 'El documento ya no existe.' });
+  const merged = { ...existing, ...updates };
+  const errors = validateDocumentData(merged, {
+    entities,
+    documents,
+    editingId: id,
+    customFieldDefs,
+    statusLifecycle,
+  });
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const now = new Date().toISOString();
+  const updated = {
+    ...existing,
+    ...updates,
+    ...pickCustomFieldValues(customFieldDefs, updates),
+    notes: sanitizeText(merged.notes || ''),
+    id: existing.id,
+    entity_id: existing.entity_id,
+    createdAt: existing.createdAt,
+    updatedAt: now,
+  };
+  const index = documents.findIndex((d) => d.id === id);
+  documents[index] = updated;
   saveDocuments(documents);
-  return record;
+  return updated;
 }
 
 export function deleteDocument(id) {
   const documents = loadDocuments();
-  const index = documents.findIndex(document => document.id === id);
-  if (index === -1) return false;
-  documents.splice(index, 1);
-  saveDocuments(documents);
-  return true;
+  saveDocuments(documents.filter((d) => d.id !== id));
 }
 
 export function deleteDocumentsForEntity(entityId) {
   const documents = loadDocuments();
-  const remaining = documents.filter(document => document.entity_id !== entityId);
+  const remaining = documents.filter((d) => d.entity_id !== entityId);
+  const deletedCount = documents.length - remaining.length;
   saveDocuments(remaining);
-  return documents.length - remaining.length;
+  return deletedCount;
 }
 
-export function documentsForEntity(entityId) {
-  return loadDocuments().filter(document => document.entity_id === entityId);
+export function getEntityDocuments(entityId, documents = loadDocuments()) {
+  return documents
+    .filter((d) => d.entity_id === entityId)
+    .slice()
+    .sort((a, b) => {
+      const dateA = a.startDate || a.createdAt;
+      const dateB = b.startDate || b.createdAt;
+      return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+    });
 }
 
-export function clearAll() {
-  const storage = store();
-  if (!storage) return;
-  storage.removeItem(ENTITIES_KEY);
-  storage.removeItem(DOCUMENTS_KEY);
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+function matchesQuery(entity, needle, documents, customFieldKeys) {
+  const haystacks = [entity.name, entity.code, entity.category, entity.description, entity.targetDate];
+  for (const key of customFieldKeys) {
+    if (entity[key] !== undefined) haystacks.push(String(entity[key]));
+  }
+  if (haystacks.some((v) => v && String(v).toLowerCase().includes(needle))) return true;
+  const docs = documents.filter((d) => d.entity_id === entity.entity_id);
+  return docs.some((d) => {
+    const docHaystacks = [d.notes, d.status];
+    for (const key of customFieldKeys) {
+      if (d[key] !== undefined) docHaystacks.push(String(d[key]));
+    }
+    return docHaystacks.some((v) => v && String(v).toLowerCase().includes(needle));
+  });
+}
+
+export function searchEntities(
+  query,
+  { entities = loadEntities(), documents = loadDocuments(), customFieldKeys = [] } = {},
+) {
+  const needle = (query || '').trim().toLowerCase();
+  if (!needle) return entities.slice();
+  return entities.filter((e) => matchesQuery(e, needle, documents, customFieldKeys));
+}
+
+// ---------------------------------------------------------------------------
+// Resumen de Gestión Comercial (Historia de Usuario 6)
+// ---------------------------------------------------------------------------
+
+export function computeSummary({ entities = loadEntities(), documents = loadDocuments(), statusLifecycle = null } = {}) {
+  const pendingStatus = statusLifecycle?.states?.includes('pendiente') ? 'pendiente' : 'pendiente';
+  const pendingDocuments = documents.filter((d) => d.status === pendingStatus);
+  const pendingByEntityMap = new Map();
+  for (const doc of pendingDocuments) {
+    pendingByEntityMap.set(doc.entity_id, (pendingByEntityMap.get(doc.entity_id) || 0) + 1);
+  }
+  const pendingByEntity = Array.from(pendingByEntityMap.entries()).map(([entityId, count]) => ({
+    entityId,
+    entity: entities.find((e) => e.entity_id === entityId) || null,
+    count,
+  }));
+  return {
+    totalEntities: entities.length,
+    totalDocuments: documents.length,
+    totalPending: pendingDocuments.length,
+    pendingByEntity,
+  };
 }

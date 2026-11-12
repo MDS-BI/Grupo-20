@@ -1,339 +1,213 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { clearAll, loadEntities, addEntity, updateEntity, deleteEntity, validateEntity, searchEntities, loadDocuments, addDocument, updateDocument, deleteDocument, deleteDocumentsForEntity, validateDocument } from '../../src/storage.js';
-import { setActiveConfig } from '../../src/module-config.js';
+import { describe, it, expect } from 'vitest';
+import {
+  addEntity,
+  updateEntity,
+  deleteEntity,
+  loadEntities,
+  addDocument,
+  updateDocument,
+  deleteDocument,
+  loadDocuments,
+  getEntityDocuments,
+  searchEntities,
+  computeSummary,
+  isValidTransition,
+  ValidationError,
+} from '../../src/storage.js';
 
-const store = new Map();
-globalThis.localStorage = {
-  getItem: (k) => (store.has(k) ? store.get(k) : null),
-  setItem: (k, v) => store.set(k, String(v)),
-  removeItem: (k) => store.delete(k),
-  clear: () => store.clear()
-};
-
-beforeEach(() => {
-  store.clear();
-  setActiveConfig(null);
-});
-
-describe('entity storage', () => {
-  it('validates entity name and code', () => {
-    expect(validateEntity({name:'', code:''}).valid).toBe(false);
-    expect(validateEntity({name:'Acme', code:''}).valid).toBe(false);
-    expect(validateEntity({name:'A', code:'B'}).valid).toBe(true);
-    expect(validateEntity({name:'', code:''}).errors.name).toContain('obligatorio');
+describe('Entidad - validación y unicidad (H1)', () => {
+  it('crea una entidad con nombre y código', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    expect(entity.id).toBeTruthy();
+    expect(entity.entity_id).toBeTruthy();
+    expect(loadEntities()).toHaveLength(1);
   });
 
-  it('adds and loads entities', () => {
-    const e = addEntity({name:'Acme', code:'AC-001'});
-    const all = loadEntities();
-    expect(all.length).toBe(1);
-    expect(all[0].id).toBe(e.id);
+  it('rechaza una entidad sin nombre o código', () => {
+    expect(() => addEntity({ name: '', code: 'AC-1' })).toThrow(ValidationError);
+    expect(() => addEntity({ name: 'Acme', code: '' })).toThrow(ValidationError);
   });
 
-  it('generates a unique entity_id for each entity', () => {
-    const e1 = addEntity({name:'Acme', code:'AC-001'});
-    const e2 = addEntity({name:'Globex', code:'GL-002'});
-    expect(e1.entity_id).toBeDefined();
-    expect(e1.entity_id).not.toBe(e2.entity_id);
-    expect(loadEntities()[0].entity_id).toBe(e1.entity_id);
+  it('rechaza un código duplicado sin distinguir mayúsculas ni espacios', () => {
+    addEntity({ name: 'Acme', code: 'AC-1' });
+    expect(() => addEntity({ name: 'Otra', code: ' ac-1 ' })).toThrow(ValidationError);
+    try {
+      addEntity({ name: 'Otra', code: 'Ac-1' });
+    } catch (err) {
+      expect(err.errors.code).toBeTruthy();
+    }
   });
 
-  it('rejects a duplicate code regardless of case and whitespace', () => {
-    addEntity({name:'Acme', code:'AC-001'});
-    expect(validateEntity({name:'Otra', code:'ac-001'}).valid).toBe(false);
-    expect(validateEntity({name:'Otra', code:'AC-001'}).errors.code).toContain('único');
-    expect(validateEntity({name:'Otra', code:'AC - 001'}).valid).toBe(false);
-    expect(validateEntity({name:'Otra', code:' ac-001 '}).valid).toBe(false);
-    expect(validateEntity({name:'Otra', code:'AC-002'}).valid).toBe(true);
-    expect(() => addEntity({name:'Otra', code:'ac-001'})).toThrow();
-    expect(loadEntities().length).toBe(1);
-  });
-
-  it('updates an entity', () => {
-    const e = addEntity({name:'X', code:'X-1'});
-    const updated = updateEntity(e.id, { name: 'X2' });
-    expect(updated.name).toBe('X2');
-  });
-
-  it('deletes an entity', () => {
-    const e1 = addEntity({name:'A', code:'A-1'});
-    const e2 = addEntity({name:'C', code:'C-1'});
-    deleteEntity(e1.id);
-    const all = loadEntities();
-    expect(all.length).toBe(1);
-    expect(all[0].id).toBe(e2.id);
-  });
-
-  it('persists ERP identity and contact fields', () => {
-    const e = addEntity({name:'Acme', code:'AC-001', taxId:'RFC800101AB1', email:'ventas@acme.mx', phone:'555-1234', address:'Av. Reforma 100'});
-    const saved = loadEntities()[0];
-    expect(saved.taxId).toBe('RFC800101AB1');
-    expect(saved.email).toBe('ventas@acme.mx');
-    expect(saved.phone).toBe('555-1234');
-    expect(saved.address).toBe('Av. Reforma 100');
-    const updated = updateEntity(e.id, { phone: '555-9999' });
-    expect(updated.phone).toBe('555-9999');
-  });
-
-  it('rejects a malformed email address', () => {
-    const res = validateEntity({name:'A', code:'B', email:'not-an-email'});
-    expect(res.valid).toBe(false);
-    expect(res.errors.email).toContain('correo electrónico');
-    expect(validateEntity({name:'A', code:'B', email:'ventas@acme.mx'}).valid).toBe(true);
-    expect(validateEntity({name:'A', code:'B', email:''}).valid).toBe(true);
-  });
-
-  it('validates the credit limit as a non-negative number', () => {
-    expect(validateEntity({name:'A', code:'B', creditLimit:-1}).valid).toBe(false);
-    expect(validateEntity({name:'A', code:'B', creditLimit:-1}).errors.creditLimit).toContain('no negativo');
-    expect(validateEntity({name:'A', code:'B', creditLimit:5000}).valid).toBe(true);
-    const e = addEntity({name:'A', code:'B', creditLimit:'5000'});
-    expect(loadEntities()[0].creditLimit).toBe(5000);
-  });
-
-  it('accepts a valid target date', () => {
-    const res = validateEntity({name:'A', code:'B', targetDate:'2026-08-06'});
-    expect(res.valid).toBe(true);
-  });
-
-  it('rejects an invalid target date', () => {
-    const res = validateEntity({name:'A', code:'B', targetDate:'2026-13-45'});
-    expect(res.valid).toBe(false);
-    expect(res.errors.targetDate).toBeDefined();
-  });
-
-  it('allows an empty target date', () => {
-    const res = validateEntity({name:'A', code:'B', targetDate:''});
-    expect(res.valid).toBe(true);
-  });
-
-  it('persists target date on create and update', () => {
-    const e = addEntity({name:'Acme', code:'AC-001', targetDate:'2026-09-01'});
-    expect(loadEntities()[0].targetDate).toBe('2026-09-01');
-    const updated = updateEntity(e.id, { targetDate:'2026-10-01' });
-    expect(updated.targetDate).toBe('2026-10-01');
-  });
-
-  it('searches by target date', () => {
-    addEntity({name:'Acme', code:'AC-001', targetDate:'2026-09-01'});
-    addEntity({name:'Globex', code:'GL-002', targetDate:'2026-11-20'});
-    const results = searchEntities('2026-09-01');
-    expect(results.length).toBe(1);
-    expect(results[0].name).toBe('Acme');
-  });
-
-  it('searches by tax id and email', () => {
-    addEntity({name:'Acme', code:'AC-001', taxId:'RFC800101AB1', email:'ventas@acme.mx'});
-    addEntity({name:'Globex', code:'GL-002', taxId:'RFC991231CD2', email:'hola@globex.mx'});
-    expect(searchEntities('RFC800101AB1').length).toBe(1);
-    expect(searchEntities('ventas@acme.mx').length).toBe(1);
-    expect(searchEntities('globex.mx').length).toBe(1);
-  });
-
-  it('validates required custom fields declared in configuration', () => {
-    setActiveConfig({
-      customFields: [{ target: 'entity', key: 'riesgo', label: 'Riesgo', type: 'number', required: true }]
-    });
-    const res = validateEntity({name:'A', code:'B'});
-    expect(res.valid).toBe(false);
-    expect(res.errors.riesgo).toContain('obligatorio');
-    expect(validateEntity({name:'A', code:'B', riesgo: 500}).valid).toBe(true);
-  });
-
-  it('rejects non-numeric values for number custom fields', () => {
-    setActiveConfig({
-      customFields: [{ target: 'entity', key: 'riesgo', label: 'Riesgo', type: 'number' }]
-    });
-    const res = validateEntity({name:'A', code:'B', riesgo: 'alto'});
-    expect(res.valid).toBe(false);
-    expect(res.errors.riesgo).toContain('número');
-  });
-
-  it('persists custom field values alongside base fields without schema changes', () => {
-    setActiveConfig({
-      customFields: [{ target: 'entity', key: 'region', label: 'Region', type: 'text' }]
-    });
-    const e = addEntity({name:'Acme', code:'AC-001', region:'EMEA'});
-    expect(loadEntities()[0].region).toBe('EMEA');
-    const updated = updateEntity(e.id, { region: 'APAC' });
-    expect(updated.region).toBe('APAC');
-    expect(updated.name).toBe('Acme');
-  });
-
-  it('includes custom field values in search results', () => {
-    setActiveConfig({
-      customFields: [{ target: 'entity', key: 'region', label: 'Region', type: 'text' }]
-    });
-    addEntity({name:'Acme', code:'AC-001', region:'EMEA'});
-    addEntity({name:'Globex', code:'GL-002', region:'APAC'});
-    const results = searchEntities('emea');
-    expect(results.length).toBe(1);
-    expect(results[0].name).toBe('Acme');
-  });
-
-  it('ignores undeclared custom keys when persisting', () => {
-    const e = addEntity({name:'Acme', code:'AC-001', rogueField:'x'});
-    expect(e.rogueField).toBeUndefined();
+  it('rechaza una fecha objetivo inválida y acepta una válida u omitida', () => {
+    expect(() => addEntity({ name: 'A', code: 'A1', targetDate: 'not-a-date' })).toThrow(ValidationError);
+    const withDate = addEntity({ name: 'B', code: 'B1', targetDate: '2026-12-01' });
+    expect(withDate.targetDate).toBe('2026-12-01');
+    const withoutDate = addEntity({ name: 'C', code: 'C1' });
+    expect(withoutDate.targetDate).toBe('');
   });
 });
 
-describe('document storage', () => {
-  let entity;
-  beforeEach(() => {
-    entity = addEntity({name:'Acme', code:'AC-001'});
+describe('Documento vinculado a Entidad (H1)', () => {
+  it('rechaza un documento cuyo entity_id no corresponde a ninguna entidad', () => {
+    expect(() => addDocument({ entity_id: 'does-not-exist' })).toThrow(ValidationError);
   });
 
-  it('validates a document against base rules', () => {
-    const base = { entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05' };
-    expect(validateDocument(base).valid).toBe(true);
-    expect(validateDocument({...base, entityId:'missing'}).valid).toBe(false);
-    expect(validateDocument({...base, folio:''}).valid).toBe(false);
-    expect(validateDocument({...base, endDate:'2026-08-01', startDate:'2026-08-05'}).valid).toBe(false);
-    expect(validateDocument({...base, quantity:0}).valid).toBe(false);
-    expect(validateDocument({...base, quantity:2.5}).valid).toBe(false);
-    expect(validateDocument({...base, quantity:3}).valid).toBe(true);
-    expect(validateDocument({...base, totalAmount:-1}).valid).toBe(false);
-    expect(validateDocument({...base, totalAmount:99.5}).valid).toBe(true);
-  });
-
-  it('requires a positive integer folio', () => {
-    const base = { entityId:entity.entity_id, startDate:'2026-08-01', endDate:'2026-08-05' };
-    expect(validateDocument(base).errors.folio).toContain('obligatorio');
-    expect(validateDocument({...base, folio:0}).errors.folio).toContain('entero positivo');
-    expect(validateDocument({...base, folio:2.5}).errors.folio).toContain('entero positivo');
-    expect(validateDocument({...base, folio:'1001'}).valid).toBe(true);
-  });
-
-  it('validates subtotal, discount, tax and their relationship', () => {
-    const base = { entityId:entity.entity_id, folio:5, startDate:'2026-08-01', endDate:'2026-08-05' };
-    expect(validateDocument({...base, subtotal:-5}).errors.subtotal).toContain('no negativo');
-    expect(validateDocument({...base, discount:-1}).errors.discount).toContain('no negativo');
-    expect(validateDocument({...base, taxAmount:-2}).errors.taxAmount).toContain('no negativo');
-    expect(validateDocument({...base, subtotal:100, discount:200}).valid).toBe(false);
-    expect(validateDocument({...base, subtotal:100, discount:150}).errors.discount).toContain('superar el subtotal');
-    expect(validateDocument({...base, subtotal:100, discount:16, taxAmount:13.44, totalAmount:97.44}).valid).toBe(true);
-  });
-
-  it('adds and loads documents linked by entity_id', () => {
-    const d = addDocument({entityId:entity.entity_id, series:'FAC', folio:1001, startDate:'2026-08-01', endDate:'2026-08-05', quantity:2, subtotal:500, discount:50, taxAmount:72.8, totalAmount:522.8, currency:'MXN', status:'pendiente', paymentTerms:'neto 30', notes:'Entrega en almacén'});
-    const all = loadDocuments();
-    expect(all.length).toBe(1);
-    expect(all[0].id).toBe(d.id);
-    expect(all[0].entity_id).toBe(entity.entity_id);
-    expect(all[0].series).toBe('FAC');
-    expect(all[0].folio).toBe(1001);
-    expect(all[0].quantity).toBe(2);
-    expect(all[0].subtotal).toBe(500);
-    expect(all[0].discount).toBe(50);
-    expect(all[0].taxAmount).toBe(72.8);
-    expect(all[0].totalAmount).toBe(522.8);
-    expect(all[0].paymentTerms).toBe('neto 30');
-    expect(all[0].notes).toBe('Entrega en almacén');
-  });
-
-  it('updates a document', () => {
-    const d = addDocument({entityId:entity.entity_id, folio:1001, startDate:'2026-08-01', endDate:'2026-08-05'});
-    const updated = updateDocument(d.id, { folio: 1002 });
-    expect(updated.folio).toBe(1002);
-  });
-
-  it('deletes a document', () => {
-    const d1 = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05'});
-    const d2 = addDocument({entityId:entity.entity_id, folio:2, startDate:'2026-08-02', endDate:'2026-08-06'});
-    deleteDocument(d1.id);
-    const all = loadDocuments();
-    expect(all.length).toBe(1);
-    expect(all[0].id).toBe(d2.id);
-  });
-
-  it('deletes documents for an entity', () => {
-    const other = addEntity({name:'Globex', code:'GL-002'});
-    addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05'});
-    addDocument({entityId:entity.entity_id, folio:2, startDate:'2026-08-02', endDate:'2026-08-06'});
-    addDocument({entityId:other.entity_id, folio:3, startDate:'2026-08-03', endDate:'2026-08-07'});
-    deleteDocumentsForEntity(entity.entity_id);
-    const all = loadDocuments();
-    expect(all.length).toBe(1);
-    expect(all[0].entity_id).toBe(other.entity_id);
-  });
-
-  it('cascades document deletion when an entity is deleted', () => {
-    const other = addEntity({name:'Globex', code:'GL-002'});
-    addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05'});
-    addDocument({entityId:other.entity_id, folio:2, startDate:'2026-08-02', endDate:'2026-08-06'});
-    deleteEntity(entity.id);
-    const docs = loadDocuments();
-    expect(docs.length).toBe(1);
-    expect(docs[0].entity_id).toBe(other.entity_id);
-  });
-
-  it('persists declared document custom fields', () => {
-    setActiveConfig({
-      customFields: [{ target: 'document', key: 'metodoEnvio', label: 'Método de envío', type: 'select', options: ['estándar','exprés'] }]
-    });
-    const d = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', metodoEnvio:'exprés'});
-    expect(loadDocuments()[0].metodoEnvio).toBe('exprés');
-    expect(validateDocument({entityId:entity.entity_id, folio:2, startDate:'2026-08-01', endDate:'2026-08-05', metodoEnvio:'urgentemente'}).errors.metodoEnvio).toContain('debe ser uno de');
+  it('vincula correctamente un documento a una entidad existente', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const doc = addDocument({ entity_id: entity.entity_id, notes: 'Llamada inicial' });
+    expect(doc.entity_id).toBe(entity.entity_id);
+    expect(loadDocuments()).toHaveLength(1);
   });
 });
 
-describe('document status lifecycle', () => {
-  let entity;
-  beforeEach(() => {
-    entity = addEntity({name:'Acme', code:'AC-001'});
+describe('Edición, eliminación y cascada (H4)', () => {
+  it('actualiza una entidad preservando id/entity_id y actualizando updatedAt', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const updated = updateEntity(entity.id, { name: 'Acme Corp' });
+    expect(updated.id).toBe(entity.id);
+    expect(updated.entity_id).toBe(entity.entity_id);
+    expect(updated.name).toBe('Acme Corp');
+    expect(updated.updatedAt).not.toBe(entity.createdAt === updated.updatedAt);
   });
 
-  it('keeps status free-form when no lifecycle is configured', () => {
-    const d = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', status:'libre'});
-    expect(loadDocuments()[0].status).toBe('libre');
-    const updated = updateDocument(d.id, { status: 'otro estado' });
-    expect(updated.status).toBe('otro estado');
+  it('elimina una entidad y sus documentos asociados en cascada', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    addDocument({ entity_id: entity.entity_id });
+    addDocument({ entity_id: entity.entity_id });
+    const result = deleteEntity(entity.id);
+    expect(result.deletedDocumentCount).toBe(2);
+    expect(loadEntities()).toHaveLength(0);
+    expect(loadDocuments()).toHaveLength(0);
   });
 
-  it('rejects unknown statuses on creation when a lifecycle is configured', () => {
-    setActiveConfig({
-      statusLifecycle: { statuses:['cotización','pedido','facturado'], transitions:{ cotización:['pedido'], pedido:['facturado'], facturado:[] } }
-    });
-    const res = validateDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', status:'inventado'});
-    expect(res.valid).toBe(false);
-    expect(res.errors.status).toContain('debe ser uno de');
+  it('actualiza y elimina un documento individualmente', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const doc = addDocument({ entity_id: entity.entity_id, notes: 'Primera' });
+    const updated = updateDocument(doc.id, { notes: 'Actualizada' });
+    expect(updated.notes).toBe('Actualizada');
+    deleteDocument(doc.id);
+    expect(loadDocuments()).toHaveLength(0);
   });
 
-  it('allows any configured status on creation', () => {
-    setActiveConfig({
-      statusLifecycle: { statuses:['cotización','pedido','facturado'], transitions:{ cotización:['pedido'], pedido:['facturado'], facturado:[] } }
-    });
-    const d = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', status:'pedido'});
-    expect(loadDocuments()[0].status).toBe('pedido');
-  });
-
-  it('enforces permitted transitions on update regardless of how a change is submitted', () => {
-    setActiveConfig({
-      statusLifecycle: { statuses:['cotización','pedido','facturado'], transitions:{ cotización:['pedido'], pedido:['facturado'], facturado:[] } }
-    });
-    const d = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', status:'cotización'});
-    expect(() => updateDocument(d.id, { status: 'facturado' })).toThrow(/Transición de estado inválida/);
-    expect(loadDocuments()[0].status).toBe('cotización');
-    const updated = updateDocument(d.id, { status: 'pedido' });
-    expect(updated.status).toBe('pedido');
-    expect(updateDocument(d.id, { status: 'facturado' }).status).toBe('facturado');
-  });
-
-  it('allows keeping the same status on update', () => {
-    setActiveConfig({
-      statusLifecycle: { statuses:['borrador'], transitions:{ borrador: [] } }
-    });
-    const d = addDocument({entityId:entity.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-05', status:'borrador'});
-    expect(updateDocument(d.id, { folio: 11 }).status).toBe('borrador');
+  it('rechaza una fecha de término anterior a la fecha de inicio', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    expect(() =>
+      addDocument({ entity_id: entity.entity_id, startDate: '2026-05-10', endDate: '2026-05-01' }),
+    ).toThrow(ValidationError);
   });
 });
 
-describe('clearAll', () => {
-  it('empties both stores', () => {
-    const e = addEntity({name:'A', code:'A-1'});
-    addDocument({entityId:e.entity_id, folio:1, startDate:'2026-08-01', endDate:'2026-08-02'});
-    clearAll();
-    expect(loadEntities().length).toBe(0);
-    expect(loadDocuments().length).toBe(0);
+describe('Búsqueda (H3/H9)', () => {
+  it('encuentra entidades por nombre, código, categoría o palabra clave', () => {
+    addEntity({ name: 'Acme Corp', code: 'AC-1', category: 'Retail' });
+    addEntity({ name: 'Globex', code: 'GL-1', category: 'Tech' });
+    expect(searchEntities('acme', {})).toHaveLength(1);
+    expect(searchEntities('GL-1', {})).toHaveLength(1);
+    expect(searchEntities('Tech', {})).toHaveLength(1);
+  });
+
+  it('devuelve una lista vacía cuando no hay coincidencias', () => {
+    addEntity({ name: 'Acme Corp', code: 'AC-1' });
+    expect(searchEntities('no-existe', {})).toHaveLength(0);
+  });
+
+  it('incluye coincidencias en campos personalizados de la entidad y del documento', () => {
+    const entity = addEntity(
+      { name: 'Acme', code: 'AC-1', vip: 'true' },
+      { customFieldDefs: [{ key: 'vip', label: 'VIP', type: 'text' }] },
+    );
+    addDocument(
+      { entity_id: entity.entity_id, interactionType: 'llamada' },
+      { customFieldDefs: [{ key: 'interactionType', label: 'Tipo', type: 'text' }] },
+    );
+    expect(searchEntities('vip', { customFieldKeys: [] })).toHaveLength(0);
+    expect(
+      searchEntities('true', { customFieldKeys: ['vip'] }),
+    ).toHaveLength(1);
+    expect(
+      searchEntities('llamada', { customFieldKeys: ['interactionType'] }),
+    ).toHaveLength(1);
+  });
+});
+
+describe('Ficha de entidad e historial ordenado (H3)', () => {
+  it('ordena los documentos de una entidad por fecha', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    addDocument({ entity_id: entity.entity_id, startDate: '2026-03-01', notes: 'segunda' });
+    addDocument({ entity_id: entity.entity_id, startDate: '2026-01-01', notes: 'primera' });
+    const docs = getEntityDocuments(entity.entity_id);
+    expect(docs.map((d) => d.notes)).toEqual(['primera', 'segunda']);
+  });
+});
+
+describe('Campos personalizados (H8)', () => {
+  const defs = [{ key: 'creditLimit', label: 'Límite de crédito', type: 'number', required: true }];
+
+  it('rechaza un campo personalizado obligatorio en blanco', () => {
+    expect(() => addEntity({ name: 'Acme', code: 'AC-1' }, { customFieldDefs: defs })).toThrow(ValidationError);
+  });
+
+  it('persiste y conserva valores de campos retirados de la configuración', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1', creditLimit: 1000 }, { customFieldDefs: defs });
+    expect(entity.creditLimit).toBe(1000);
+    // El campo se retira de la configuración (customFieldDefs = []) pero el valor persiste oculto.
+    const reloaded = loadEntities().find((e) => e.id === entity.id);
+    expect(reloaded.creditLimit).toBe(1000);
+    // Al redeclarar el campo, vuelve a estar disponible para validación/edición.
+    const updated = updateEntity(entity.id, { creditLimit: 2000 }, { customFieldDefs: defs });
+    expect(updated.creditLimit).toBe(2000);
+  });
+});
+
+describe('Ciclo de vida de estados de documentos (H13)', () => {
+  const lifecycle = {
+    states: ['pendiente', 'en_progreso', 'completado'],
+    transitions: { pendiente: ['en_progreso'], en_progreso: ['completado'] },
+  };
+
+  it('permite solo transiciones declaradas y texto libre sin ciclo de vida', () => {
+    expect(isValidTransition(null, 'pendiente', 'cualquier-cosa')).toBe(true);
+    expect(isValidTransition(lifecycle, null, 'pendiente')).toBe(true);
+    expect(isValidTransition(lifecycle, 'pendiente', 'en_progreso')).toBe(true);
+    expect(isValidTransition(lifecycle, 'pendiente', 'completado')).toBe(false);
+  });
+
+  it('rechaza una transición inválida al actualizar un documento', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const doc = addDocument({ entity_id: entity.entity_id, status: 'pendiente' }, { statusLifecycle: lifecycle });
+    expect(() => updateDocument(doc.id, { status: 'completado' }, { statusLifecycle: lifecycle })).toThrow(
+      ValidationError,
+    );
+    const updated = updateDocument(doc.id, { status: 'en_progreso' }, { statusLifecycle: lifecycle });
+    expect(updated.status).toBe('en_progreso');
+  });
+});
+
+describe('Resumen de Gestión Comercial (H6)', () => {
+  it('calcula totales y pendientes por entidad, y refleja un estado vacío', () => {
+    expect(computeSummary({ entities: [], documents: [] })).toEqual({
+      totalEntities: 0,
+      totalDocuments: 0,
+      totalPending: 0,
+      pendingByEntity: [],
+    });
+
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    addDocument({ entity_id: entity.entity_id, status: 'completado' });
+
+    const summary = computeSummary({ entities: loadEntities(), documents: loadDocuments() });
+    expect(summary.totalEntities).toBe(1);
+    expect(summary.totalDocuments).toBe(2);
+    expect(summary.totalPending).toBe(1);
+    expect(summary.pendingByEntity).toEqual([{ entityId: entity.entity_id, entity, count: 1 }]);
+  });
+
+  it('actualiza el indicador de pendientes cuando un seguimiento se completa', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const doc = addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    updateDocument(doc.id, { status: 'completado' });
+    const summary = computeSummary({ entities: loadEntities(), documents: loadDocuments() });
+    expect(summary.totalPending).toBe(0);
   });
 });

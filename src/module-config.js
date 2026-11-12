@@ -1,290 +1,145 @@
-const BASE_ENTITY_FIELDS = [
-  'id', 'entity_id', 'name', 'code', 'taxId', 'email', 'phone', 'address',
-  'category', 'description', 'targetDate', 'creditLimit', 'paymentTerms',
-  'createdAt', 'updatedAt'
+// Único punto de adaptación del módulo base (Historia de Usuario 5).
+//
+// Un módulo personalizado reemplaza MODULE_CONFIG por un objeto con su
+// propio moduleName, labels, customFields, statusLifecycle y theme, sin
+// tocar ningún otro archivo del código central. Dejar MODULE_CONFIG en
+// `null` ejecuta el módulo base sin adaptación (FR-024).
+export const MODULE_CONFIG = null;
+
+export const RESERVED_ENTITY_KEYS = [
+  'id', 'entity_id', 'name', 'code', 'category', 'description', 'targetDate', 'createdAt', 'updatedAt',
+];
+export const RESERVED_DOCUMENT_KEYS = [
+  'id', 'entity_id', 'startDate', 'endDate', 'notes', 'status', 'createdAt', 'updatedAt',
 ];
 
-const BASE_DOCUMENT_FIELDS = [
-  'id', 'entity_id', 'series', 'folio', 'startDate', 'endDate', 'quantity',
-  'subtotal', 'discount', 'taxAmount', 'totalAmount', 'currency',
-  'paymentTerms', 'notes', 'status', 'createdAt', 'updatedAt'
-];
+const VALID_FIELD_TYPES = ['text', 'number', 'date', 'select', 'boolean'];
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-export const BASE_FIELDS = {
-  entity: BASE_ENTITY_FIELDS,
-  document: BASE_DOCUMENT_FIELDS
-};
-
-export const FIELD_TYPES = ['text', 'number', 'date', 'select'];
-
-const DEFAULT_LABELS = {
-  entity: 'Entidad',
-  entities: 'Entidades',
-  document: 'Documento',
-  documents: 'Documentos'
-};
-
-export const DEFAULT_CONFIG = Object.freeze({
+export const DEFAULT_CONFIG = {
   moduleName: 'Módulo Base ERP',
-  labels: Object.freeze({ ...DEFAULT_LABELS }),
-  customFields: Object.freeze([]),
+  labels: {
+    entity: 'Entidad',
+    entityPlural: 'Entidades',
+    document: 'Documento',
+    documentPlural: 'Documentos',
+    dashboard: 'Panel',
+    manage: 'Gestión',
+    search: 'Buscar',
+    summary: 'Resumen',
+  },
+  customFields: { entity: [], document: [] },
   statusLifecycle: null,
-  theme: Object.freeze({ accentColor: '#2563eb' })
-});
-
-export const userConfig = null;
-
-const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-function defaultConfig() {
-  return clone(DEFAULT_CONFIG);
-}
+  theme: { accentColor: null },
+};
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function nonEmptyString(value) {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-function baseFieldSet(target) {
-  return new Set([...(BASE_FIELDS.entity || []), ...(BASE_FIELDS.document || [])]);
-}
-
-function normalizeLabels(raw, errors) {
-  const labels = { ...DEFAULT_LABELS };
-  if (raw === undefined || raw === null) return labels;
-  if (!isPlainObject(raw)) {
-    errors.push('labels debe ser un objeto de mapeos de términos.');
-    return labels;
-  }
-  for (const key of Object.keys(DEFAULT_LABELS)) {
-    if (raw[key] !== undefined) {
-      if (nonEmptyString(raw[key])) {
-        labels[key] = raw[key].trim();
-      } else {
-        errors.push(`labels.${key} debe ser un texto no vacío; se usa el valor predeterminado.`);
-      }
-    }
-  }
-  return labels;
-}
-
-function normalizeCustomFields(raw, errors) {
-  if (raw === undefined || raw === null) return [];
-  if (!Array.isArray(raw)) {
-    errors.push('customFields debe ser una lista de definiciones de campo.');
-    return [];
-  }
-
-  const fields = [];
-  const seen = new Set();
-  const baseFields = baseFieldSet();
-
-  raw.forEach((field, index) => {
-    const prefix = `customFields[${index}]`;
-    if (!isPlainObject(field)) {
-      errors.push(`${prefix} debe ser un objeto.`);
-      return;
-    }
-
-    const target = field.target;
-    if (target !== 'entity' && target !== 'document') {
-      errors.push(`${prefix}.target debe ser "entity" o "document".`);
-      return;
-    }
-
-    if (!nonEmptyString(field.key)) {
-      errors.push(`${prefix}.key debe ser un texto no vacío.`);
-      return;
-    }
-    const key = field.key.trim();
-
-    if (baseFields.has(key)) {
-      errors.push(`${prefix}.key "${key}" choca con un campo base.`);
-      return;
-    }
-
-    if (!FIELD_TYPES.includes(field.type)) {
-      errors.push(`${prefix}.type "${field.type}" no es un tipo de campo válido.`);
-      return;
-    }
-
-    if (!nonEmptyString(field.label)) {
-      errors.push(`${prefix}.label debe ser un texto no vacío.`);
-      return;
-    }
-
-    const dedupeKey = `${target}:${key}`;
-    if (seen.has(dedupeKey)) {
-      errors.push(`${prefix}.key "${key}" está declarado más de una vez para ${target}.`);
-      return;
-    }
-
-    let options;
-    if (field.type === 'select') {
-      if (!Array.isArray(field.options) || field.options.length === 0) {
-        errors.push(`${prefix}.options es obligatorio para campos de selección.`);
-        return;
-      }
-      if (!field.options.every(option => typeof option === 'string' && option.trim().length > 0)) {
-        errors.push(`${prefix}.options debe contener textos no vacíos.`);
-        return;
-      }
-      options = field.options.map(option => option.trim());
-    }
-
-    seen.add(dedupeKey);
-    const normalized = {
-      target,
-      key,
-      label: field.label.trim(),
-      type: field.type,
-      required: field.required === true
-    };
-    if (options) normalized.options = options;
-    fields.push(normalized);
-  });
-
-  return fields;
-}
-
-function normalizeLifecycle(raw, errors) {
-  if (raw === undefined || raw === null) return null;
-  if (!isPlainObject(raw)) {
-    errors.push('statusLifecycle debe ser un objeto o null.');
-    return null;
-  }
-
-  const statuses = raw.statuses;
-  if (!Array.isArray(statuses) || statuses.length === 0) {
-    errors.push('statusLifecycle.statuses debe ser una lista no vacía.');
-    return null;
-  }
-  if (!statuses.every(status => typeof status === 'string' && status.trim().length > 0)) {
-    errors.push('statusLifecycle.statuses debe contener textos no vacíos.');
-    return null;
-  }
-
-  const statusSet = new Set(statuses.map(status => status.trim()));
-  if (statusSet.size !== statuses.length) {
-    errors.push('statusLifecycle.statuses no puede contener estados duplicados.');
-    return null;
-  }
-
-  const transitions = raw.transitions;
-  if (transitions !== undefined && !isPlainObject(transitions)) {
-    errors.push('statusLifecycle.transitions debe ser un objeto.');
-    return null;
-  }
-
-  const normalizedTransitions = {};
-  for (const status of statusSet) {
-    normalizedTransitions[status] = [];
-  }
-
-  if (isPlainObject(transitions)) {
-    for (const [from, targets] of Object.entries(transitions)) {
-      if (!statusSet.has(from)) {
-        errors.push(`statusLifecycle.transitions referencia el estado desconocido "${from}".`);
-        continue;
-      }
-      if (!Array.isArray(targets)) {
-        errors.push(`statusLifecycle.transitions.${from} debe ser una lista de estados.`);
-        continue;
-      }
-      for (const target of targets) {
-        if (!statusSet.has(target)) {
-          errors.push(`statusLifecycle.transitions.${from} referencia el estado desconocido "${target}".`);
-          continue;
-        }
-        normalizedTransitions[from].push(target);
-      }
-    }
-  }
-
-  return {
-    statuses: [...statusSet],
-    transitions: normalizedTransitions
-  };
-}
-
-function normalizeTheme(raw, errors) {
-  const theme = { accentColor: DEFAULT_CONFIG.theme.accentColor };
-  if (raw === undefined || raw === null) return theme;
-  if (!isPlainObject(raw)) {
-    errors.push('theme debe ser un objeto de configuración de marca.');
-    return theme;
-  }
-  if (raw.accentColor !== undefined) {
-    if (typeof raw.accentColor === 'string' && HEX_COLOR.test(raw.accentColor.trim())) {
-      theme.accentColor = raw.accentColor.trim();
-    } else {
-      errors.push('theme.accentColor debe ser un color hexadecimal válido (por ejemplo #0f62fe).');
-    }
-  }
-  return theme;
-}
-
-export function normalizeConfig(raw) {
-  if (raw === undefined || raw === null) {
-    return { config: defaultConfig(), errors: [] };
-  }
-
+/**
+ * Returns a list of human-readable problems with a raw module config.
+ * An empty/absent config (null/undefined) is not an error — it just means
+ * "use the defaults" (FR-024). A non-empty array means the config must not
+ * be trusted and the caller should fall back to DEFAULT_CONFIG (FR-025).
+ */
+export function validateConfig(raw) {
   const errors = [];
-  if (!isPlainObject(raw)) {
-    return {
-      config: defaultConfig(),
-      errors: ['La configuración del módulo debe ser un objeto.']
-    };
+  if (!isPlainObject(raw)) return errors;
+
+  if (raw.moduleName !== undefined && (typeof raw.moduleName !== 'string' || !raw.moduleName.trim())) {
+    errors.push('moduleName debe ser una cadena no vacía.');
+  }
+  if (raw.labels !== undefined && !isPlainObject(raw.labels)) {
+    errors.push('labels debe ser un objeto.');
   }
 
-  const config = defaultConfig();
-
-  if (raw.moduleName !== undefined) {
-    if (nonEmptyString(raw.moduleName)) {
-      config.moduleName = raw.moduleName.trim();
-    } else {
-      errors.push('moduleName debe ser un texto no vacío; se usa el nombre predeterminado.');
+  for (const kind of ['entity', 'document']) {
+    const defs = raw.customFields?.[kind];
+    if (defs === undefined) continue;
+    if (!Array.isArray(defs)) {
+      errors.push(`customFields.${kind} debe ser un arreglo.`);
+      continue;
+    }
+    const reserved = kind === 'entity' ? RESERVED_ENTITY_KEYS : RESERVED_DOCUMENT_KEYS;
+    const seen = new Set();
+    for (const def of defs) {
+      if (!isPlainObject(def) || !def.key) {
+        errors.push(`Cada campo personalizado de ${kind} necesita una clave ("key").`);
+        continue;
+      }
+      if (reserved.includes(def.key)) {
+        errors.push(`El campo personalizado "${def.key}" choca con un nombre de campo base de ${kind}.`);
+      }
+      if (seen.has(def.key)) {
+        errors.push(`El campo personalizado "${def.key}" está declarado más de una vez.`);
+      }
+      seen.add(def.key);
+      if (def.type && !VALID_FIELD_TYPES.includes(def.type)) {
+        errors.push(`El campo personalizado "${def.key}" declara un tipo desconocido: "${def.type}".`);
+      }
     }
   }
 
-  config.labels = normalizeLabels(raw.labels, errors);
-  config.customFields = normalizeCustomFields(raw.customFields, errors);
-  config.statusLifecycle = normalizeLifecycle(raw.statusLifecycle, errors);
-  config.theme = normalizeTheme(raw.theme, errors);
-
-  return { config, errors };
-}
-
-let activeConfig = defaultConfig();
-
-export function setActiveConfig(config) {
-  if (!config) {
-    activeConfig = defaultConfig();
-    return activeConfig;
+  if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
+    const lifecycle = raw.statusLifecycle;
+    if (!isPlainObject(lifecycle) || !Array.isArray(lifecycle.states) || lifecycle.states.length === 0) {
+      errors.push('statusLifecycle debe declarar un arreglo "states" no vacío.');
+    } else {
+      const transitions = lifecycle.transitions || {};
+      for (const [from, tos] of Object.entries(transitions)) {
+        if (!lifecycle.states.includes(from)) {
+          errors.push(`statusLifecycle.transitions referencia un estado desconocido: "${from}".`);
+        }
+        for (const to of tos) {
+          if (!lifecycle.states.includes(to)) {
+            errors.push(`statusLifecycle.transitions.${from} referencia un estado desconocido: "${to}".`);
+          }
+        }
+      }
+    }
   }
 
-  const { config: normalized } = normalizeConfig(config);
-  activeConfig = normalized;
-  return activeConfig;
+  return errors;
 }
 
-export function getConfig() {
-  return activeConfig;
+/** FR-038: un accentColor inválido retrocede en silencio, sin invalidar el resto de la configuración. */
+export function sanitizeAccentColor(accentColor) {
+  return accentColor && HEX_COLOR_RE.test(accentColor) ? accentColor : null;
 }
 
-export function labelFor(key) {
-  const labels = activeConfig && activeConfig.labels ? activeConfig.labels : DEFAULT_LABELS;
-  if (labels[key]) return labels[key];
-  return DEFAULT_LABELS[key] || '';
+/**
+ * Loads and validates a module config, falling back to DEFAULT_CONFIG with
+ * a visible warning when it is absent, invalid or conflicting (FR-023..FR-025).
+ */
+export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
+  if (!rawConfig) {
+    return { config: DEFAULT_CONFIG, warning: null };
+  }
+  const errors = validateConfig(rawConfig);
+  if (errors.length) {
+    return {
+      config: DEFAULT_CONFIG,
+      warning: `La configuración del módulo es inválida; se usan los valores predeterminados. Detalle: ${errors.join(' ')}`,
+    };
+  }
+  const config = {
+    moduleName: rawConfig.moduleName || DEFAULT_CONFIG.moduleName,
+    labels: { ...DEFAULT_CONFIG.labels, ...(rawConfig.labels || {}) },
+    customFields: {
+      entity: rawConfig.customFields?.entity || [],
+      document: rawConfig.customFields?.document || [],
+    },
+    statusLifecycle: rawConfig.statusLifecycle || null,
+    theme: {
+      ...DEFAULT_CONFIG.theme,
+      ...(rawConfig.theme || {}),
+      accentColor: sanitizeAccentColor(rawConfig.theme?.accentColor),
+    },
+  };
+  return { config, warning: null };
 }
 
-export async function loadModuleConfig() {
-  return normalizeConfig(userConfig);
+export function getLabel(config, key) {
+  return (config?.labels && config.labels[key]) || DEFAULT_CONFIG.labels[key] || key;
 }
