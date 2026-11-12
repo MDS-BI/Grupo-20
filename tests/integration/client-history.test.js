@@ -1,48 +1,46 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { JSDOM } from 'jsdom';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { addEntity, addDocument, updateEntity } from '../../src/storage.js';
+import { initApp } from '../../src/app.js';
 
-const html = fs.readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8');
+const CONFIG = {
+  customFields: {
+    entity: [{ key: 'taxId', label: 'Identificación fiscal', type: 'text' }],
+    document: [
+      { key: 'series', label: 'Serie', type: 'text' },
+      { key: 'folio', label: 'Folio', type: 'number' },
+    ],
+  },
+};
 
-let dom;
+function qs(id) {
+  return document.getElementById(id);
+}
 
-function qs(id){ return document.getElementById(id); }
+function navigate(view) {
+  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+}
 
-beforeEach(async () => {
-  dom = new JSDOM(html, { url: 'http://localhost/' });
-  const w = dom.window;
-  globalThis.window = w;
-  globalThis.document = w.document;
-  globalThis.localStorage = w.localStorage;
-  globalThis.alert = vi.fn();
-  globalThis.confirm = vi.fn(() => true);
-  w.scrollTo = vi.fn();
-  w.localStorage.clear();
-  vi.resetModules();
-  const { boot } = await import('../../src/app.js');
-  await boot();
-});
-
-afterEach(() => {
-  dom.window.close();
-});
-
-function searchAndOpen(term){
-  qs('nav-search').click();
+function searchAndOpen(term) {
+  navigate('search');
   qs('search-input').value = term;
-  qs('search-input').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  qs('search-input').dispatchEvent(new Event('input', { bubbles: true }));
   const item = qs('search-results-list').querySelector('.entity-item');
   expect(item).not.toBeNull();
-  item.click();
+  item.querySelector('[data-action="view-entity"]').click();
 }
 
 describe('User Story 3 - consult entity history', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.clear();
+    globalThis.confirm = vi.fn(() => true);
+    initApp(document.getElementById('app'), { rawConfig: CONFIG });
+  });
+
   it('opens the entity profile with its document history sorted by date', () => {
     const entity = addEntity({ name: 'Acme', code: 'AC-001', taxId: 'RFC800101AB1' });
-    addDocument({ entityId: entity.entity_id, series: 'FAC', folio: 1, startDate: '2026-08-01', endDate: '2026-08-02', status: 'quote' });
-    addDocument({ entityId: entity.entity_id, series: 'FAC', folio: 2, startDate: '2026-08-10', endDate: '2026-08-11', status: 'order' });
+    addDocument({ entity_id: entity.entity_id, series: 'FAC', folio: 1, startDate: '2026-08-01', endDate: '2026-08-02', status: 'quote' });
+    addDocument({ entity_id: entity.entity_id, series: 'FAC', folio: 2, startDate: '2026-08-10', endDate: '2026-08-11', status: 'order' });
 
     searchAndOpen('acme');
 
@@ -52,15 +50,15 @@ describe('User Story 3 - consult entity history', () => {
 
     const items = [...qs('entity-history').querySelectorAll('.history-item')];
     expect(items.length).toBe(2);
-    expect(items[0].textContent).toContain('2026-08-10');
-    expect(items[0].textContent).toContain('order');
+    expect(items[0].textContent).toContain('2026-08-01');
+    expect(items[0].textContent).toContain('quote');
     expect(qs('entity-history-empty').hidden).toBe(true);
   });
 
   it('shows an empty history state for entities without documents', () => {
     addEntity({ name: 'Globex', code: 'GL-002' });
     searchAndOpen('globex');
-    expect(qs('entity-history').children.length).toBe(0);
+    expect(qs('entity-history').querySelectorAll('.history-item').length).toBe(0);
     expect(qs('entity-history-empty').hidden).toBe(false);
   });
 
@@ -71,7 +69,7 @@ describe('User Story 3 - consult entity history', () => {
 
     updateEntity(entity.id, { name: 'Acme Renamed' });
 
-    qs('nav-dashboard').click();
+    navigate('dashboard');
     searchAndOpen('acme');
     expect(qs('entity-detail-title').textContent).toContain('Acme Renamed');
   });

@@ -16,11 +16,11 @@ function monogramSvg(moduleName) {
 // gestión preseleccionando su pestaña (FR-013, FR-014). El botón de Resumen
 // es adicional (Historia de Usuario 6), más allá del mínimo exigido por FR-012.
 const NAV_ITEMS = [
-  { key: 'dashboard', labelKey: 'dashboard', icon: '⌂' },
-  { key: 'manage-entity', labelKey: 'entityPlural', icon: '🏷' },
-  { key: 'manage-document', labelKey: 'documentPlural', icon: '📄' },
-  { key: 'search', labelKey: 'search', icon: '🔍' },
-  { key: 'summary', labelKey: 'summary', icon: '📊' },
+  { key: 'dashboard', labelKey: 'dashboard', icon: '⌂', id: 'nav-dashboard' },
+  { key: 'manage-entity', labelKey: 'entityPlural', icon: '🏷', id: 'nav-entities' },
+  { key: 'manage-document', labelKey: 'documentPlural', icon: '📄', id: 'nav-documents' },
+  { key: 'search', labelKey: 'search', icon: '🔍', id: 'nav-search' },
+  { key: 'summary', labelKey: 'summary', icon: '📊', id: 'nav-summary' },
 ];
 
 export function renderShellHtml(config, activeNavKey) {
@@ -29,6 +29,7 @@ export function renderShellHtml(config, activeNavKey) {
     const isActive = item.key === activeNavKey;
     return `
       <button
+        id="${item.id}"
         type="button"
         class="sidebar-button${isActive ? ' active' : ''}"
         data-action="navigate"
@@ -37,14 +38,14 @@ export function renderShellHtml(config, activeNavKey) {
         aria-label="${escapeHtml(label)}"
       >
         <span class="sidebar-icon" aria-hidden="true">${item.icon}</span>
-        <span class="sidebar-label">${escapeHtml(label)}</span>
+        <span id="${item.id}-label" class="sidebar-label">${escapeHtml(label)}</span>
       </button>`;
   }).join('');
 
   return `
     <header class="topbar">
       ${monogramSvg(config.moduleName)}
-      <span class="module-name">${escapeHtml(config.moduleName)}</span>
+      <span id="brand-name" class="module-name">${escapeHtml(config.moduleName)}</span>
     </header>
     <nav class="sidebar" aria-label="Navegación de módulos">
       ${navButtons}

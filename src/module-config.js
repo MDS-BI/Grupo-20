@@ -16,6 +16,12 @@ export const RESERVED_DOCUMENT_KEYS = [
 const VALID_FIELD_TYPES = ['text', 'number', 'date', 'select', 'boolean'];
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
+export const FIELD_TYPES = VALID_FIELD_TYPES;
+export const BASE_FIELDS = {
+  entity: RESERVED_ENTITY_KEYS,
+  document: RESERVED_DOCUMENT_KEYS,
+};
+
 export const DEFAULT_CONFIG = {
   moduleName: 'Módulo Base ERP',
   labels: {
@@ -120,7 +126,7 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
   if (errors.length) {
     return {
       config: DEFAULT_CONFIG,
-      warning: `La configuración del módulo es inválida; se usan los valores predeterminados. Detalle: ${errors.join(' ')}`,
+      warning: `Configuración del módulo inválida; se usan los valores predeterminados. Detalle: ${errors.join(' ')}`,
     };
   }
   const config = {
@@ -142,4 +148,87 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
 
 export function getLabel(config, key) {
   return (config?.labels && config.labels[key]) || DEFAULT_CONFIG.labels[key] || key;
+}
+
+function normalizeCustomFields(rawCustomFields) {
+  if (Array.isArray(rawCustomFields)) {
+    const grouped = { entity: [], document: [] };
+    for (const def of rawCustomFields) {
+      const kind = def?.target === 'document' ? 'document' : 'entity';
+      grouped[kind].push(def);
+    }
+    return grouped;
+  }
+  if (isPlainObject(rawCustomFields)) {
+    return {
+      entity: Array.isArray(rawCustomFields.entity) ? rawCustomFields.entity : [],
+      document: Array.isArray(rawCustomFields.document) ? rawCustomFields.document : [],
+    };
+  }
+  return { entity: [], document: [] };
+}
+
+/**
+ * Normalizes either the object-shaped config used internally or the compact
+ * test/module shape with `customFields: [{ target, key, ... }]`.
+ * Returns `{ config, errors }`; invalid configs fall back to DEFAULT_CONFIG.
+ */
+export function normalizeConfig(rawConfig) {
+  if (rawConfig === null || rawConfig === undefined) {
+    return { config: DEFAULT_CONFIG, errors: [] };
+  }
+  if (!isPlainObject(rawConfig)) {
+    return { config: DEFAULT_CONFIG, errors: ['La configuración debe ser un objeto.'] };
+  }
+
+  const candidate = {
+    moduleName: rawConfig.moduleName === undefined ? DEFAULT_CONFIG.moduleName : rawConfig.moduleName,
+    labels: isPlainObject(rawConfig.labels) ? rawConfig.labels : rawConfig.labels === undefined ? {} : rawConfig.labels,
+    customFields: normalizeCustomFields(rawConfig.customFields),
+    statusLifecycle: rawConfig.statusLifecycle ?? null,
+    theme: isPlainObject(rawConfig.theme) ? rawConfig.theme : rawConfig.theme === undefined ? {} : rawConfig.theme,
+  };
+  const errors = validateConfig(candidate);
+  if (errors.length) {
+    return { config: DEFAULT_CONFIG, errors };
+  }
+
+  return {
+    config: {
+      moduleName: candidate.moduleName || DEFAULT_CONFIG.moduleName,
+      labels: { ...DEFAULT_CONFIG.labels, ...candidate.labels },
+      customFields: candidate.customFields,
+      statusLifecycle: candidate.statusLifecycle,
+      theme: {
+        ...DEFAULT_CONFIG.theme,
+        ...candidate.theme,
+        accentColor: sanitizeAccentColor(candidate.theme.accentColor),
+      },
+    },
+    errors: [],
+  };
+}
+
+let activeConfig = DEFAULT_CONFIG;
+
+export function setActiveConfig(rawConfig) {
+  if (rawConfig && typeof rawConfig === 'object' && rawConfig.config && Array.isArray(rawConfig.errors)) {
+    activeConfig = rawConfig.errors.length ? DEFAULT_CONFIG : rawConfig.config;
+    return activeConfig;
+  }
+  activeConfig = normalizeConfig(rawConfig).config;
+  return activeConfig;
+}
+
+export function getConfig() {
+  return activeConfig;
+}
+
+const LABEL_ALIASES = {
+  entities: 'entityPlural',
+  documents: 'documentPlural',
+};
+
+export function labelFor(key) {
+  return getLabel(getConfig(), LABEL_ALIASES[key] || key);
 }

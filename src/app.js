@@ -1,5 +1,5 @@
 import { escapeHtml } from './utils/sanitize.js';
-import { loadModuleConfig, getLabel } from './module-config.js';
+import { loadModuleConfig, getLabel, setActiveConfig } from './module-config.js';
 import {
   loadEntities,
   loadDocuments,
@@ -25,8 +25,33 @@ import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
 
-export function initApp(rootEl, { rawConfig } = {}) {
-  const { config, warning } = loadModuleConfig(rawConfig);
+export function initApp(rootEl = null, options = {}) {
+  let root = rootEl;
+  let provided = options;
+
+  if (root && typeof root === 'object' && root.nodeType !== 1) {
+    provided = root;
+    root = null;
+  }
+  if (!root || typeof root.addEventListener !== 'function') {
+    root = document.getElementById('app') || document.body;
+  }
+  rootEl = root;
+
+  let configResult;
+  if (provided && provided.config && Array.isArray(provided.errors)) {
+    configResult = {
+      config: provided.config,
+      warning: provided.errors.length
+        ? `Configuración del módulo inválida; se usan los valores predeterminados. Detalle: ${provided.errors.join(' ')}`
+        : null,
+    };
+  } else {
+    configResult = loadModuleConfig(provided?.rawConfig);
+  }
+  const { config, warning } = configResult;
+  setActiveConfig(config);
+  if (typeof document !== 'undefined') document.title = config.moduleName;
 
   const state = {
     config,
@@ -148,7 +173,9 @@ export function initApp(rootEl, { rawConfig } = {}) {
     return `
       <div class="search-view">
         ${renderSearchBarHtml(state.config, state.searchQuery)}
-        <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config)}</div>
+        <div id="search-results-list">
+          <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config)}</div>
+        </div>
       </div>
     `;
   }
@@ -189,10 +216,15 @@ export function initApp(rootEl, { rawConfig } = {}) {
   function render() {
     refreshData();
     rootEl.innerHTML = `
-      ${state.warning ? `<div class="config-warning" role="alert">${escapeHtml(state.warning)}</div>` : ''}
+      <div id="config-warning" class="config-warning" role="alert" ${state.warning ? '' : 'hidden'}>${state.warning ? escapeHtml(state.warning) : ''}</div>
       ${renderShellHtml(state.config, activeNavKey())}
     `;
+    const accent = state.config.theme?.accentColor || '#2563eb';
     rootEl.style.setProperty('--accent-color', state.config.theme?.accentColor || '');
+    if (typeof document !== 'undefined' && document.documentElement?.style) {
+      document.documentElement.style.setProperty('--accent', accent);
+      document.documentElement.style.setProperty('--accent-color', accent);
+    }
     const viewRoot = rootEl.querySelector('#view-root');
     viewRoot.innerHTML = renderCurrentView();
 
@@ -410,4 +442,8 @@ export function initApp(rootEl, { rawConfig } = {}) {
     navigate,
     getState: () => state,
   };
+}
+
+export function boot(rootEl = null) {
+  return initApp(rootEl);
 }

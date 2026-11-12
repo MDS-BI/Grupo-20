@@ -30,6 +30,9 @@ Registro transaccional vinculado a exactamente una `Entidad` mediante `entity_id
 |---|---|---|---|
 | `id` | string | Sí | Identificador único, autogenerado. |
 | `entity_id` | string | Sí | Debe coincidir con el `entity_id` de una entidad existente; si no, se rechaza (Historia de Usuario 1, Historia de Usuario 11). |
+| `startDate` | string (ISO date) | No | Fecha de inicio opcional; cuando se provee junto a `endDate`, `endDate` debe ser igual o posterior (Historia de Usuario 11). |
+| `endDate` | string (ISO date) | No | Fecha de fin opcional; no puede ser anterior a `startDate`. |
+| `notes` | string | No | Notas o descripción libres del documento. |
 | `status` | string | No | Texto libre por defecto (FR-031); si `module-config.js` declara `statusLifecycle`, el valor queda restringido a transiciones válidas (FR-030, Historia de Usuario 13). |
 | `createdAt` / `updatedAt` | string (ISO timestamp) | Sí | Marcas de tiempo de auditoría. |
 | *(campos personalizados)* | según configuración | según configuración | Declarados en `module-config.js` (Historia de Usuario 8). |
@@ -60,6 +63,6 @@ El perfil CRM ilustrado en la especificación **no introduce entidades nuevas**:
 | Interacción / llamada / seguimiento | `Documento` | `labels.document = "Interacción"`; campo personalizado `interactionType` (texto/selección: llamada, correo, reunión); `Documento.status` gobernado por `statusLifecycle` |
 | Estado de un seguimiento | `Documento.status` | `statusLifecycle` con estados p. ej. `pendiente → en_progreso → completado`, más `atrasado` |
 | Ficha de cliente (Historia de Usuario 3) | Vista de detalle de `Entidad` + sus `Documento` asociados, ordenados por fecha (FR-041, FR-042, FR-043) | N/A (comportamiento base, no requiere configuración) |
-| Resumen de Gestión Comercial (Historia de Usuario 6) | Agregación en memoria sobre `Entidad`/`Documento` almacenados: total de entidades, total de documentos, documentos con `status` "pendiente" agrupados por `entity_id` (FR-044 a FR-046) | Usa el `statusLifecycle` configurado para determinar qué valor de `status` representa "pendiente" |
+| Resumen de Gestión Comercial (Historia de Usuario 6) | Agregación en memoria sobre `Entidad`/`Documento` almacenados: total de entidades, total de documentos, documentos pendientes agrupados por `entity_id` (FR-044 a FR-046) | Usa el `statusLifecycle` configurado para determinar el estado "pendiente"; sin ciclo de vida, compara el estado normalizado (minúsculas y recorte) con "pendiente" |
 
 **Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad.

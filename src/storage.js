@@ -1,4 +1,6 @@
 import { sanitizeText } from './utils/sanitize.js';
+import { normalizeText } from './utils/search.js';
+import { getConfig } from './module-config.js';
 
 const ENTITIES_KEY = 'erp_entities';
 const DOCUMENTS_KEY = 'erp_documents';
@@ -69,6 +71,24 @@ export function isValidDate(value) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function activeCustomFieldDefs(kind) {
+  const customFields = getConfig()?.customFields;
+  if (Array.isArray(customFields)) {
+    return customFields.filter((def) => (def?.target || 'entity') === kind);
+  }
+  return customFields?.[kind] || [];
+}
+
+function resolveCustomFieldDefs(kind, customFieldDefs) {
+  return customFieldDefs === null || customFieldDefs === undefined
+    ? activeCustomFieldDefs(kind)
+    : customFieldDefs;
+}
+
+function documentEntityId(data) {
+  return data.entity_id || data.entityId || '';
+}
+
 function validateCustomFields(definitions, data, errors) {
   for (const def of definitions || []) {
     const value = data[def.key];
@@ -109,8 +129,9 @@ function pickCustomFieldValues(definitions, data) {
 // Entities
 // ---------------------------------------------------------------------------
 
-export function validateEntityData(data, { entities = [], editingId = null, customFieldDefs = [] } = {}) {
+export function validateEntityData(data, { entities = [], editingId = null, customFieldDefs = null } = {}) {
   const errors = {};
+  const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
   const name = sanitizeText(data.name);
   const code = sanitizeText(data.code);
   if (!name) errors.name = 'El nombre es obligatorio.';
@@ -124,13 +145,23 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
   if (data.targetDate && !isValidDate(data.targetDate)) {
     errors.targetDate = 'La fecha objetivo no es una fecha de calendario válida.';
   }
-  validateCustomFields(customFieldDefs, data, errors);
+  validateCustomFields(customFieldDefinitions, data, errors);
   return errors;
 }
 
-export function addEntity(data, { customFieldDefs = [] } = {}) {
+export function validateEntity(entity, { entities = loadEntities(), customFieldDefs = null } = {}) {
+  const errors = validateEntityData(entity || {}, {
+    entities,
+    editingId: entity?.id || null,
+    customFieldDefs,
+  });
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+export function addEntity(data, { customFieldDefs = null } = {}) {
   const entities = loadEntities();
-  const errors = validateEntityData(data, { entities, customFieldDefs });
+  const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
+  const errors = validateEntityData(data, { entities, customFieldDefs: customFieldDefinitions });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
   const entity = {
@@ -143,25 +174,30 @@ export function addEntity(data, { customFieldDefs = [] } = {}) {
     targetDate: data.targetDate || '',
     createdAt: now,
     updatedAt: now,
-    ...pickCustomFieldValues(customFieldDefs, data),
+    ...pickCustomFieldValues(customFieldDefinitions, data),
   };
   entities.push(entity);
   saveEntities(entities);
   return entity;
 }
 
-export function updateEntity(id, updates, { customFieldDefs = [] } = {}) {
+export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   const entities = loadEntities();
   const existing = entities.find((e) => e.id === id);
   if (!existing) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
+  const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
   const merged = { ...existing, ...updates };
-  const errors = validateEntityData(merged, { entities, editingId: id, customFieldDefs });
+  const errors = validateEntityData(merged, {
+    entities,
+    editingId: id,
+    customFieldDefs: customFieldDefinitions,
+  });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
   const updated = {
     ...existing,
     ...updates,
-    ...pickCustomFieldValues(customFieldDefs, updates),
+    ...pickCustomFieldValues(customFieldDefinitions, updates),
     name: sanitizeText(merged.name),
     code: sanitizeText(merged.code),
     category: sanitizeText(merged.category || ''),
@@ -205,12 +241,14 @@ export function isValidTransition(lifecycle, fromStatus, toStatus) {
 
 export function validateDocumentData(
   data,
-  { entities = [], documents = [], editingId = null, customFieldDefs = [], statusLifecycle = null } = {},
+  { entities = [], documents = [], editingId = null, customFieldDefs = null, statusLifecycle = null } = {},
 ) {
   const errors = {};
-  if (!data.entity_id) {
+  const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
+  const entityId = documentEntityId(data);
+  if (!entityId) {
     errors.entity_id = 'El documento debe estar asociado a una entidad.';
-  } else if (!entities.some((e) => e.entity_id === data.entity_id)) {
+  } else if (!entities.some((e) => e.entity_id === entityId)) {
     errors.entity_id = 'La entidad asociada no existe.';
   }
   if (data.startDate && !isValidDate(data.startDate)) {
@@ -238,43 +276,61 @@ export function validateDocumentData(
   if (data.subtotal !== undefined && data.discount !== undefined && Number(data.discount) > Number(data.subtotal)) {
     errors.discount = 'El descuento no puede superar el subtotal.';
   }
-  validateCustomFields(customFieldDefs, data, errors);
+  validateCustomFields(customFieldDefinitions, data, errors);
   return errors;
 }
 
-export function addDocument(data, { customFieldDefs = [], statusLifecycle = null } = {}) {
+export function validateDocument(document, { entities = loadEntities(), documents = loadDocuments(), customFieldDefs = null, statusLifecycle = null } = {}) {
+  const errors = validateDocumentData(document || {}, {
+    entities,
+    documents,
+    editingId: document?.id || null,
+    customFieldDefs,
+    statusLifecycle,
+  });
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+export function addDocument(data, { customFieldDefs = null, statusLifecycle = null } = {}) {
   const entities = loadEntities();
   const documents = loadDocuments();
-  const errors = validateDocumentData(data, { entities, documents, customFieldDefs, statusLifecycle });
+  const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
+  const errors = validateDocumentData(data, {
+    entities,
+    documents,
+    customFieldDefs: customFieldDefinitions,
+    statusLifecycle,
+  });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
   const document = {
     id: generateRecordId(),
-    entity_id: data.entity_id,
+    entity_id: documentEntityId(data),
     startDate: data.startDate || '',
     endDate: data.endDate || '',
     notes: sanitizeText(data.notes || ''),
     status: data.status || '',
     createdAt: now,
     updatedAt: now,
-    ...pickCustomFieldValues(customFieldDefs, data),
+    ...pickCustomFieldValues(customFieldDefinitions, data),
   };
   documents.push(document);
   saveDocuments(documents);
   return document;
 }
 
-export function updateDocument(id, updates, { customFieldDefs = [], statusLifecycle = null } = {}) {
+export function updateDocument(id, updates, { customFieldDefs = null, statusLifecycle = null } = {}) {
   const entities = loadEntities();
   const documents = loadDocuments();
   const existing = documents.find((d) => d.id === id);
   if (!existing) throw new ValidationError({ _document: 'El documento ya no existe.' });
+  const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
   const merged = { ...existing, ...updates };
   const errors = validateDocumentData(merged, {
     entities,
     documents,
     editingId: id,
-    customFieldDefs,
+    customFieldDefs: customFieldDefinitions,
     statusLifecycle,
   });
   if (Object.keys(errors).length) throw new ValidationError(errors);
@@ -282,7 +338,7 @@ export function updateDocument(id, updates, { customFieldDefs = [], statusLifecy
   const updated = {
     ...existing,
     ...updates,
-    ...pickCustomFieldValues(customFieldDefs, updates),
+    ...pickCustomFieldValues(customFieldDefinitions, updates),
     notes: sanitizeText(merged.notes || ''),
     id: existing.id,
     entity_id: existing.entity_id,
@@ -300,12 +356,25 @@ export function deleteDocument(id) {
   saveDocuments(documents.filter((d) => d.id !== id));
 }
 
+export function clearAll() {
+  try {
+    localStorage.removeItem(ENTITIES_KEY);
+    localStorage.removeItem(DOCUMENTS_KEY);
+  } catch {
+    // Storage may be unavailable in some environments.
+  }
+}
+
 export function deleteDocumentsForEntity(entityId) {
   const documents = loadDocuments();
   const remaining = documents.filter((d) => d.entity_id !== entityId);
   const deletedCount = documents.length - remaining.length;
   saveDocuments(remaining);
   return deletedCount;
+}
+
+export function documentsForEntity(entityId) {
+  return loadDocuments().filter((document) => document.entity_id === entityId);
 }
 
 export function getEntityDocuments(entityId, documents = loadDocuments()) {
@@ -353,8 +422,10 @@ export function searchEntities(
 // ---------------------------------------------------------------------------
 
 export function computeSummary({ entities = loadEntities(), documents = loadDocuments(), statusLifecycle = null } = {}) {
-  const pendingStatus = statusLifecycle?.states?.includes('pendiente') ? 'pendiente' : 'pendiente';
-  const pendingDocuments = documents.filter((d) => d.status === pendingStatus);
+  const pendingStatus = normalizeText(
+    statusLifecycle?.states?.find((state) => normalizeText(state) === 'pendiente') || 'pendiente',
+  );
+  const pendingDocuments = documents.filter((d) => normalizeText(d.status) === pendingStatus);
   const pendingByEntityMap = new Map();
   for (const doc of pendingDocuments) {
     pendingByEntityMap.set(doc.entity_id, (pendingByEntityMap.get(doc.entity_id) || 0) + 1);

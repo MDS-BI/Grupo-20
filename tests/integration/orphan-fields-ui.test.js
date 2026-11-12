@@ -1,36 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { JSDOM } from 'jsdom';
-import { normalizeConfig, setActiveConfig } from '../../src/module-config.js';
-import { addEntity, loadEntities } from '../../src/storage.js';
-
-const html = fs.readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8');
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { setActiveConfig } from '../../src/module-config.js';
+import { loadEntities } from '../../src/storage.js';
 
 const regionField = { target: 'entity', key: 'region', label: 'Región', type: 'text' };
 const configWithRegion = { customFields: [regionField] };
 
-let dom;
+function qs(id) {
+  return document.getElementById(id);
+}
 
-function qs(id){ return document.getElementById(id); }
+function navigate(view) {
+  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+}
 
-beforeEach(() => {
-  dom = new JSDOM(html, { url: 'http://localhost/' });
-  const w = dom.window;
-  globalThis.window = w;
-  globalThis.document = w.document;
-  globalThis.localStorage = w.localStorage;
-  globalThis.alert = vi.fn();
-  globalThis.confirm = vi.fn(() => true);
-  w.scrollTo = vi.fn();
-  w.localStorage.clear();
-});
-
-afterEach(() => {
-  dom.window.close();
-});
-
-async function seedWithRegion(){
+async function seedWithRegion() {
   vi.resetModules();
   const moduleConfig = await import('../../src/module-config.js');
   const storage = await import('../../src/storage.js');
@@ -38,25 +21,33 @@ async function seedWithRegion(){
   storage.addEntity({ name: 'Acme', code: 'AC-001', region: 'EMEA' });
 }
 
-async function bootWith(configOverride){
+async function bootWith(configOverride) {
   vi.resetModules();
   const { initApp } = await import('../../src/app.js');
-  await initApp(normalizeConfig(configOverride));
+  const moduleConfig = await import('../../src/module-config.js');
+  document.body.innerHTML = '<div id="app"></div>';
+  await initApp(document.getElementById('app'), moduleConfig.normalizeConfig(configOverride));
 }
 
-function searchFor(term){
-  qs('nav-search').click();
+function searchFor(term) {
+  navigate('search');
   qs('search-input').value = term;
-  qs('search-input').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  qs('search-input').dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 describe('User Story 7 - orphan custom values', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.clear();
+    setActiveConfig(null);
+  });
+
   it('hides undeclared values from the interface without deleting them', async () => {
     await seedWithRegion();
     await bootWith({ customFields: [] });
 
-    qs('nav-entities').click();
-    expect(qs('cf-region')).toBeNull();
+    navigate('manage-entity');
+    expect(qs('field-region')).toBeNull();
 
     searchFor('acme');
     const item = qs('search-results-list').querySelector('.entity-item');
@@ -70,11 +61,9 @@ describe('User Story 7 - orphan custom values', () => {
     await seedWithRegion();
     await bootWith(configWithRegion);
 
-    qs('nav-entities').click();
-    const select = qs('edit-entity');
-    select.value = select.options[1].value;
-    select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
-    expect(qs('cf-region').value).toBe('EMEA');
+    navigate('search');
+    document.querySelector('[data-action="edit-entity"]').click();
+    expect(qs('field-region').value).toBe('EMEA');
 
     searchFor('emea');
     const item = qs('search-results-list').querySelector('.entity-item');

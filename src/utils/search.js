@@ -1,5 +1,5 @@
 export function normalizeText(value) {
-  return String(value == null ? '' : value)
+  return String(value === null || value === undefined ? '' : value)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

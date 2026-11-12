@@ -194,13 +194,14 @@ describe('Resumen de Gestión Comercial (H6)', () => {
 
     const entity = addEntity({ name: 'Acme', code: 'AC-1' });
     addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    addDocument({ entity_id: entity.entity_id, status: 'Pendiente ' });
     addDocument({ entity_id: entity.entity_id, status: 'completado' });
 
     const summary = computeSummary({ entities: loadEntities(), documents: loadDocuments() });
     expect(summary.totalEntities).toBe(1);
-    expect(summary.totalDocuments).toBe(2);
-    expect(summary.totalPending).toBe(1);
-    expect(summary.pendingByEntity).toEqual([{ entityId: entity.entity_id, entity, count: 1 }]);
+    expect(summary.totalDocuments).toBe(3);
+    expect(summary.totalPending).toBe(2);
+    expect(summary.pendingByEntity).toEqual([{ entityId: entity.entity_id, entity, count: 2 }]);
   });
 
   it('actualiza el indicador de pendientes cuando un seguimiento se completa', () => {
@@ -209,5 +210,16 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     updateDocument(doc.id, { status: 'completado' });
     const summary = computeSummary({ entities: loadEntities(), documents: loadDocuments() });
     expect(summary.totalPending).toBe(0);
+  });
+
+  it('usa el estado pendiente declarado en el ciclo de vida sin distinguir mayúsculas', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-2' });
+    addDocument({ entity_id: entity.entity_id, status: 'Pendiente' });
+    const summary = computeSummary({
+      entities: loadEntities(),
+      documents: loadDocuments(),
+      statusLifecycle: { states: ['Pendiente', 'Completado'] },
+    });
+    expect(summary.totalPending).toBe(1);
   });
 });

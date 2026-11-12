@@ -21,7 +21,9 @@ export function renderFieldHtml(def, value, error) {
   } else {
     input = `<input type="text" id="${id}" name="${def.key}" value="${escapeHtml(val)}" ${requiredAttr} />`;
   }
-  const errorHtml = error ? `<p class="field-error" role="alert">${escapeHtml(error)}</p>` : '';
+  const errorHtml = error
+    ? `<p id="error-${escapeHtml(def.key)}" class="field-error" role="alert">${escapeHtml(error)}</p>`
+    : '';
   return `<div class="form-field${error ? ' has-error' : ''}"><label for="${id}">${escapeHtml(def.label)}${def.required ? ' *' : ''}</label>${input}${errorHtml}</div>`;
 }
 
