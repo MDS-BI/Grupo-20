@@ -19,8 +19,8 @@
 
 - Verifique que los campos obligatorios muestran errores de validación.
 - Verifique que un `code` duplicado se rechaza con una explicación, incluso si solo difiere en mayúsculas o espacios.
-- Verifique que un documento exige folio entero positivo y que el descuento no puede superar el subtotal.
-- Verifique que un correo electrónico con formato inválido se rechaza con una explicación.
+- Si el módulo declara campos personalizados equivalentes (p. ej. folio, subtotal y descuento), verifique que el folio sea entero positivo y que el descuento no supere el subtotal (validaciones de módulo definidas por configuración, no reglas base fijas).
+- Si el módulo declara un campo personalizado de correo electrónico, verifique que un valor con formato inválido se rechaza con una explicación.
 - Verifique que los resultados de búsqueda se actualizan a medida que el usuario escribe.
 - Verifique que la lista permanece consistente tras las acciones de edición y eliminación.
 - Verifique que eliminar una entidad pide confirmación e indica cuántos documentos asociados se eliminarán.
