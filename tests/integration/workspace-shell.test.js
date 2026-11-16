@@ -15,7 +15,7 @@ describe('Marco de espacio de trabajo ERP con marca (H14)', () => {
     for (const view of ['dashboard', 'manage-entity', 'search', 'summary']) {
       document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
       expect(document.querySelector('.topbar .module-logo')).toBeTruthy();
-      expect(document.querySelector('.topbar .module-name').textContent).toBe('Módulo Base ERP');
+      expect(document.querySelector('.topbar .module-name').textContent).toBe('CRM Comercial');
     }
   });
 

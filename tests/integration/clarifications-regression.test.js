@@ -81,6 +81,6 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(document.getElementById('field-status').tagName).toBe('INPUT');
+    expect(document.getElementById('field-status').tagName).toBe('SELECT');
   });
 });
