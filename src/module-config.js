@@ -32,7 +32,39 @@ export const DEFAULT_CONFIG = Object.freeze({
   theme: Object.freeze({ accentColor: '#2563eb' })
 });
 
-export const userConfig = null;
+export const userConfig = {
+  moduleName: 'CRM Comercial',
+  labels: {
+    entity: 'Cliente',
+    entities: 'Clientes',
+    document: 'Oportunidad',
+    documents: 'Oportunidades'
+  },
+  customFields: [
+    { target: 'entity', key: 'industria', label: 'Industria', type: 'text', required: false },
+    {
+      target: 'entity',
+      key: 'canalOrigen',
+      label: 'Canal de origen',
+      type: 'select',
+      required: false,
+      options: ['Web', 'Referido', 'Evento', 'Llamada', 'Otro']
+    },
+    { target: 'entity', key: 'ejecutivoAsignado', label: 'Ejecutivo asignado', type: 'text', required: false }
+  ],
+  statusLifecycle: {
+    statuses: ['Prospecto', 'Contactado', 'Propuesta Enviada', 'Negociación', 'Cerrada Ganada', 'Cerrada Perdida'],
+    transitions: {
+      Prospecto: ['Contactado', 'Cerrada Perdida'],
+      Contactado: ['Propuesta Enviada', 'Cerrada Perdida'],
+      'Propuesta Enviada': ['Negociación', 'Cerrada Perdida'],
+      Negociación: ['Cerrada Ganada', 'Cerrada Perdida'],
+      'Cerrada Ganada': [],
+      'Cerrada Perdida': []
+    }
+  },
+  theme: { accentColor: '#2563eb' }
+};
 
 const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 

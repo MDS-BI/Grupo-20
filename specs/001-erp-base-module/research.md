@@ -1,51 +1,65 @@
-# Investigación: Módulo Base de Software de Planificación de Recursos Empresariales (ERP)
+﻿# Investigación: Módulo Base de Gestión de Relaciones con Clientes (CRM)
 
 ## Decisión: Usar Vite con HTML, CSS y JavaScript vanilla
 
-**Justificación**: La solicitud enfatiza un enfoque de mínimas librerías y una implementación ligera. Vite proporciona una experiencia de desarrollo rápida y un pipeline de construcción simple sin requerir un framework más pesado. JavaScript vanilla mantiene la aplicación fácil de entender, fácil de probar y fácil de mantener para una pequeña aplicación de página única, y deja a los módulos personalizados libres de adoptar cualquier enfoque de interfaz por encima de ella.
+**Justificación**: Enfoque de mínimas librerías y una implementación ligera. Vite proporciona una experiencia de desarrollo rápida y un pipeline de construcción simple sin requerir un framework pesado. JavaScript vanilla mantiene la aplicación fácil de entender, probar y extender para módulos personalizados.
 
 ## Alternativas consideradas
 
-- React o Vue: Ecosistema de componentes más sólido, pero añade más abstracción y sobrecarga de dependencias de las necesarias para este alcance.
-- HTML estático plano sin Vite: Más simple, pero Vite ofrece un mejor flujo de trabajo de desarrollo local y paso de construcción para crecimiento futuro.
-- Persistencia en backend con base de datos: No es necesaria para un módulo base de espacio único y añadiría complejidad innecesaria; el contrato de almacenamiento está aislado, por lo que un backend puede introducirse más tarde sin cambiar la lógica del módulo.
+- React o Vue: Ecosistema de componentes más sólido, pero añade abstracción y dependencias innecesarias para este alcance.
+- HTML estático plano sin Vite: Más simple, pero Vite ofrece mejor flujo de trabajo local y paso de construcción.
+- Persistencia en backend con base de datos: No es necesaria para un módulo de espacio único; el contrato de almacenamiento está aislado para permitir un backend futuro.
 
 ## Decisiones adicionales
 
-- Se usará localStorage del navegador para la persistencia porque el módulo base es de espacio único y no necesita almacenamiento del lado servidor.
-- La interfaz inicial será una experiencia de página única con un panel, campo de búsqueda y lista de entidades.
-- La aplicación favorecerá la mejora progresiva y los controles de formulario nativos accesibles sobre widgets personalizados complejos.
-- El modelo de datos separa los datos maestros (Entidad) de los registros transaccionales (Documento), vinculados por un identificador público autogenerado (`entity_id`), de modo que los módulos personalizados puedan adjuntar cualquier significado de dominio a ambos lados sin cambios estructurales.
-- Las preocupaciones base (generación de identidad, marcas de tiempo, integridad referencial, eliminación en cascada) residen en la capa de almacenamiento, manteniendo los módulos personalizados limitados a campos, etiquetas y reglas de validación.
+- Se usa localStorage del navegador para la persistencia porque el módulo es de espacio único.
+- La interfaz es una experiencia de página única con panel, búsqueda y gestión de clientes/oportunidades.
+- La aplicación favorece controles de formulario nativos accesibles sobre widgets personalizados complejos.
+- El modelo de datos separa los datos maestros (Cliente) de los registros comerciales (Oportunidad), vinculados por un identificador público autogenerado (`entity_id`).
+- Las preocupaciones base (generación de identidad, marcas de tiempo, integridad referencial, eliminación en cascada) residen en la capa de almacenamiento.
 
 ## Decisiones de aclaración (sesión 2026-11-01)
 
-### Decisión: El código de entidad es único
+### Decisión: El código de cliente es único
 
-**Justificación**: El código es la clave de negocio que los usuarios usan para identificar registros; permitir duplicados haría ambiguas las referencias y debilitaría la validación. Se compara recortado y sin distinguir mayúsculas para evitar duplicados accidentales por formato.
+**Justificación**: El código es la clave de negocio; permitir duplicados haría ambiguas las referencias. Se compara recortado y sin distinguir mayúsculas para evitar duplicados accidentales.
 
-**Alternativas consideradas**: Permitir duplicados con advertencia (no garantiza integridad); permitir duplicados sin aviso (rechazado por riesgo operativo).
+**Alternativas consideradas**: Permitir duplicados con advertencia (no garantiza integridad); permitir duplicados sin aviso (rechazado).
 
-### Decisión: Estado de documento como texto libre sin ciclo de vida configurado
+### Decisión: Estado de oportunidad como texto libre sin ciclo de vida configurado
 
-**Justificación**: Mantener el texto libre preserva la extensibilidad del módulo base y coincide con FR-031; los cuatro estados del modelo de datos son solo ejemplos, no un catálogo obligatorio.
+**Justificación**: Mantener el texto libre preserva la extensibilidad del módulo base; el ciclo de vida de embudo se activa solo mediante configuración.
 
-**Alternativas consideradas**: Lista fija de cuatro estados (limita módulos personalizados); desplegable editable (añade complejidad sin beneficio para la base).
+**Alternativas consideradas**: Lista fija de estados (limita módulos personalizados); desplegable editable (complejidad sin beneficio para la base).
 
 ### Decisión: Configuración inválida → valores predeterminados con advertencia visible
 
-**Justificación**: Evita una pantalla muerta, permite seguir operando con los datos y cumple el requisito de informar del problema en lugar de fallar silenciosamente.
+**Justificación**: Evita una pantalla muerta, permite seguir operando con los datos e informa del problema con claridad.
 
-**Alternativas consideradas**: Bloquear la aplicación con pantalla de error (impide trabajar); registrar solo en consola (no cumple el aviso claro al usuario).
+**Alternativas consideradas**: Bloquear la aplicación con pantalla de error; registrar solo en consola (no visible al usuario).
 
 ### Decisión: Conservar y ocultar valores de campos personalizados no declarados
 
-**Justificación**: Evita pérdida de datos al evolucionar la configuración y permite recuperar los valores si el campo se vuelve a declarar; solo cambia la presentación, no el almacenamiento.
+**Justificación**: Evita pérdida de datos al evolucionar la configuración y permite recuperar los valores si el campo se vuelve a declarar.
 
-**Alternativas consideradas**: Eliminar los valores huérfanos (pérdida irreversible); mostrarlos en solo lectura (expone campos que el módulo ya no define).
+**Alternativas consideradas**: Eliminar los valores huérfanos (pérdida irreversible); mostrarlos en solo lectura.
 
-### Decisión: Confirmación con recuento antes de eliminar una entidad
+### Decisión: Confirmación con recuento antes de eliminar un cliente
 
-**Justificación**: La eliminación en cascada es irreversible; indicar cuántos documentos se eliminarán hace explícito el impacto y reduce pérdidas accidentales.
+**Justificación**: La eliminación en cascada de oportunidades es irreversible; indicar cuántas se eliminarán hace explícito el impacto.
 
-**Alternativas consideradas**: Confirmación simple sin recuento (menos informativa); eliminación inmediata (riesgo alto de pérdida de datos).
+**Alternativas consideradas**: Confirmación simple sin recuento; eliminación inmediata.
+
+## Decisiones de adaptación al dominio CRM
+
+### Decisión: Mapear Entidades a Clientes y Documentos a Oportunidades
+
+**Justificación**: En CRM, el cliente es el dato maestro central y la oportunidad representa el avance comercial asociado. El modelo base (entidad/documento con `entity_id`, integridad referencial y cascada) se adapta directamente sin cambios estructurales.
+
+### Decisión: Campos personalizados de cliente (industria, canal de origen, ejecutivo asignado)
+
+**Justificación**: Son atributos comunes para segmentación, atribución de origen y asignación comercial en procesos de ventas, y se modelan como `customFields` de tipo `entity` para no modificar el esquema base.
+
+### Decisión: Ciclo de vida de embudo comercial para oportunidades
+
+**Justificación**: Las oportunidades siguen un flujo de ventas controlado. Se define como `statusLifecycle`: Prospecto → Contactado → Propuesta Enviada → Negociación → Cerrada Ganada / Cerrada Perdida, con transiciones explícitas que impiden saltos o retrocesos inválidos cuando el ciclo está configurado.

@@ -98,10 +98,30 @@ describe('module-config', () => {
     expect(config.statusLifecycle).toBeNull();
   });
 
-  it('loadModuleConfig reflects the userConfig slot (null by default)', async () => {
+  it('loadModuleConfig reflects the CRM userConfig', async () => {
     const { config, errors } = await loadModuleConfig();
     expect(errors).toEqual([]);
-    expect(config.moduleName).toBe(DEFAULT_CONFIG.moduleName);
+    expect(config.moduleName).toBe('CRM Comercial');
+    expect(config.labels).toEqual({
+      entity: 'Cliente',
+      entities: 'Clientes',
+      document: 'Oportunidad',
+      documents: 'Oportunidades'
+    });
+    expect(config.customFields.map(field => field.key)).toEqual([
+      'industria',
+      'canalOrigen',
+      'ejecutivoAsignado'
+    ]);
+    expect(config.statusLifecycle.statuses).toEqual([
+      'Prospecto',
+      'Contactado',
+      'Propuesta Enviada',
+      'Negociación',
+      'Cerrada Ganada',
+      'Cerrada Perdida'
+    ]);
+    expect(config.statusLifecycle.transitions.Prospecto).toEqual(['Contactado', 'Cerrada Perdida']);
   });
 
   it('exposes active config and label helpers after setActiveConfig', () => {
