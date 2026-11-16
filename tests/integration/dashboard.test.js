@@ -28,7 +28,7 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
 
   it('las estadísticas reflejan el número actual de registros y cero cuando no hay ninguno', () => {
     const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
-    expect(values).toEqual(['0', '0']);
+    expect(values).toEqual(['0', '0', '0', '0.0%', '$0.00']);
 
     document.querySelector('[data-action="quick-new-entity"]').click();
     document.getElementById('field-name').value = 'Acme';
@@ -37,6 +37,6 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
 
     document.querySelector('[data-action="navigate"][data-view="dashboard"]').click();
     const updated = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
-    expect(updated).toEqual(['1', '0']);
+    expect(updated).toEqual(['1', '0', '0', '0.0%', '$0.00']);
   });
 });

@@ -9,9 +9,9 @@
 export const MODULE_CONFIG = {
   moduleName: 'CRM Comercial',
   labels: {
-    entity: 'cliente',
-    entityPlural: 'clientes',
-    document: 'Interaccion',
+    entity: 'Cliente',
+    entityPlural: 'Clientes',
+    document: 'Interacción',
     documentPlural: 'Interacciones',
     dashboard: 'Panel',
     manage: 'Gestión',
