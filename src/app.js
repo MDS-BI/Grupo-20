@@ -24,7 +24,6 @@ import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
-import { DASHBOARD_DEMO_STATS } from './dashboard-demo.js';
 
 export function initApp(rootEl = null, options = {}) {
   let root = rootEl;
@@ -66,17 +65,11 @@ export function initApp(rootEl = null, options = {}) {
     documentEntityId: null,
     detailEntityId: null,
     searchQuery: '',
-    searchCategory: '',
-    searchStage: '',
     entityFormErrors: {},
     documentFormErrors: {},
     entityFormDraft: null,
     documentFormDraft: null,
     focusSearchOnRender: false,
-    demoStatsEnabled: !(
-      typeof window !== 'undefined' &&
-      new URLSearchParams(window.location?.search || '').get('demo') === '0'
-    ),
   };
 
   function refreshData() {
@@ -96,13 +89,9 @@ export function initApp(rootEl = null, options = {}) {
   // -- View renderers --------------------------------------------------
 
   function renderDashboardView() {
-    if (state.demoStatsEnabled && state.entities.length === 0 && state.documents.length === 0) {
-      return renderDashboardHtml(state.config, DASHBOARD_DEMO_STATS);
-    }
     return renderDashboardHtml(state.config, {
       entityCount: state.entities.length,
       documentCount: state.documents.length,
-      documents: state.documents,
     });
   }
 
@@ -177,49 +166,15 @@ export function initApp(rootEl = null, options = {}) {
       entities: state.entities,
       documents: state.documents,
       customFieldKeys: customFieldKeys('entity'),
-      category: state.searchCategory,
-      status: state.searchStage,
-    });
-  }
-
-  function searchFilterOptions() {
-    const categories = Array.from(
-      new Set(state.entities.map((e) => String(e.category || '').trim()).filter(Boolean)),
-    ).sort((a, b) => a.localeCompare(b, 'es'));
-    const stages = Array.from(
-      new Set(
-        [
-          ...(state.config.statusLifecycle?.states || []),
-          ...state.documents.map((d) => String(d.status || '').trim()),
-        ].filter(Boolean),
-      ),
-    );
-    return { categories, stages };
-  }
-
-  function renderSearchResultsHtml() {
-    const hasClients = state.entities.length > 0;
-    const hasFilters = Boolean(state.searchQuery.trim() || state.searchCategory || state.searchStage);
-    const plural = getLabel(state.config, 'entityPlural').toLowerCase();
-    return renderEntityListHtml(currentSearchResults(), state.config, {
-      documents: state.documents,
-      emptyMessage: hasClients ? `No hay ${plural} que coincidan con tu búsqueda o los filtros.` : undefined,
-      showClearFilters: hasFilters,
     });
   }
 
   function renderSearchView() {
-    const { categories, stages } = searchFilterOptions();
     return `
       <div class="search-view">
-        ${renderSearchBarHtml(state.config, state.searchQuery, {
-          categories,
-          stages,
-          selectedCategory: state.searchCategory,
-          selectedStage: state.searchStage,
-        })}
+        ${renderSearchBarHtml(state.config, state.searchQuery)}
         <div id="search-results-list">
-          <div id="search-results">${renderSearchResultsHtml()}</div>
+          <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config)}</div>
         </div>
       </div>
     `;
@@ -282,7 +237,7 @@ export function initApp(rootEl = null, options = {}) {
   function updateSearchResults() {
     const resultsEl = rootEl.querySelector('#search-results');
     if (!resultsEl) return;
-    resultsEl.innerHTML = renderSearchResultsHtml();
+    resultsEl.innerHTML = renderEntityListHtml(currentSearchResults(), state.config);
   }
 
   // -- Navigation ----------------------------------------------------------
@@ -401,23 +356,6 @@ export function initApp(rootEl = null, options = {}) {
         state.focusSearchOnRender = true;
         navigate('search');
         break;
-      case 'search-filter': {
-        const { filter, value } = target.dataset;
-        if (filter === 'category') {
-          state.searchCategory = state.searchCategory === value ? '' : value;
-        } else if (filter === 'stage') {
-          state.searchStage = state.searchStage === value ? '' : value;
-        }
-        render();
-        break;
-      }
-      case 'clear-search-filters':
-        state.searchQuery = '';
-        state.searchCategory = '';
-        state.searchStage = '';
-        state.focusSearchOnRender = true;
-        render();
-        break;
       case 'manage-tab':
         state.manageTab = target.dataset.tab;
         render();
@@ -503,10 +441,6 @@ export function initApp(rootEl = null, options = {}) {
   return {
     navigate,
     getState: () => state,
-    setDemoMode(enabled) {
-      state.demoStatsEnabled = Boolean(enabled);
-      render();
-    },
   };
 }
 

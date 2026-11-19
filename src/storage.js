@@ -410,34 +410,11 @@ function matchesQuery(entity, needle, documents, customFieldKeys) {
 
 export function searchEntities(
   query,
-  {
-    entities = loadEntities(),
-    documents = loadDocuments(),
-    customFieldKeys = [],
-    category = '',
-    status = '',
-  } = {},
+  { entities = loadEntities(), documents = loadDocuments(), customFieldKeys = [] } = {},
 ) {
   const needle = (query || '').trim().toLowerCase();
-  let results = needle
-    ? entities.filter((e) => matchesQuery(e, needle, documents, customFieldKeys))
-    : entities.slice();
-
-  const categoryNeedle = (category || '').trim().toLowerCase();
-  if (categoryNeedle) {
-    results = results.filter((e) => String(e.category || '').trim().toLowerCase() === categoryNeedle);
-  }
-
-  const statusNeedle = (status || '').trim().toLowerCase();
-  if (statusNeedle) {
-    results = results.filter((e) =>
-      documents.some(
-        (d) => d.entity_id === e.entity_id && String(d.status || '').trim().toLowerCase() === statusNeedle,
-      ),
-    );
-  }
-
-  return results;
+  if (!needle) return entities.slice();
+  return entities.filter((e) => matchesQuery(e, needle, documents, customFieldKeys));
 }
 
 // ---------------------------------------------------------------------------

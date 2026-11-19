@@ -27,6 +27,11 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - Los valores de campos personalizados que ya no están declarados se conservan en el almacenamiento y se ocultan de la interfaz; si el campo se vuelve a declarar, los valores reaparecen.
 - La eliminación de una entidad exige confirmación explícita e indica cuántos documentos asociados se eliminarán en cascada.
 
+### Aclaraciones integradas (sesión 2026-11-12)
+
+- Sin ciclo de vida configurado, un documento se considera pendiente cuando su `status` normalizado (minúsculas y recorte) coincide con "pendiente"; si no hay coincidencias, el indicador es cero.
+- Los campos base de `Documento` son `id`, `entity_id`, `startDate`/`endDate` opcionales, `notes` opcional, `status` y marcas de tiempo; serie/folio, importes, moneda, condiciones y tipo de interacción se tratan como campos personalizados declarados por la configuración.
+
 ## Verificación de la Constitución
 
 *COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar tras el diseño de la Fase 1.*
@@ -65,7 +70,9 @@ src/
     ├── shell.js        (marco del espacio de trabajo: barra superior, logotipo SVG, barra lateral, estado de módulo activo)
     ├── dashboard.js    (vista de inicio: cuadrícula de acciones rápidas + tarjetas de estadísticas en vivo)
     ├── entity-form.js  (formulario de creación/edición de entidades con campos personalizados)
-    └── document-form.js (formulario de creación/edición de documentos con campos personalizados y ciclo de vida de estados)
+    ├── document-form.js (formulario de creación/edición de documentos con campos personalizados y ciclo de vida de estados)
+    ├── entity-detail.js (ficha de entidad: datos de la entidad + sus documentos asociados ordenados por fecha; Historia de Usuario 3)
+    └── commercial-summary.js (resumen de indicadores: totales de entidades/documentos y documentos pendientes por entidad; Historia de Usuario 6)
 
 tests/
 ├── unit/
@@ -73,7 +80,7 @@ tests/
 └── setup/
 ```
 
-**Decisión de Estructura**: Una aplicación Vite simple con un único punto de entrada HTML, un pequeño conjunto de módulos JavaScript y CSS en un archivo separado. Se usará localStorage para la persistencia de modo que la aplicación permanezca ligera y autónoma. Los componentes se dividen en pares de entidad (datos maestros) y documento (transaccional) que reflejan los dos conceptos centrales del módulo base, de modo que un módulo personalizado pueda renombrar o extender cada par de forma independiente. `shell.js` posee el marco del espacio de trabajo ERP — un logotipo monograma SVG en línea derivado del nombre del módulo, la barra superior y la barra lateral de módulos — envolviendo todas las vistas para que la marca y la navegación permanezcan consistentes sin duplicar marcado. `dashboard.js` renderiza los botones de acción rápida y las tarjetas de estadísticas de la pantalla de entrada, leyendo los recuentos del almacenamiento cada vez que se vuelve visible. `module-config.js` centraliza todos los puntos de adaptación — nombre del módulo, etiquetas de términos, definiciones de campos personalizados, ciclo de vida de estados y color de acento — manteniendo la personalización del dominio fuera del código central; el estilo se controla mediante propiedades personalizadas de CSS (tokens de diseño) en `styles.css` para que el color de acento configurado se aplique globalmente.
+**Decisión de Estructura**: Una aplicación Vite simple con un único punto de entrada HTML, un pequeño conjunto de módulos JavaScript y CSS en un archivo separado. Se usará localStorage para la persistencia de modo que la aplicación permanezca ligera y autónoma. Los componentes se dividen en pares de entidad (datos maestros) y documento (transaccional) que reflejan los dos conceptos centrales del módulo base, de modo que un módulo personalizado pueda renombrar o extender cada par de forma independiente. `shell.js` posee el marco del espacio de trabajo ERP — un logotipo monograma SVG en línea derivado del nombre del módulo, la barra superior y la barra lateral de módulos — envolviendo todas las vistas para que la marca y la navegación permanezcan consistentes sin duplicar marcado. `dashboard.js` renderiza los botones de acción rápida y las tarjetas de estadísticas de la pantalla de entrada, leyendo los recuentos del almacenamiento cada vez que se vuelve visible. `entity-detail.js` renderiza la ficha de una entidad seleccionada (desde búsqueda o resumen) junto con su historial de documentos ordenado por fecha, reflejando los cambios hechos en la pantalla de gestión. `commercial-summary.js` agrega en memoria los recuentos de entidades, documentos y documentos pendientes (según el `statusLifecycle` configurado) y permite seleccionar una entidad para abrir su ficha de detalle; ambos son comportamiento genérico del módulo base, no exclusivo de un perfil CRM. `module-config.js` centraliza todos los puntos de adaptación — nombre del módulo, etiquetas de términos, definiciones de campos personalizados, ciclo de vida de estados y color de acento — manteniendo la personalización del dominio fuera del código central; el estilo se controla mediante propiedades personalizadas de CSS (tokens de diseño) en `styles.css` para que el color de acento configurado se aplique globalmente.
 
 ## Seguimiento de Complejidad
 

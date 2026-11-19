@@ -6,23 +6,19 @@ La aplicación almacena los registros de entidad localmente en el navegador usan
 
 ## Forma de los Datos
 
-Cada registro de entidad debe incluir:
+Cada registro de entidad **base** (sin ningún módulo personalizado configurado) debe incluir:
 
 - `id`: cadena única
 - `entity_id`: cadena única, generada automáticamente, usada para vincular documentos
 - `name`: cadena no vacía
 - `code`: cadena no vacía y única entre todas las entidades (comparación sin distinguir mayúsculas ni espacios)
-- `taxId`: cadena opcional (identificación fiscal)
-- `email`: cadena opcional con formato de correo válido cuando está presente
-- `phone`: cadena opcional
-- `address`: cadena opcional
 - `category`: cadena opcional
 - `description`: cadena opcional
 - `targetDate`: cadena de fecha opcional (YYYY-MM-DD) válida cuando está presente
-- `creditLimit`: número opcional no negativo
-- `paymentTerms`: cadena opcional
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
+
+Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8) — por ejemplo `taxId`, `email` (validado con formato de correo cuando está presente), `phone`, `address`, `creditLimit` (número no negativo) o `paymentTerms`. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001).
 
 ## Operaciones
 
@@ -36,23 +32,18 @@ Cada registro de entidad debe incluir:
 
 Cada registro de documento debe incluir:
 
+Cada registro de documento **base** debe incluir:
+
 - `id`: cadena única
-- `entity_id`: el entity_id autogenerado de la entidad vinculada
-- `series`: cadena opcional que agrupa folios consecutivos
-- `folio`: entero positivo obligatorio; junto con la serie forma el número oficial del documento
-- `startDate`: cadena de fecha de calendario válida
-- `endDate`: cadena de fecha de calendario válida, igual o posterior a startDate
-- `quantity`: entero positivo opcional
-- `subtotal`: número no negativo opcional
-- `discount`: número no negativo opcional; no puede superar el subtotal
-- `taxAmount`: número no negativo opcional
-- `totalAmount`: número no negativo opcional
-- `currency`: cadena opcional
-- `paymentTerms`: cadena opcional
-- `notes`: cadena opcional
-- `status`: cadena opcional
+- `entity_id`: el entity_id autogenerado de la entidad vinculada; obligatorio y debe corresponder a una entidad existente
+- `startDate`: cadena de fecha de calendario opcional; cuando se provee junto a `endDate`, `endDate` debe ser igual o posterior
+- `endDate`: cadena de fecha de calendario opcional
+- `notes`: cadena opcional (p. ej. la descripción de una interacción, Historia de Usuario 2)
+- `status`: cadena opcional; texto libre cuando no hay `statusLifecycle` configurado (FR-031), o restringido a transiciones válidas cuando sí lo hay (FR-030, Historia de Usuario 13)
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
+
+Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
 
 Operaciones:
 
@@ -67,8 +58,9 @@ Operaciones:
 
 - Un `name` o `code` faltante debe rechazarse antes de la persistencia.
 - Un `code` duplicado debe rechazarse antes de la persistencia (comparación sin distinguir mayúsculas ni espacios).
-- Un `email` presente debe tener formato de correo válido y un `creditLimit` presente debe ser un número no negativo.
-- Un documento sin `folio` entero positivo debe rechazarse; un `discount` mayor que el `subtotal` debe rechazarse.
+- Un `targetDate` presente debe ser una fecha de calendario válida.
+- Los campos personalizados obligatorios (declarados en `module-config.js`) deben validarse con la misma experiencia de retroalimentación que los campos base (p. ej. `email` con formato válido, `creditLimit` no negativo cuando el módulo los declara).
+- Un `endDate` presente debe ser igual o posterior a `startDate` cuando ambos están presentes.
 - Un entity_id debe generarse automáticamente y debe ser único.
 - Un documento sin un `entity_id` que coincida con una entidad existente debe rechazarse.
 - Eliminar una entidad también debe eliminar todos los documentos vinculados a su entity_id.

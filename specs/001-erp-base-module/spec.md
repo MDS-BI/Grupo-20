@@ -19,6 +19,16 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: Cuando la configuración deja de declarar un campo personalizado que ya tenía valores guardados, ¿qué debe hacer el sistema con esos valores? → A: Conservar los valores en el almacenamiento y ocultarlos de la interfaz.
 - Q: ¿Debe pedirse confirmación explícita antes de eliminar una entidad, indicando que también se eliminarán sus documentos asociados? → A: Confirmación obligatoria que indique cuántos documentos se eliminarán.
 
+### Session 2026-11-12
+
+- Q: ¿Cómo se identifica un documento "pendiente" en el resumen cuando no hay ciclo de vida configurado (estado de texto libre)? → A: Se compara el estado normalizado (minúsculas y recortado) con "pendiente"; si no hay coincidencias, el indicador es cero. Con ciclo de vida configurado, se usan los estados de ese ciclo que representen "pendiente".
+- Q: ¿Qué campos base tiene un Documento frente a los campos personalizados del módulo? → A: Los campos base son `id`, `entity_id`, `startDate`/`endDate` opcionales, `notes` opcional, `status` y marcas de tiempo; serie/folio, importes, moneda, condiciones y tipo de interacción son campos personalizados declarados por la configuración.
+
+### Session 2026-11-16
+
+- Q: ¿Cómo debe identificar el sistema qué documentos cuentan como "pendientes" en el resumen de indicadores? (FR-044) → A: Si hay ciclo de vida, la configuración marca explícitamente uno o más estados como "pendientes"; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado coincide con `pendiente`.
+- Q: ¿Qué debe hacer el sistema si el usuario intenta cambiar de pantalla o módulo mientras hay cambios sin guardar en un formulario? (FR-022) → A: Mostrar confirmación para salir y descartar cambios o quedarse; solo navegar si el usuario confirma descartar.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
@@ -38,37 +48,36 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 
 ---
 
-### Historia de Usuario 2 - Editar y eliminar entidades (Prioridad: P1)
-Como usuario de negocio, quiero actualizar o eliminar entidades cuando cambien los datos maestros para que los registros se mantengan precisos.
+### Historia de Usuario 2 - Registrar clientes y contactos comerciales  (Prioridad: P2)
+Como ejecutivo de ventas, quiero registrar clientes y sus interacciones para organizar la información comercial y dejar constancia de cada contacto. 
 
-**Por qué esta prioridad**: Mantener los registros actualizados es esencial para la confianza en la herramienta y para soportar las operaciones comerciales diarias.
+**Por qué esta prioridad**: Se encuentra en este nivel de prioridad dado que permite ingresar la información principal del CRM, una vez definida la estructura de datos en la Historia de Usuario 1. Sin los registros no sería posible consultar antecedentes ni gestionar seguimientos. 
 
-**Prueba Independiente**: Un usuario puede seleccionar una entidad existente, cambiar su información o eliminarla, y la lista refleja el cambio.
+**Prueba Independiente**: Un ejecutivo registra un cliente y una llamada asociada a él; comprueba que el cliente aparece en la lista de registros y que la llamada queda guardada en su ficha. 
 
 **Escenarios de Aceptación**:
 
-1. **Dada** una entidad que ya existe en la lista, **cuando** el usuario edita sus detalles, **entonces** la información actualizada se guarda y se muestra en la lista.
-2. **Dada** una entidad que ya no es relevante, **cuando** el usuario la elimina, **entonces** desaparece de la lista y deja de aparecer en los resultados de búsqueda.
-3. **Dadas** cientos de entidades almacenadas, **cuando** el usuario edita o elimina una, **entonces** la lista se actualiza correctamente y sigue siendo ágil.
-
+1. **Dado** que el ejecutivo completa los datos obligatorios del cliente, **cuando** los guarda, **entonces** parece en la lista de clientes. 
+2. **Dado** que existe un cliente, **cuando** registra una llamada con fecha y descripción, **entonces** queda guardada en la ficha de ese cliente.
+3. **Dado**  que faltan datos obligatorios o el codigo del cliente está repetido, **cuando** se intenta guardar, **entonces** el sistema rechaza el registro y explica qué se debe corregir. 
 ---
 
-### Historia de Usuario 3 - Panel de inicio con acciones rápidas y estadísticas de registros (Prioridad: P1)
+### Historia de Usuario 3 - Consultar antecedentes del cliente (Prioridad: P1)
 
-Como usuario de negocio, quiero aterrizar en un panel estilo ERP con botones de acción rápida claramente etiquetados para las tareas clave y totales de registros de un vistazo al abrir la aplicación, para poder empezar a trabajar de inmediato.
+Como ejecutivo de atención al cliente, quiero buscar clientes y consultar su ficha e historial para brindar una atención informada y continua.
 
-**Por qué esta prioridad**: El panel es el punto de entrada de la aplicación. Nada más puede alcanzarse sin él, y las acciones rápidas son la ruta más rápida hacia cada flujo de trabajo central.
+**Por qué esta prioridad**: Permite al ejecutivo de atención al cliente acceder de forma centralizada a la información del cliente, garantizando una atención oportuna, trazable e informada con base en los registros comerciales existentes.
 
-**Prueba Independiente**: Un usuario abre la aplicación, ve un panel con múltiples botones de acción rápida y estadísticas de registros, inicia una nueva entidad o documento con un solo clic y ve estadísticas que reflejan los datos almacenados.
+**Prueba Independiente**: Un ejecutivo de atención al cliente busca un cliente registrado, accede a su ficha y revisa su historial de interacciones y documentos asociados, verificando que la información corresponde a los registros creados en la Historia de Usuario 2 y refleja las actualizaciones realizadas en la Historia de Usuario 4.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el usuario abre la aplicación, **cuando** la aplicación carga, **entonces** se muestra el panel de inicio con al menos cuatro botones de acción rápida claramente etiquetados que cubren las tareas ERP clave: crear una nueva entidad, crear un nuevo documento, abrir la gestión de entidades y buscar registros.
-2. **Dado** que se muestra el panel, **cuando** el usuario activa la acción de nueva entidad, **entonces** la aplicación abre el área de gestión de entidades con un formulario vacío listo para introducir datos.
-3. **Dado** que se muestra el panel, **cuando** el usuario activa la acción de nuevo documento, **entonces** la aplicación abre el área de gestión de documentos con un formulario vacío listo para introducir datos.
-4. **Dado** que se muestra el panel, **cuando** el usuario activa la acción de buscar registros, **entonces** la aplicación abre la pantalla de búsqueda con el campo de búsqueda enfocado.
-5. **Dadas** entidades y documentos almacenados, **cuando** el usuario ve el panel, **entonces** las tarjetas de estadísticas muestran el recuento actual de entidades y documentos.
-6. **Dado** que el usuario crea o elimina registros en otra parte de la aplicación, **cuando** vuelve al panel, **entonces** las estadísticas reflejan el cambio.
+1. **Dado** que existen clientes registrados conforme a la Historia de Usuario 2, **cuando** el ejecutivo de atención al cliente busca por nombre, código o palabra clave, **entonces** el sistema muestra únicamente los clientes coincidentes.
+2. **Dado** que el ejecutivo selecciona un cliente de los resultados de búsqueda, **cuando** accede a su ficha, **entonces** se muestra la información del cliente junto a su historial de interacciones y documentos asociados.
+3. **Dado** que esta vista consulta los registros de la Historia de Usuario 2, **cuando** se carga la ficha o el historial, **entonces** el sistema debe obtener la información desde dichos registros, manteniendo la consistencia con lo ingresado por el ejecutivo de ventas.
+4. **Dado** que se han realizado actualizaciones a la ficha del cliente o a sus documentos desde la pantalla de gestión (Historia de Usuario 4), **cuando** el ejecutivo de atención al cliente consulta nuevamente dicha ficha e historial, **entonces** la vista refleja dichas actualizaciones.
+5. **Dada** una búsqueda sin coincidencias, **cuando** el ejecutivo envía la búsqueda, **entonces** el sistema muestra un estado vacío claro y permite volver a intentarlo.
+6. **Dado** que el ejecutivo necesita dar una atención informada y continua, **cuando** consulta la ficha del cliente, **entonces** el historial se presenta de forma ordenada (por fecha) para facilitar la revisión de los antecedentes del cliente.
 
 ---
 
@@ -111,7 +120,26 @@ Como desarrollador de módulos, quiero declarar un único archivo de configuraci
 
 ---
 
-### Historia de Usuario 6 - Reetiquetar pantallas desde la configuración (Prioridad: P1)
+### Historia de Usuario 6 - Consultar indicadores de Gestión Comercial (Prioridad: P6)
+
+Como Gerente Comercial, quiero visualizar un resumen de clientes, interacciones y seguimientos pendientes para identificar necesidades de atención y organizar el trabajo del equipo.
+
+**Por qué esta prioridad**: Se ubica en este nivel porque entrega al Gerente Comercial una vista consolidada para priorizar la gestión del equipo, apoyándose en los clientes e historiales ya registrados en las Historias de Usuario 2 y 3. Sin esos registros, los indicadores no tendrían información que resumir.
+
+**Prueba Independiente**: Un Gerente Comercial accede al resumen de Gestión Comercial y comprueba que el total de clientes, las interacciones registradas y los seguimientos pendientes coinciden con los datos de las fichas de los clientes; luego registra un nuevo seguimiento y verifica que el indicador correspondiente se actualiza.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que existen clientes e interacciones registrados en sus fichas (Historias de Usuario 2 y 3), **cuando** el Gerente Comercial abre el resumen de Gestión Comercial, **entonces** visualiza el total de clientes y el número de interacciones registradas.
+2. **Dado** que existen seguimientos con estado pendiente asociados a los clientes, **cuando** el Gerente Comercial consulta el resumen, **entonces** el sistema muestra la cantidad de seguimientos pendientes y los identifica por cliente.
+3. **Dado** que se completó un seguimiento pendiente o se registró uno nuevo en la ficha de un cliente, **cuando** el Gerente Comercial vuelve a consultar el resumen, **entonces** los indicadores reflejan la información actualizada.
+4. **Dado** que el Gerente Comercial identifica clientes con seguimientos pendientes, **cuando** selecciona uno de ellos, **entonces** accede a su ficha e historial para revisar el detalle y organizar la atención del equipo.
+5. **Dado** que no existen clientes, interacciones ni seguimientos registrados, **cuando** el Gerente Comercial abre el resumen, **entonces** el sistema muestra un estado vacío claro, con los indicadores en cero, e indica cómo comenzar a registrar información.
+6. **Dado** que el módulo está configurado como CRM, **cuando** se muestra el resumen de Gestión Comercial, **entonces** todas las etiquetas utilizan "Clientes" e "Historial/Ficha" en lugar de "Entidades" y "Documentos".
+
+---
+
+### Historia de Usuario 7 - Reetiquetar pantallas desde la configuración (Prioridad: P1)
 
 Como desarrollador de módulos, quiero que todas las etiquetas visibles para el usuario deriven de la configuración, para que un módulo adaptado hable su idioma de dominio de forma consistente en todo momento.
 
@@ -127,7 +155,7 @@ Como desarrollador de módulos, quiero que todas las etiquetas visibles para el 
 
 ---
 
-### Historia de Usuario 7 - Declarar campos personalizados para los registros (Prioridad: P1)
+### Historia de Usuario 8 - Declarar campos personalizados para los registros (Prioridad: P1)
 
 Como desarrollador de módulos, quiero declarar campos adicionales para entidades y documentos en la configuración, para que aparezcan automáticamente en formularios, listas, validación y búsqueda sin escribir código de interfaz.
 
@@ -144,7 +172,7 @@ Como desarrollador de módulos, quiero declarar campos adicionales para entidade
 
 ---
 
-### Historia de Usuario 8 - Buscar y encontrar entidades rápidamente (Prioridad: P2)
+### Historia de Usuario 9 - Buscar y encontrar entidades rápidamente (Prioridad: P2)
 Como usuario de negocio, quiero buscar mis entidades por detalles clave para encontrar rápidamente el registro que necesito.
 
 **Por qué esta prioridad**: La recuperación rápida mejora la utilidad cuando el conjunto de datos crece más allá de un pequeño número de entradas.
@@ -159,7 +187,7 @@ Como usuario de negocio, quiero buscar mis entidades por detalles clave para enc
 
 ---
 
-### Historia de Usuario 9 - Registrar una fecha objetivo (Prioridad: P2)
+### Historia de Usuario 10 - Registrar una fecha objetivo (Prioridad: P2)
 Como usuario de negocio, quiero adjuntar una fecha objetivo opcional a una entidad para planificar y ordenar los registros según cuándo vence algo.
 
 **Por qué esta prioridad**: La planificación consciente de fechas mejora el valor central cuando el conjunto de datos crece, pero no es necesaria para la gestión básica.
@@ -174,7 +202,7 @@ Como usuario de negocio, quiero adjuntar una fecha objetivo opcional a una entid
 
 ---
 
-### Historia de Usuario 10 - Registrar los detalles de documentos de una entidad (Prioridad: P2)
+### Historia de Usuario 11 - Registrar los detalles de documentos de una entidad (Prioridad: P2)
 Como usuario de negocio, quiero registrar detalles de documentos para una entidad, para mantener la actividad transaccional organizada junto a cada registro de datos maestros.
 
 **Por qué esta prioridad**: Los documentos aportan valor operativo práctico una vez que las entidades están gestionadas, pero no son necesarios para la gestión central.
@@ -190,7 +218,7 @@ Como usuario de negocio, quiero registrar detalles de documentos para una entida
 
 ---
 
-### Historia de Usuario 11 - Buscar entidades en una pantalla dedicada (Prioridad: P2)
+### Historia de Usuario 12 - Buscar entidades en una pantalla dedicada (Prioridad: P2)
 
 Como usuario de negocio, quiero una pantalla de búsqueda dedicada para encontrar rápidamente entidades sin que los formularios de edición saturen la vista.
 
@@ -207,7 +235,7 @@ Como usuario de negocio, quiero una pantalla de búsqueda dedicada para encontra
 
 ---
 
-### Historia de Usuario 12 - Configurar el ciclo de vida de estados de documentos (Prioridad: P2)
+### Historia de Usuario 13 - Configurar el ciclo de vida de estados de documentos (Prioridad: P2)
 
 Como desarrollador de módulos, quiero definir los estados permitidos de los documentos y las transiciones permitidas, para que los documentos sigan el ciclo de vida del dominio en lugar de aceptar texto de estado arbitrario.
 
@@ -224,11 +252,11 @@ Como desarrollador de módulos, quiero definir los estados permitidos de los doc
 
 ---
 
-### Historia de Usuario 13 - Marco de espacio de trabajo ERP con marca (Prioridad: P1)
+### Historia de Usuario 14 - Marco de espacio de trabajo ERP con marca (Prioridad: P1)
 
 Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, con una barra superior con marca y una barra lateral de módulos presentes en cada pantalla, para que la aplicación se sienta como un sistema empresarial coherente en lugar de páginas sueltas.
 
-**Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 3 y 4).
+**Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 15 y 4).
 
 **Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Entidades, Documentos y Buscar con el módulo activo resaltado visualmente, y navegar entre módulos nunca pierde datos.
 
@@ -240,6 +268,23 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 4. **Dado** que la ventana gráfica es estrecha, **cuando** se usa la aplicación en una pantalla pequeña, **entonces** la barra lateral se contrae a una columna de iconos manteniéndose utilizable y etiquetada de forma accesible.
 5. **Dada** una configuración que define un color de acento, **cuando** cualquier pantalla carga, **entonces** el marco lo usa consistentemente para resaltados y controles principales; sin valor configurado o con un valor inválido, se usan los valores predeterminados integrados sin errores.
 6. **Dado** que el usuario navega entre módulos mediante la barra lateral, **cuando** inspecciona sus datos después, **entonces** todas las entidades y documentos almacenados permanecen intactos.
+
+---
+
+### Historia de Usuario 15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
+
+Como usuario de negocio, quiero un panel de inicio con accesos directos a las tareas clave y estadísticas de registros, para empezar a trabajar de inmediato sin buscar la acción correcta.
+
+**Por qué esta prioridad**: El panel es la pantalla de entrada de todo el espacio de trabajo (Historia de Usuario 14); sin accesos rápidos ni estadísticas visibles, un usuario nuevo no tiene un punto de partida claro para crear, gestionar o buscar registros.
+
+**Prueba Independiente**: Un usuario abre la aplicación, ve el panel con al menos cuatro acciones rápidas y tarjetas de estadísticas, y cada acción lo lleva al destino correcto con un formulario vacío o la búsqueda enfocada.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cuatro botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, buscar registros).
+2. **Dado** que el usuario activa la acción rápida de nueva entidad o nuevo documento, **cuando** se ejecuta, **entonces** se abre el área de gestión correspondiente con un formulario vacío listo para introducir datos.
+3. **Dado** que existen entidades y documentos almacenados, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas reflejan el número actual de cada uno.
+4. **Dado** que no existen entidades ni documentos, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas muestran cero sin errores.
 
 ---
 
@@ -256,11 +301,14 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 - ¿Qué ocurre cuando los registros almacenados contienen valores de campos personalizados que ya no están declarados en la configuración?
 - ¿Qué ocurre cuando un usuario abre la aplicación directamente en la pantalla de gestión o búsqueda (p. ej., vía enlace profundo o recarga del navegador) sin pasar por el panel de inicio?
 - ¿Qué ocurre cuando un usuario pulsa el botón atrás del navegador estando en la pantalla de gestión o búsqueda?
-- ¿Qué ocurre si un usuario navega fuera de la pantalla de gestión mientras un formulario aún tiene cambios sin guardar?
+- Navegación con cambios sin guardar en un formulario: el sistema solicita confirmación y solo sale si el usuario confirma descartar (resuelto en aclaración 2026-11-16).
 - ¿Permanecen intactas las entidades y los documentos al navegar entre el panel, la gestión y la búsqueda?
 - ¿Qué ocurre cuando el panel se abre con cero entidades o cero documentos (valores estadísticos)?
 - ¿Qué ocurre cuando el color de acento configurado no es un valor de color válido?
 - ¿Cómo mantiene la barra lateral contraída las etiquetas de módulo accesibles en ventanas gráficas estrechas?
+- ¿Qué ocurre cuando una entidad no tiene ningún documento asociado al abrir su ficha de detalle?
+- ¿Cómo identifica el resumen de indicadores los documentos "pendientes"? → Con ciclo de vida, los estados marcados explícitamente como pendientes en la configuración; sin ciclo de vida, coincidencia del estado normalizado con "pendiente" (resuelto en aclaraciones 2026-11-12 y 2026-11-16).
+- ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
 
 ## Requisitos *(obligatorio)*
 
@@ -287,7 +335,7 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 - **FR-019**: El sistema DEBE navegar a una pantalla de búsqueda dedicada cuando se selecciona el botón Buscar en la barra lateral.
 - **FR-020**: La pantalla de búsqueda DEBE permitir buscar entidades por nombre, código, categoría, descripción o fecha objetivo.
 - **FR-021**: La pantalla de búsqueda DEBE ser accesible tanto desde la barra lateral como desde la acción rápida de buscar registros del panel.
-- **FR-022**: El sistema DEBE mantener los datos de entidades y documentos intactos y consistentes durante la navegación entre pantallas.
+- **FR-022**: El sistema DEBE mantener los datos de entidades y documentos intactos y consistentes durante la navegación entre pantallas. Si el usuario intenta navegar con cambios sin guardar en un formulario, el sistema DEBE mostrar una confirmación para salir y descartar los cambios o quedarse en el formulario, y solo DEBE navegar si el usuario confirma descartar.
 - **FR-023**: El sistema DEBE cargar la configuración del módulo al arrancar y aplicarla en todas las pantallas.
 - **FR-024**: El sistema DEBE retroceder a los valores predeterminados integrados (terminología Entidad/Documento, sin campos personalizados, sin ciclo de vida) cuando no se proporciona configuración.
 - **FR-025**: Ante una configuración inválida o conflictiva, el sistema DEBE arrancar con los valores predeterminados integrados y mostrar una advertencia visible que informe claramente del problema, en lugar de fallar silenciosamente o bloquear la aplicación.
@@ -306,6 +354,12 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 - **FR-038**: La configuración PUEDE definir un color de acento; el sistema DEBE aplicarlo consistentemente en todo el marco y retroceder de forma segura a los valores integrados cuando esté ausente o sea inválido.
 - **FR-039**: En ventanas gráficas estrechas, la barra lateral DEBE contraerse a una columna de iconos manteniéndose operable.
 - **FR-040**: Los valores de campos personalizados que ya no están declarados en la configuración DEBEN conservarse en el almacenamiento y ocultarse de la interfaz; si el campo se vuelve a declarar, sus valores vuelven a mostrarse.
+- **FR-041**: El sistema DEBE ofrecer una vista de detalle de entidad ("ficha"), accesible al seleccionar una entidad desde los resultados de búsqueda, que muestre los datos de la entidad junto con sus documentos asociados.
+- **FR-042**: La vista de detalle de entidad DEBE ordenar los documentos asociados por fecha para presentar el historial de forma cronológica.
+- **FR-043**: La vista de detalle de entidad DEBE reflejar las actualizaciones realizadas desde la pantalla de gestión (creación, edición o eliminación de la entidad o de sus documentos) la próxima vez que se consulte.
+- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos "pendientes" por entidad. Si hay ciclo de vida configurado, la configuración DEBE marcar explícitamente uno o más estados como pendientes y solo esos se cuentan; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado (minúsculas y recorte) coincide con `pendiente`; si no hay coincidencias, el indicador es cero.
+- **FR-045**: El resumen de indicadores DEBE actualizarse cada vez que se crea, edita o elimina una entidad o un documento, y DEBE permitir seleccionar una entidad listada para abrir su ficha de detalle (FR-041).
+- **FR-046**: Cuando no existan entidades, documentos ni documentos pendientes, el resumen de indicadores DEBE mostrar un estado vacío con los valores en cero e indicar cómo comenzar a registrar información.
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -319,8 +373,8 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 ### Entidades Clave *(incluir si la funcionalidad implica datos)*
 
-- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional y un entity_id autogenerado. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
-- **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato).
+- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
+- **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
 - **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -337,6 +391,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-008**: Un desarrollador puede producir un módulo adaptado usando solo el archivo de configuración, con cero modificaciones en archivos fuente centrales.
 - **SC-009**: Cada pantalla presenta el mismo marco con marca, y los usuarios pueden identificar en qué módulo están de un vistazo.
 - **SC-010**: Las estadísticas de registros mostradas en el panel siempre coinciden con el número de entidades y documentos almacenados.
+- **SC-011**: Los indicadores del resumen de Gestión Comercial (total de entidades, total de documentos y documentos pendientes por entidad) siempre coinciden con los registros de entidades y documentos almacenados.
 
 ## Suposiciones
 
