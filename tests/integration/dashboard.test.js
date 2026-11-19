@@ -26,9 +26,10 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
     expect(document.activeElement.id).toBe('search-input');
   });
 
-  it('las estadísticas reflejan el número actual de registros y cero cuando no hay ninguno', () => {
+  it('las estadísticas muestran los valores de referencia sin registros y se actualizan con registros reales', () => {
     const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
-    expect(values).toEqual(['0', '0', '0', '0.0%', '$0.00']);
+    expect(values).toEqual(['421', '35', '25', '64%', '$1,500']);
+    expect(document.querySelector('.demo-note')).toBeTruthy();
 
     document.querySelector('[data-action="quick-new-entity"]').click();
     document.getElementById('field-name').value = 'Acme';
@@ -37,6 +38,7 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
 
     document.querySelector('[data-action="navigate"][data-view="dashboard"]').click();
     const updated = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
-    expect(updated).toEqual(['1', '0', '0', '0.0%', '$0.00']);
+    expect(updated).toEqual(['1', '0', '0', '0%', '$0']);
+    expect(document.querySelector('.demo-note')).toBeNull();
   });
 });

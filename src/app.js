@@ -17,6 +17,7 @@ import {
 } from './storage.js';
 import { renderShellHtml } from './components/shell.js';
 import { renderDashboardHtml } from './components/dashboard.js';
+import { DASHBOARD_DEMO_STATS } from './dashboard-demo.js';
 import { renderEntityFormHtml, collectEntityFormData } from './components/entity-form.js';
 import { renderDocumentFormHtml, collectDocumentFormData } from './components/document-form.js';
 import { renderEntityListHtml } from './components/entity-list.js';
@@ -70,6 +71,10 @@ export function initApp(rootEl = null, options = {}) {
     entityFormDraft: null,
     documentFormDraft: null,
     focusSearchOnRender: false,
+    demoStatsEnabled: !(
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location?.search || '').get('demo') === '0'
+    ),
   };
 
   function refreshData() {
@@ -89,9 +94,13 @@ export function initApp(rootEl = null, options = {}) {
   // -- View renderers --------------------------------------------------
 
   function renderDashboardView() {
+    if (state.demoStatsEnabled && state.entities.length === 0 && state.documents.length === 0) {
+      return renderDashboardHtml(state.config, DASHBOARD_DEMO_STATS);
+    }
     return renderDashboardHtml(state.config, {
       entityCount: state.entities.length,
       documentCount: state.documents.length,
+      documents: state.documents,
     });
   }
 
@@ -441,6 +450,10 @@ export function initApp(rootEl = null, options = {}) {
   return {
     navigate,
     getState: () => state,
+    setDemoMode(enabled) {
+      state.demoStatsEnabled = Boolean(enabled);
+      render();
+    },
   };
 }
 
