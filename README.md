@@ -60,6 +60,20 @@ Or a one-off run without watch mode:
 npx vitest run
 ```
 
+## Datos simulados (seed)
+
+Para poblar el CRM con 57 clientes de demostración (`CLI-001` a `CLI-057`), cada uno con RUT válido, segmento, pedidos e interacciones vinculadas:
+
+```bash
+npm run seed          # poblar (idempotente: omite códigos existentes)
+npm run seed:preview  # vista previa sin escribir en localStorage
+npm run seed:clear    # eliminar solo los datos simulados
+```
+
+Con `npm run dev`, los mismos controles están disponibles en la consola del navegador: `crmSeed.run()`, `crmSeed.preview()` y `crmSeed.clear()`. `run()` y `clear()` recargan la página para mostrar los cambios. Los comandos de Node usan `.crm-seed-storage.json` (ignorado por Git) como localStorage; el navegador usa su propio localStorage. Los registros simulados llevan el marcador `[SIMULACIÓN CRM]`, por lo que la limpieza no afecta clientes reales.
+
+El Panel muestra valores de referencia (421 clientes, 35 interacciones, 25 cerrado ganado, 64% de conversión y $1,500 USD) mientras no haya registros guardados. En cuanto se crea un cliente o interacción, los indicadores se recalculan desde localStorage. Para desactivar los valores de referencia, abre con `?demo=0` o usa `crmDashboard.setDemoMode(false)` en la consola.
+
 ## Building Custom Modules
 
 Custom ERP modules built on this base define:

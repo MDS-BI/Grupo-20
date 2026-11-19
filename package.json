@@ -6,7 +6,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173",
-    "test": "vitest"
+    "test": "vitest",
+    "seed": "node scripts/seed.mjs",
+    "seed:clear": "node scripts/seed.mjs --clear",
+    "seed:preview": "node scripts/seed.mjs --preview"
   },
   "devDependencies": {
     "jsdom": "^30.0.1",
