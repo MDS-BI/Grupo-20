@@ -4,6 +4,8 @@
 // propio moduleName, labels, customFields, statusLifecycle y theme, sin
 // tocar ningún otro archivo del código central. Dejar MODULE_CONFIG en
 // `null` ejecuta el módulo base sin adaptación (FR-024).
+import { LOCAL_TODAY, isValidISODate } from './utils/entity-date.js';
+
 //
 // PERFIL ACTIVO: CRM Comercial (sesión 2026-11-16)
 export const MODULE_CONFIG = {
@@ -34,6 +36,11 @@ export const MODULE_CONFIG = {
   },
   theme: {
     accentColor: '#0f766e',
+  },
+  entityDate: {
+    label: 'Fecha de nacimiento',
+    min: '1910-01-01',
+    max: LOCAL_TODAY,
   },
 };
 
@@ -68,10 +75,23 @@ export const DEFAULT_CONFIG = {
   customFields: { entity: [], document: [] },
   statusLifecycle: null,
   theme: { accentColor: null },
+  entityDate: null,
 };
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isValidEntityDateRule(rule) {
+  if (!isPlainObject(rule)) return false;
+  if (rule.label !== undefined && (typeof rule.label !== 'string' || !rule.label.trim())) return false;
+  if (rule.min !== undefined && !isValidISODate(rule.min)) return false;
+  if (rule.max !== undefined && rule.max !== LOCAL_TODAY && !isValidISODate(rule.max)) return false;
+  return true;
+}
+
+function normalizeEntityDateRule(rule) {
+  return isPlainObject(rule) ? { ...rule } : null;
 }
 
 /**
@@ -118,11 +138,26 @@ export function validateConfig(raw) {
     }
   }
 
+  if (raw.entityDate !== undefined && raw.entityDate !== null && !isValidEntityDateRule(raw.entityDate)) {
+    errors.push('entityDate debe declarar una etiqueta, min ISO y max ISO o "localToday" válidos.');
+  }
+
   if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
     const lifecycle = raw.statusLifecycle;
     if (!isPlainObject(lifecycle) || !Array.isArray(lifecycle.states) || lifecycle.states.length === 0) {
       errors.push('statusLifecycle debe declarar un arreglo "states" no vacío.');
     } else {
+      if (lifecycle.pendingStates !== undefined) {
+        if (!Array.isArray(lifecycle.pendingStates)) {
+          errors.push('statusLifecycle.pendingStates debe ser un arreglo.');
+        } else {
+          for (const state of lifecycle.pendingStates) {
+            if (!lifecycle.states.includes(state)) {
+              errors.push(`statusLifecycle.pendingStates referencia un estado desconocido: "${state}".`);
+            }
+          }
+        }
+      }
       const transitions = lifecycle.transitions || {};
       for (const [from, tos] of Object.entries(transitions)) {
         if (!lifecycle.states.includes(from)) {
@@ -173,6 +208,7 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
       ...(rawConfig.theme || {}),
       accentColor: sanitizeAccentColor(rawConfig.theme?.accentColor),
     },
+    entityDate: normalizeEntityDateRule(rawConfig.entityDate),
   };
   return { config, warning: null };
 }
@@ -218,6 +254,7 @@ export function normalizeConfig(rawConfig) {
     customFields: normalizeCustomFields(rawConfig.customFields),
     statusLifecycle: rawConfig.statusLifecycle ?? null,
     theme: isPlainObject(rawConfig.theme) ? rawConfig.theme : rawConfig.theme === undefined ? {} : rawConfig.theme,
+    entityDate: rawConfig.entityDate ?? null,
   };
   const errors = validateConfig(candidate);
   if (errors.length) {
@@ -235,6 +272,7 @@ export function normalizeConfig(rawConfig) {
         ...candidate.theme,
         accentColor: sanitizeAccentColor(candidate.theme.accentColor),
       },
+      entityDate: normalizeEntityDateRule(candidate.entityDate),
     },
     errors: [],
   };

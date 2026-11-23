@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { loadModuleConfig, validateConfig, getLabel, DEFAULT_CONFIG } from '../../src/module-config.js';
+import {
+  loadModuleConfig,
+  normalizeConfig,
+  validateConfig,
+  getLabel,
+  DEFAULT_CONFIG,
+} from '../../src/module-config.js';
 import { sanitizeAccentColor } from '../../src/module-config.js';
 
 describe('Carga de configuración del módulo (H5)', () => {
@@ -58,5 +64,52 @@ describe('Carga de configuración del módulo (H5)', () => {
     const { config } = loadModuleConfig(null);
     expect(getLabel(config, 'entity')).toBe('Entidad');
     expect(getLabel(config, 'document')).toBe('Documento');
+  });
+
+  it('acepta una regla entityDate válida y la conserva en la configuración cargada', () => {
+    const raw = {
+      moduleName: 'CRM Comercial',
+      entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' },
+    };
+    const { config, warning } = loadModuleConfig(raw);
+    expect(warning).toBeNull();
+    expect(config.entityDate).toEqual(raw.entityDate);
+  });
+
+  it('rechaza una regla entityDate con etiqueta vacía, min inválido o max desconocido', () => {
+    expect(validateConfig({ entityDate: { label: '' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ entityDate: { min: '1910-02-29' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ entityDate: { max: 'hoy' } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ entityDate: 'no-es-un-objeto' }).length).toBeGreaterThan(0);
+  });
+
+  it('hace fallback con advertencia cuando entityDate es inválida', () => {
+    const { config, warning } = loadModuleConfig({ moduleName: 'CRM', entityDate: { max: 'mañana' } });
+    expect(config).toEqual(DEFAULT_CONFIG);
+    expect(warning).toBeTruthy();
+  });
+
+  it('valida pendingStates contra los estados declarados en el ciclo de vida', () => {
+    const valid = {
+      statusLifecycle: {
+        states: ['pendiente', 'en_revision', 'cerrado'],
+        pendingStates: ['pendiente', 'en_revision'],
+      },
+    };
+    expect(validateConfig(valid)).toEqual([]);
+    expect(validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: ['otro'] } }).length).toBeGreaterThan(0);
+    expect(validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: 'pendiente' } }).length).toBeGreaterThan(0);
+  });
+
+  it('normaliza pendingStates sin perderlos', () => {
+    const raw = {
+      statusLifecycle: {
+        states: ['pendiente', 'en_revision'],
+        pendingStates: ['en_revision'],
+      },
+    };
+    const { config, errors } = normalizeConfig(raw);
+    expect(errors).toEqual([]);
+    expect(config.statusLifecycle.pendingStates).toEqual(['en_revision']);
   });
 });

@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
+import { setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
+import { localTodayISO } from '../../src/utils/entity-date.js';
 import {
   addEntity,
   updateEntity,
@@ -14,6 +16,10 @@ import {
   isValidTransition,
   ValidationError,
 } from '../../src/storage.js';
+
+afterEach(() => {
+  setActiveConfig(DEFAULT_CONFIG);
+});
 
 describe('Entidad - validación y unicidad (H1)', () => {
   it('crea una entidad con nombre y código', () => {
@@ -221,5 +227,63 @@ describe('Resumen de Gestión Comercial (H6)', () => {
       statusLifecycle: { states: ['Pendiente', 'Completado'] },
     });
     expect(summary.totalPending).toBe(1);
+  });
+
+  it('cuenta solo los estados marcados como pendingStates cuando se declaran', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-3' });
+    addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    addDocument({ entity_id: entity.entity_id, status: 'en_revision' });
+    addDocument({ entity_id: entity.entity_id, status: 'cerrado' });
+    const lifecycle = {
+      states: ['pendiente', 'en_revision', 'cerrado'],
+      pendingStates: ['en_revision'],
+    };
+    const summary = computeSummary({ entities: loadEntities(), documents: loadDocuments(), statusLifecycle: lifecycle });
+    expect(summary.totalPending).toBe(1);
+    expect(summary.pendingByEntity[0].count).toBe(1);
+
+    const fallback = computeSummary({
+      entities: loadEntities(),
+      documents: loadDocuments(),
+      statusLifecycle: { states: lifecycle.states },
+    });
+    expect(fallback.totalPending).toBe(1);
+  });
+});
+
+describe('Fecha de nacimiento del perfil de clientes (FR-047 a FR-050)', () => {
+  const clientConfig = {
+    moduleName: 'CRM Comercial',
+    entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' },
+  };
+
+  it('acepta los límites inclusive y rechaza fechas fuera de rango o imposibles', () => {
+    setActiveConfig(clientConfig);
+    expect(addEntity({ name: 'Min', code: 'MIN', targetDate: '1910-01-01' }).targetDate).toBe('1910-01-01');
+    expect(addEntity({ name: 'Hoy', code: 'HOY', targetDate: localTodayISO() }).targetDate).toBe(localTodayISO());
+    expect(() => addEntity({ name: 'Old', code: 'OLD', targetDate: '1909-12-31' })).toThrow(ValidationError);
+    expect(() => addEntity({ name: 'Future', code: 'FUT', targetDate: '2999-01-01' })).toThrow(ValidationError);
+    expect(() => addEntity({ name: 'Leap', code: 'LEAP', targetDate: '1910-02-29' })).toThrow(ValidationError);
+    expect(() => addEntity({ name: 'Feb', code: 'FEB', targetDate: '2026-02-30' })).toThrow(ValidationError);
+  });
+
+  it('usa la etiqueta configurada en el mensaje de error', () => {
+    setActiveConfig(clientConfig);
+    try {
+      addEntity({ name: 'Bad', code: 'BAD', targetDate: '1900-01-01' });
+    } catch (err) {
+      expect(err.errors.targetDate).toContain('Fecha de nacimiento');
+    }
+  });
+
+  it('conserva un valor histórico pero exige corregirlo antes de guardar una edición', () => {
+    setActiveConfig(DEFAULT_CONFIG);
+    const legacy = addEntity({ name: 'Legacy', code: 'LEG', targetDate: '1900-05-05' });
+    expect(loadEntities().find((e) => e.id === legacy.id).targetDate).toBe('1900-05-05');
+
+    setActiveConfig(clientConfig);
+    expect(() => updateEntity(legacy.id, { name: 'Legacy Corregido' })).toThrow(ValidationError);
+    const corrected = updateEntity(legacy.id, { name: 'Legacy', targetDate: '1980-05-05' });
+    expect(corrected.targetDate).toBe('1980-05-05');
   });
 });

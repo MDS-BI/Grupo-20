@@ -1,4 +1,4 @@
-import { renderFieldsHtml, collectFormData } from './form-fields.js';
+import { buildFormBaseline, collectFormData, isFormDirty, renderFieldsHtml } from './form-fields.js';
 import { getLabel } from '../module-config.js';
 
 export function getDocumentFieldDefs(config) {
@@ -29,4 +29,12 @@ export function renderDocumentFormHtml(config, document = {}, errors = {}) {
 
 export function collectDocumentFormData(formEl, config) {
   return collectFormData(formEl, getDocumentFieldDefs(config));
+}
+
+export function buildDocumentFormBaseline(config, doc = {}) {
+  return buildFormBaseline(getDocumentFieldDefs(config), doc);
+}
+
+export function isDocumentFormDirty(formEl, config, baseline) {
+  return isFormDirty(formEl, getDocumentFieldDefs(config), baseline);
 }

@@ -1,5 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
+import { addEntity, addDocument } from '../../src/storage.js';
+
+const SUMMARY_CONFIG = {
+  moduleName: 'CRM Comercial',
+  labels: {
+    entity: 'Cliente',
+    entityPlural: 'Clientes',
+    document: 'Interacción',
+    documentPlural: 'Interacciones',
+  },
+  statusLifecycle: {
+    states: ['pendiente', 'en_revision', 'cerrado'],
+    pendingStates: ['en_revision'],
+  },
+};
 
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
@@ -64,5 +79,19 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
     document.querySelector('.pending-list [data-action="view-entity"]').click();
     expect(document.querySelector('.entity-detail-header h2').textContent).toBe('Cliente Uno');
+  });
+
+  it('cuenta como pendientes solo los estados marcados en pendingStates', () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    const app = initApp(document.getElementById('app'), { rawConfig: SUMMARY_CONFIG });
+    const entity = addEntity({ name: 'Cliente Uno', code: 'CL-1' });
+    addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    addDocument({ entity_id: entity.entity_id, status: 'en_revision' });
+
+    app.navigate('summary');
+    const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
+    expect(values).toEqual(['1', '2', '1']);
+    expect(document.querySelector('.pending-list').textContent).toContain('Cliente Uno');
+    app.destroy();
   });
 });

@@ -1,5 +1,6 @@
 import { sanitizeText } from './utils/sanitize.js';
 import { normalizeText } from './utils/search.js';
+import { isValidISODate, resolveEntityDateRule } from './utils/entity-date.js';
 import { getConfig } from './module-config.js';
 
 const ENTITIES_KEY = 'erp_entities';
@@ -63,10 +64,7 @@ function normalizeCode(code) {
 }
 
 export function isValidDate(value) {
-  if (!value) return true;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return isValidISODate(value);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -142,8 +140,18 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
     const duplicate = entities.some((e) => e.id !== editingId && normalizeCode(e.code) === normalized);
     if (duplicate) errors.code = 'Ya existe una entidad con ese código.';
   }
-  if (data.targetDate && !isValidDate(data.targetDate)) {
-    errors.targetDate = 'La fecha objetivo no es una fecha de calendario válida.';
+  const entityDateRule = resolveEntityDateRule(getConfig());
+  if (data.targetDate) {
+    if (!isValidDate(data.targetDate)) {
+      errors.targetDate = `${entityDateRule?.label || 'La fecha objetivo'} no es una fecha de calendario válida.`;
+    } else if (entityDateRule) {
+      const min = entityDateRule.min || '';
+      const max = entityDateRule.max || '';
+      if ((min && data.targetDate < min) || (max && data.targetDate > max)) {
+        const range = [min && `desde ${min}`, max && `hasta ${max}`].filter(Boolean).join(' y ');
+        errors.targetDate = `${entityDateRule.label} debe estar ${range ? `${range} ` : ''}(inclusive).`;
+      }
+    }
   }
   validateCustomFields(customFieldDefinitions, data, errors);
   return errors;
@@ -422,10 +430,15 @@ export function searchEntities(
 // ---------------------------------------------------------------------------
 
 export function computeSummary({ entities = loadEntities(), documents = loadDocuments(), statusLifecycle = null } = {}) {
+  const pendingStates = Array.isArray(statusLifecycle?.pendingStates) && statusLifecycle.pendingStates.length
+    ? statusLifecycle.pendingStates.map((state) => normalizeText(state))
+    : null;
   const pendingStatus = normalizeText(
     statusLifecycle?.states?.find((state) => normalizeText(state) === 'pendiente') || 'pendiente',
   );
-  const pendingDocuments = documents.filter((d) => normalizeText(d.status) === pendingStatus);
+  const pendingDocuments = pendingStates
+    ? documents.filter((d) => pendingStates.includes(normalizeText(d.status)))
+    : documents.filter((d) => normalizeText(d.status) === pendingStatus);
   const pendingByEntityMap = new Map();
   for (const doc of pendingDocuments) {
     pendingByEntityMap.set(doc.entity_id, (pendingByEntityMap.get(doc.entity_id) || 0) + 1);

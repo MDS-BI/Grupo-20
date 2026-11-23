@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
+import { localTodayISO } from '../../src/utils/entity-date.js';
 import { addEntity, loadEntities, loadDocuments } from '../../src/storage.js';
 import {
   SEED_COUNT,
@@ -48,7 +49,8 @@ describe('utilidad de simulación CRM', () => {
       expect(client.pedidos).toBeGreaterThanOrEqual(0);
       expect(client.pedidos).toBeLessThanOrEqual(35);
       expect(client.targetDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(new Date(client.targetDate).getTime()).toBeGreaterThan(Date.now());
+      expect(client.targetDate >= '1910-01-01').toBe(true);
+      expect(client.targetDate <= localTodayISO()).toBe(true);
       expect(client.rubro).toBeTruthy();
       expect(client.ejecutivo_asignado).toBeTruthy();
       expect(['llamada', 'correo', 'reunion', 'whatsapp']).toContain(client.canal_contacto);

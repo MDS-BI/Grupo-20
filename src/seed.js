@@ -94,7 +94,7 @@ function customValues(defs, index, ctx) {
     else if (key === 'canal_contacto') values[key] = def.options?.[index % def.options.length] || 'llamada';
     else if (def.type === 'select') values[key] = def.options?.[index % def.options.length] || '';
     else if (def.type === 'number') values[key] = (index * 3) % 20;
-    else if (def.type === 'date') values[key] = isoDate(5 + (index % 30));
+    else if (def.type === 'date') values[key] = isoDate(-(5 + (index % 30)));
     else if (def.type === 'boolean') values[key] = index % 2 === 0;
     else values[key] = `Dato ${key} ${index + 1}`;
   }
@@ -147,7 +147,7 @@ export function buildSeedClients(count = SEED_COUNT, config = resolveConfig()) {
       code: `${SEED_CODE_PREFIX}${String(index + 1).padStart(3, '0')}`,
       category,
       description: `${SEED_MARKER} ${rubro}. Cliente ${category.toLowerCase()} con ${pedidos} pedidos; contacto preferido por ${canal}.`,
-      targetDate: isoDate(3 + ((index * 5) % 58)),
+      targetDate: isoDate(-(365 * (25 + (index % 45)) + (index % 365))),
       rut: formatRut(buildRutBody(index)),
       pedidos,
       ejecutivo: EJECUTIVOS[index % EJECUTIVOS.length],

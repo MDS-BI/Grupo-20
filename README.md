@@ -25,17 +25,17 @@ Para lograrlo, nos proponemos construir un producto mínimo viable (MVP) como pr
 
 Minimal single-page app serving as an Enterprise Resource Planning (ERP) software base module. It provides the common foundation for building custom ERP modules: master data management (Entities) and linked transactional documents (Documents) with create/edit/delete/search, validation, and browser localStorage persistence — using Vite and vanilla HTML, CSS, and JavaScript. See `specs/001-erp-base-module/` for the full specification (15 user stories, functional requirements, data model).
 
-The user interface is fully in **Spanish** (default terms: Entidad / Documento; module name: Módulo Base ERP), including labels, validation messages, empty states, and dialogs.
+The user interface is fully in **Spanish**. The active profile is **CRM Comercial** (Cliente / Interacción), while the base defaults remain Entidad / Documento when no configuration is provided.
 
-Entities carry base master-data fields (name, code, category, description, target date). Documents link to exactly one entity and carry base fields (start/end date, notes, status). Any domain-specific field (tax ID, credit limit, interaction type, invoice folio, etc.) is added by a custom module through `customFields`, without changing the storage layer (see `specs/001-erp-base-module/data-model.md`).
+Entities carry base master-data fields (name, code, category, description, entity date). Documents link to exactly one entity and carry base fields (start/end date, notes, status). Any domain-specific field (tax ID, credit limit, interaction type, invoice folio, etc.) is added by a custom module through `customFields`, without changing the storage layer (see `specs/001-erp-base-module/data-model.md`).
 
 The app presents itself as a coherent ERP workspace:
 
 - **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Entidades, Documentos, Buscar and Resumen. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
 - **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management area, find records) and live statistic cards showing record counts.
 - **Management screen** (`src/app.js`, `manage-entity` / `manage-document`) — a dedicated screen with an Entidades/Documentos tab to create, edit and delete records; it does not show the full entity list (that lives in Search), per the base module's navigation model.
-- **Search screen** — finds entities by name, code, category, description, target date or custom field values, updating results as you type; selecting a result opens its **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
-- **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents with a "pendiente" status, grouped by entity.
+- **Search screen** — finds entities by name, code, category, description, the configured entity date or custom field values, updating results as you type; selecting a result opens its **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
+- **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents in the states marked as `pendingStates` (or `pendiente` when no lifecycle is configured), grouped by entity.
 - **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding (including `theme.accentColor`) applies globally.
 
 ## Setup
@@ -63,7 +63,7 @@ Custom ERP modules built on this base define:
 
 - What an **Entity** represents (e.g., customer, product, asset) plus domain-specific fields.
 - What a **Document** represents (e.g., order, invoice, contract, interaction).
-- Module-specific labels, custom fields and status lifecycle.
+- Module-specific labels, custom fields, status lifecycle and optional entity date rule.
 
 The base module handles identity generation, timestamps, referential integrity between entities and documents, cascade deletion, navigation, and search. Custom modules never edit `src/storage.js`, `src/app.js` or any component file — only `src/module-config.js`.
 
@@ -80,18 +80,21 @@ export const MODULE_CONFIG = {
     document: [{ key: 'folio', label: 'Folio', type: 'number', required: true }],
   },
   statusLifecycle: {
-    states: ['cotizacion', 'pedido', 'facturado'],
+    states: ['cotizacion', 'pedido', 'facturado', 'pendiente'],
+    pendingStates: ['pendiente'],
     transitions: { cotizacion: ['pedido'], pedido: ['facturado'] },
   },
   theme: { accentColor: '#1a73e8' },
+  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' },
 };
 ```
 
 - `moduleName` — display name shown in the top bar, dashboard, and document title; also derives the logo monogram.
 - `labels` — rename Entity/Document terms (`entity`, `entityPlural`, `document`, `documentPlural`, `dashboard`, `manage`, `search`, `summary`) across every screen.
 - `customFields.entity` / `customFields.document` — extra fields per record type: `key`, `label`, `type` (`text`, `number`, `date`, `select`, or `boolean`), optional `required`, and `options` for `select`. Keys must not collide with base field names.
-- `statusLifecycle` — restrict document `status` to a declared list of `states` with permitted `transitions` between them. Without it, status stays a free-form field. A state named `pendiente` feeds the Resumen de Gestión Comercial's pending count.
+- `statusLifecycle` — restrict document `status` to a declared list of `states` with permitted `transitions` between them. Without it, status stays a free-form field. `pendingStates` marks which declared states feed the Resumen de Gestión Comercial's pending count; without it, the normalized text `pendiente` is used.
 - `theme.accentColor` — a hex color (e.g., `"#0f62fe"`) applied across the shell. An invalid value falls back to the default silently, without affecting the rest of the configuration.
+- `entityDate` — optional label and inclusive ISO range for the base entity date field; `max: "localToday"` follows the user's local date and updates when the local day changes while the app is open. Existing out-of-range values are preserved until the record is edited.
 
 If the rest of the configuration is invalid (unknown field types, custom field keys colliding with base fields, status transitions referencing undeclared states), the app shows the problem in a banner and falls back to the full base defaults instead of breaking.
 
@@ -99,5 +102,6 @@ If the rest of the configuration is invalid (unknown field types, custom field k
 
 - Data is persisted to `localStorage` under the keys `erp_entities` and `erp_documents`.
 - Deleting an entity also deletes its documents (cascade), after a confirmation that states how many documents will be removed.
+- Navigating away from a modified form asks for confirmation before discarding unsaved changes.
 - User-entered text is escaped before being rendered (`src/utils/sanitize.js`) to prevent XSS via localStorage-sourced content.
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.

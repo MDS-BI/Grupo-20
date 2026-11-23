@@ -29,6 +29,15 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Cómo debe identificar el sistema qué documentos cuentan como "pendientes" en el resumen de indicadores? (FR-044) → A: Si hay ciclo de vida, la configuración marca explícitamente uno o más estados como "pendientes"; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado coincide con `pendiente`.
 - Q: ¿Qué debe hacer el sistema si el usuario intenta cambiar de pantalla o módulo mientras hay cambios sin guardar en un formulario? (FR-022) → A: Mostrar confirmación para salir y descartar cambios o quedarse; solo navegar si el usuario confirma descartar.
 
+### Session 2026-11-23
+
+- Q: ¿El rango de fechas desde 1910 hasta hoy debe aplicarse únicamente a la fecha objetivo de los clientes o a la fecha objetivo de todas las entidades del módulo? → A: Únicamente al perfil de clientes (entidades etiquetadas como "Cliente"); los demás perfiles conservan la fecha objetivo sin este rango.
+- Q: ¿Cómo debe denominarse el campo de fecha en el perfil de clientes? → A: "Fecha de nacimiento" en lugar de "Fecha objetivo".
+- Q: ¿La fecha actual usada como límite debe recalcularse solo al abrir la página o debe actualizarse automáticamente mientras la página permanece abierta cuando cambia el día? → A: Actualizarse automáticamente mientras la página permanece abierta al cambiar de día, sin requerir recarga.
+- Q: ¿Qué zona horaria debe usarse para determinar la "fecha actual" cuando cambia el día? → A: Hora local del dispositivo del usuario.
+- Q: ¿Qué debe hacer el sistema con las fechas de nacimiento ya guardadas en clientes que queden fuera del nuevo rango o sean inválidas? → A: Conservarlas y mostrarlas sin borrarlas, pero exigir su corrección al editar el cliente antes de guardar.
+- Q: ¿La etiqueta "Fecha de nacimiento" debe reemplazar a "Fecha objetivo" solo en el formulario de clientes o en todos los lugares visibles del perfil de clientes, como listas, ficha, búsqueda y filtros? → A: En todos los lugares visibles del perfil de clientes.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
@@ -152,6 +161,7 @@ Como desarrollador de módulos, quiero que todas las etiquetas visibles para el 
 1. **Dados** mapeos de términos definidos en la configuración, **cuando** cualquier pantalla carga, **entonces** pestañas, botones, etiquetas de formulario, encabezados y mensajes de estado vacío muestran los términos configurados.
 2. **Dado** que las etiquetas han sido remapeadas, **cuando** el usuario navega entre pantallas, **entonces** el comportamiento de navegación no cambia.
 3. **Dado** que no se proporcionan mapeos, **cuando** cualquier pantalla carga, **entonces** se muestran los términos predeterminados Entidad/Documento.
+4. **Dado** el perfil de clientes, **cuando** carga cualquier pantalla, **entonces** "Fecha de nacimiento" reemplaza a "Fecha objetivo" en formularios, listas, ficha, búsqueda y filtros.
 
 ---
 
@@ -199,6 +209,10 @@ Como usuario de negocio, quiero adjuntar una fecha objetivo opcional a una entid
 1. **Dado** que un usuario está creando o editando una entidad, **cuando** introduce una fecha objetivo, **entonces** la fecha se guarda y se muestra en la lista.
 2. **Dada** una entidad con fecha fijada, **cuando** el usuario ve la lista, **entonces** las entidades con fechas pueden identificarse de un vistazo.
 3. **Dado** que un usuario deja la fecha en blanco, **cuando** guarda la entidad, **entonces** la entidad igualmente se guarda sin fecha (campo opcional).
+4. **Dado** el perfil de clientes, **cuando** se muestra el formulario de creación o edición, **entonces** el campo de fecha se denomina "Fecha de nacimiento" y admite fechas válidas desde el 1 de enero de 1910 hasta la fecha actual, inclusive.
+5. **Dado** el perfil de clientes, **cuando** se introduce una fecha con un día inexistente para su mes, anterior al 1 de enero de 1910 o posterior a la fecha actual, **entonces** el sistema rechaza el valor con una explicación clara.
+6. **Dado** el formulario de cliente abierto antes de cambiar de día según la hora local del dispositivo, **cuando** llega el siguiente día local, **entonces** el límite máximo de "Fecha de nacimiento" pasa a ser la nueva fecha actual sin recargar la página.
+7. **Dado** un cliente con una fecha de nacimiento almacenada fuera del rango o inválida, **cuando** se consulta su ficha, **entonces** el valor se muestra igual; y **cuando** se edita, **entonces** no se permite guardar hasta corregirlo.
 
 ---
 
@@ -293,7 +307,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Qué ocurre cuando un usuario intenta guardar una entidad sin nombre o código obligatorio?
 - ¿Cómo gestiona el sistema una búsqueda que no devuelve coincidencias?
 - ¿Qué ocurre si un usuario intenta editar o eliminar una entidad que ya no existe?
-- ¿Qué ocurre cuando un usuario introduce una fecha objetivo que no es una fecha de calendario válida?
+- ¿Qué ocurre cuando un usuario introduce una fecha objetivo que no es una fecha de calendario válida? En el perfil de clientes, además se rechazan las fechas anteriores al 1 de enero de 1910 o posteriores a la fecha actual (FR-047). Si el valor ya estaba guardado, se conserva y se exige corrección al editar (FR-050).
 - ¿Qué ocurre con los documentos de una entidad cuando esta se elimina?
 - ¿Qué ocurre cuando un usuario introduce una fecha final anterior a la fecha inicial en un documento?
 - ¿Qué ocurre cuando la configuración declara un campo personalizado cuya clave choca con un nombre de campo base?
@@ -309,6 +323,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Qué ocurre cuando una entidad no tiene ningún documento asociado al abrir su ficha de detalle?
 - ¿Cómo identifica el resumen de indicadores los documentos "pendientes"? → Con ciclo de vida, los estados marcados explícitamente como pendientes en la configuración; sin ciclo de vida, coincidencia del estado normalizado con "pendiente" (resuelto en aclaraciones 2026-11-12 y 2026-11-16).
 - ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
+- ¿Qué ocurre si una sesión del perfil de clientes permanece abierta al cruzar la medianoche? → El límite máximo de "Fecha de nacimiento" se actualiza automáticamente al nuevo día (FR-048).
 
 ## Requisitos *(obligatorio)*
 
@@ -360,6 +375,10 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos "pendientes" por entidad. Si hay ciclo de vida configurado, la configuración DEBE marcar explícitamente uno o más estados como pendientes y solo esos se cuentan; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado (minúsculas y recorte) coincide con `pendiente`; si no hay coincidencias, el indicador es cero.
 - **FR-045**: El resumen de indicadores DEBE actualizarse cada vez que se crea, edita o elimina una entidad o un documento, y DEBE permitir seleccionar una entidad listada para abrir su ficha de detalle (FR-041).
 - **FR-046**: Cuando no existan entidades, documentos ni documentos pendientes, el resumen de indicadores DEBE mostrar un estado vacío con los valores en cero e indicar cómo comenzar a registrar información.
+- **FR-047**: En el perfil de clientes, el campo de fecha objetivo DEBE mostrarse con la etiqueta "Fecha de nacimiento" en todos los lugares visibles (formularios, listas, ficha, búsqueda y filtros) y DEBE aceptar únicamente fechas de calendario válidas entre el 1 de enero de 1910 y la fecha actual, inclusive.
+- **FR-048**: En el perfil de clientes, el límite máximo de "Fecha de nacimiento" DEBE recalcularse automáticamente cuando cambie el día mientras la aplicación permanece abierta, sin requerir recarga.
+- **FR-049**: En el perfil de clientes, la fecha actual usada como límite DEBE corresponder a la fecha local del dispositivo del usuario.
+- **FR-050**: En el perfil de clientes, las fechas de nacimiento almacenadas que queden fuera del rango o sean inválidas DEBEN conservarse y mostrarse sin borrarlas, y el sistema DEBE exigir su corrección antes de guardar cuando el cliente se edite.
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -373,7 +392,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 ### Entidades Clave *(incluir si la funcionalidad implica datos)*
 
-- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
+- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
 - **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
 - **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
 
@@ -392,6 +411,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-009**: Cada pantalla presenta el mismo marco con marca, y los usuarios pueden identificar en qué módulo están de un vistazo.
 - **SC-010**: Las estadísticas de registros mostradas en el panel siempre coinciden con el número de entidades y documentos almacenados.
 - **SC-011**: Los indicadores del resumen de Gestión Comercial (total de entidades, total de documentos y documentos pendientes por entidad) siempre coinciden con los registros de entidades y documentos almacenados.
+- **SC-012**: En el perfil de clientes, el campo "Fecha de nacimiento" rechaza el 100% de las fechas anteriores al 1 de enero de 1910, posteriores a la fecha actual o inválidas según el calendario en las pruebas automatizadas, y actualiza su límite máximo al cambiar de día sin recarga.
 
 ## Suposiciones
 
@@ -407,6 +427,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - Solo se muestra una pantalla a la vez; no hay diseño lado a lado del contenido de gestión y búsqueda.
 - La navegación entre pantallas se maneja dentro de la aplicación (p. ej., cambio de vistas), y el botón atrás del navegador debe comportarse de forma predecible.
 - Los datos siguen persistiéndose en el localStorage del navegador y no se ven afectados por la navegación entre pantallas.
+- La fecha actual para el límite de "Fecha de nacimiento" en el perfil de clientes se determina con la hora local del dispositivo del usuario.
 - La pantalla de búsqueda se centra en encontrar y ver entidades; la edición permanece en la pantalla de gestión.
 - El contenido del usuario introducido por el usuario (nombres, descripciones, notas de documentos) DEBE sanitizarse antes de renderizarse en el DOM para prevenir ataques de inyección de scripts (XSS). El módulo base DEBE escapar HTML y atributos de eventos al mostrar datos de localStorage.
 

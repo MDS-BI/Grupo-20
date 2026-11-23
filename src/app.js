@@ -18,13 +18,24 @@ import {
 import { renderShellHtml } from './components/shell.js';
 import { renderDashboardHtml } from './components/dashboard.js';
 import { DASHBOARD_DEMO_STATS } from './dashboard-demo.js';
-import { renderEntityFormHtml, collectEntityFormData } from './components/entity-form.js';
-import { renderDocumentFormHtml, collectDocumentFormData } from './components/document-form.js';
+import {
+  renderEntityFormHtml,
+  collectEntityFormData,
+  buildEntityFormBaseline,
+  isEntityFormDirty,
+} from './components/entity-form.js';
+import {
+  renderDocumentFormHtml,
+  collectDocumentFormData,
+  buildDocumentFormBaseline,
+  isDocumentFormDirty,
+} from './components/document-form.js';
 import { renderEntityListHtml } from './components/entity-list.js';
 import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
+import { resolveEntityDateRule, watchLocalDayChange } from './utils/entity-date.js';
 
 export function initApp(rootEl = null, options = {}) {
   let root = rootEl;
@@ -70,6 +81,8 @@ export function initApp(rootEl = null, options = {}) {
     documentFormErrors: {},
     entityFormDraft: null,
     documentFormDraft: null,
+    entityFormBaseline: null,
+    documentFormBaseline: null,
     focusSearchOnRender: false,
     demoStatsEnabled: !(
       typeof window !== 'undefined' &&
@@ -237,6 +250,14 @@ export function initApp(rootEl = null, options = {}) {
     const viewRoot = rootEl.querySelector('#view-root');
     viewRoot.innerHTML = renderCurrentView();
 
+    if (state.view === 'manage' && state.manageTab === 'entity') {
+      const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
+      state.entityFormBaseline = buildEntityFormBaseline(state.config, editing || {});
+    } else if (state.view === 'manage' && state.manageTab === 'document') {
+      const editingDoc = state.editingDocumentId ? state.documents.find((d) => d.id === state.editingDocumentId) : null;
+      state.documentFormBaseline = buildDocumentFormBaseline(state.config, editingDoc || {});
+    }
+
     if (state.focusSearchOnRender) {
       state.focusSearchOnRender = false;
       rootEl.querySelector('#search-input')?.focus();
@@ -251,7 +272,28 @@ export function initApp(rootEl = null, options = {}) {
 
   // -- Navigation ----------------------------------------------------------
 
-  function navigate(key) {
+  function hasUnsavedChanges() {
+    if (state.view !== 'manage') return false;
+    if (state.manageTab === 'entity') {
+      return isEntityFormDirty(rootEl.querySelector('#entity-form'), state.config, state.entityFormBaseline);
+    }
+    return isDocumentFormDirty(rootEl.querySelector('#document-form'), state.config, state.documentFormBaseline);
+  }
+
+  function confirmDiscardChanges() {
+    return window.confirm('Hay cambios sin guardar en el formulario. ¿Deseas salir y descartar los cambios?');
+  }
+
+  function discardDrafts() {
+    state.entityFormDraft = null;
+    state.documentFormDraft = null;
+    state.entityFormErrors = {};
+    state.documentFormErrors = {};
+  }
+
+  function navigate(key, { skipDirtyCheck = false } = {}) {
+    if (!skipDirtyCheck && hasUnsavedChanges() && !confirmDiscardChanges()) return;
+    discardDrafts();
     if (key === 'manage-entity') {
       state.view = 'manage';
       state.manageTab = 'entity';
@@ -347,16 +389,16 @@ export function initApp(rootEl = null, options = {}) {
         navigate(target.dataset.view);
         break;
       case 'quick-new-entity':
+        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
+        discardDrafts();
         state.editingEntityId = null;
-        state.entityFormDraft = null;
-        state.entityFormErrors = {};
-        navigate('manage-entity');
+        navigate('manage-entity', { skipDirtyCheck: true });
         break;
       case 'quick-new-document':
+        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
+        discardDrafts();
         state.editingDocumentId = null;
-        state.documentFormDraft = null;
-        state.documentFormErrors = {};
-        navigate('manage-document');
+        navigate('manage-document', { skipDirtyCheck: true });
         break;
       case 'quick-manage':
         navigate('manage-entity');
@@ -366,6 +408,8 @@ export function initApp(rootEl = null, options = {}) {
         navigate('search');
         break;
       case 'manage-tab':
+        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
+        discardDrafts();
         state.manageTab = target.dataset.tab;
         render();
         break;
@@ -374,10 +418,10 @@ export function initApp(rootEl = null, options = {}) {
         navigate('detail');
         break;
       case 'edit-entity':
+        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
+        discardDrafts();
         state.editingEntityId = target.dataset.id;
-        state.entityFormDraft = null;
-        state.entityFormErrors = {};
-        navigate('manage-entity');
+        navigate('manage-entity', { skipDirtyCheck: true });
         break;
       case 'delete-entity':
         onDeleteEntity(target.dataset.id);
@@ -389,12 +433,12 @@ export function initApp(rootEl = null, options = {}) {
         render();
         break;
       case 'edit-document': {
+        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
+        discardDrafts();
         const doc = state.documents.find((d) => d.id === target.dataset.id);
         state.editingDocumentId = target.dataset.id;
         state.documentEntityId = doc ? doc.entity_id : state.documentEntityId;
-        state.documentFormDraft = null;
-        state.documentFormErrors = {};
-        navigate('manage-document');
+        navigate('manage-document', { skipDirtyCheck: true });
         break;
       }
       case 'delete-document':
@@ -432,6 +476,11 @@ export function initApp(rootEl = null, options = {}) {
 
   function handleChange(event) {
     if (event.target.id === 'document-entity-select') {
+      if (hasUnsavedChanges() && !confirmDiscardChanges()) {
+        event.target.value = state.documentEntityId || '';
+        return;
+      }
+      discardDrafts();
       state.documentEntityId = event.target.value || null;
       state.editingDocumentId = null;
       state.documentFormDraft = null;
@@ -445,11 +494,27 @@ export function initApp(rootEl = null, options = {}) {
   rootEl.addEventListener('input', handleInput);
   rootEl.addEventListener('change', handleChange);
 
+  const stopEntityDateWatcher = config.entityDate
+    ? watchLocalDayChange(() => {
+        const input = rootEl.querySelector('#field-targetDate');
+        const rule = resolveEntityDateRule(config);
+        if (!input || input.type !== 'date' || !rule) return;
+        input.min = rule.min || '';
+        input.max = rule.max || '';
+        const hint = rootEl.querySelector('#field-targetDate')?.parentElement?.querySelector('[data-role="date-range"]');
+        if (hint) {
+          const rangeParts = [rule.min && `desde ${rule.min}`, rule.max && `hasta ${rule.max}`].filter(Boolean);
+          hint.textContent = rangeParts.length ? `Rango permitido ${rangeParts.join(' y ')} (inclusive).` : '';
+        }
+      })
+    : () => {};
+
   render();
 
   return {
     navigate,
     getState: () => state,
+    destroy: stopEntityDateWatcher,
     setDemoMode(enabled) {
       state.demoStatsEnabled = Boolean(enabled);
       render();

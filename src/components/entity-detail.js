@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils/sanitize.js';
 import { getLabel } from '../module-config.js';
+import { resolveEntityDateRule } from '../utils/entity-date.js';
 import { renderDocumentListHtml } from './document-list.js';
 
 export function renderEntityDetailHtml(config, entity, documents) {
@@ -7,6 +8,7 @@ export function renderEntityDetailHtml(config, entity, documents) {
     return `<p class="empty-state">${getLabel(config, 'entity')} no encontrada.</p>`;
   }
   const customFieldDefs = config?.customFields?.entity || [];
+  const dateLabel = resolveEntityDateRule(config)?.label || 'Fecha objetivo';
   const customFieldsHtml = customFieldDefs
     .filter((def) => entity[def.key] !== undefined && entity[def.key] !== null && entity[def.key] !== '')
     .map(
@@ -22,7 +24,7 @@ export function renderEntityDetailHtml(config, entity, documents) {
           <p class="entity-detail-code">${getLabel(config, 'entity')}: ${escapeHtml(entity.code)}</p>
           ${entity.category ? `<p>${escapeHtml(entity.category)}</p>` : ''}
           ${entity.description ? `<p>${escapeHtml(entity.description)}</p>` : ''}
-          ${entity.targetDate ? `<p>Fecha objetivo: ${escapeHtml(entity.targetDate)}</p>` : ''}
+          ${entity.targetDate ? `<p>${escapeHtml(dateLabel)}: ${escapeHtml(entity.targetDate)}</p>` : ''}
           ${customFieldsHtml}
         </div>
       </header>

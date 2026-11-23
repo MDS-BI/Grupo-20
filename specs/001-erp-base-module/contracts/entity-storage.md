@@ -14,7 +14,7 @@ Cada registro de entidad **base** (sin ningún módulo personalizado configurado
 - `code`: cadena no vacía y única entre todas las entidades (comparación sin distinguir mayúsculas ni espacios)
 - `category`: cadena opcional
 - `description`: cadena opcional
-- `targetDate`: cadena de fecha opcional (YYYY-MM-DD) válida cuando está presente
+- `targetDate`: cadena de fecha opcional (YYYY-MM-DD) válida cuando está presente; en el perfil de clientes debe además cumplir la regla `entityDate` descrita abajo
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
@@ -59,12 +59,33 @@ Operaciones:
 - Un `name` o `code` faltante debe rechazarse antes de la persistencia.
 - Un `code` duplicado debe rechazarse antes de la persistencia (comparación sin distinguir mayúsculas ni espacios).
 - Un `targetDate` presente debe ser una fecha de calendario válida.
+- Si la configuración activa declara `entityDate`, un `targetDate` presente debe cumplir `min <= targetDate <= max`. En el perfil de clientes, `min = "1910-01-01"` y `max` es la fecha local actual resuelta en el momento de la validación.
+- La validación de rango se aplica al objeto fusionado en `updateEntity()`; por eso un registro histórico con fecha fuera de rango puede consultarse pero no guardarse sin corregir la fecha.
 - Los campos personalizados obligatorios (declarados en `module-config.js`) deben validarse con la misma experiencia de retroalimentación que los campos base (p. ej. `email` con formato válido, `creditLimit` no negativo cuando el módulo los declara).
 - Un `endDate` presente debe ser igual o posterior a `startDate` cuando ambos están presentes.
 - Un entity_id debe generarse automáticamente y debe ser único.
 - Un documento sin un `entity_id` que coincida con una entidad existente debe rechazarse.
 - Eliminar una entidad también debe eliminar todos los documentos vinculados a su entity_id.
 - Las operaciones de almacenamiento deben preservar el orden actual de la lista y actualizar las marcas de tiempo.
+
+## Contrato de Configuración `entityDate`
+
+Cuando `module-config.js` declara `entityDate`, debe tener esta forma:
+
+```js
+entityDate: {
+  label: 'Fecha de nacimiento',
+  min: '1910-01-01',
+  max: 'localToday',
+}
+```
+
+- `label`: cadena no vacía usada en todas las etiquetas visibles del campo `targetDate`. Si se omite, se usa "Fecha objetivo".
+- `min`: fecha ISO `YYYY-MM-DD` válida. Si se omite, no hay límite inferior.
+- `max`: fecha ISO `YYYY-MM-DD` válida o el centinela `localToday`, que se resuelve a la fecha local del dispositivo en cada cálculo.
+- Si el bloque `entityDate` está ausente, el campo conserva el comportamiento base sin rango.
+- El centinela `localToday` debe calcularse con componentes locales (`getFullYear`/`getMonth`/`getDate`), nunca con `toISOString()`.
+- La UI debe reflejar `min`, `max` y `label` en el formulario y actualizar `max` sin recargar cuando cambia el día local.
 
 ## Expectativas de Extensibilidad
 

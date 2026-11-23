@@ -15,7 +15,7 @@ Feedback Avance 02 (2/11/26)
 - Se observan historias de usuario por miembro del grupo (solo actividad parcial)
 - Evitar trabajar con modelos de IA fuera de speckit en local, porque crean ramas nuevas y se pierde la integridad del proyecto
 
-Proximos pasos:
+Proximos pasos
 
 - rectificar puntos anteriores y crear tareas a partir de los specs
 - hacer primera implmentacion, registar modificaciones/incremental y volver al spec
