@@ -3,13 +3,16 @@ import { initApp } from '../../src/app.js';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
 import { addEntity } from '../../src/storage.js';
 
+let app;
+
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig: {} });
+  app = initApp(document.getElementById('app'), { rawConfig: {} });
+  return app;
 }
 
 function createEntity(name, code) {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+  app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
   document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));

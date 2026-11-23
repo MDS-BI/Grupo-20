@@ -31,8 +31,9 @@ Entities carry base master-data fields (name, code, category, description, entit
 
 The app presents itself as a coherent ERP workspace:
 
-- **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Entidades, Documentos, Buscar and Resumen. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
-- **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management area, find records) and live statistic cards showing record counts.
+- **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Buscar and Resumen. Clientes e Interacciones se gestionan desde el panel; sus enlaces profundos siguen disponibles. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
+- **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers six quick-action buttons (new entity, new document, open entity management, find records, abrir Marketing and gestionar documentos) and live statistic cards showing record counts.
+- **Marketing** (`src/components/marketing.js`) — the capture form (`?view=capture`) creates prospects with explicit consent, and the summary shows commercial stages, funnel rates, five counters and an accessible SVG pie chart.
 - **Management screen** (`src/app.js`, `manage-entity` / `manage-document`) — a dedicated screen with an Entidades/Documentos tab to create, edit and delete records; it does not show the full entity list (that lives in Search), per the base module's navigation model.
 - **Search screen** — finds entities by the fields declared as searchable in `fieldRules`; the base profile searches name, code, category, description, the configured entity date and custom fields, while the CRM profile excludes the hidden `code`, `category` and `description`. Results open the **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
 - **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents in the states marked as `pendingStates` (or `pendiente` when no lifecycle is configured), grouped by entity.
@@ -97,6 +98,7 @@ export const MODULE_CONFIG = {
 - `entityDate` — optional label and inclusive ISO range for the base entity date field; `max: "localToday"` follows the user's local date and updates when the local day changes while the app is open. Existing out-of-range values are preserved until the record is edited. `required: true` makes the date mandatory.
 - `fieldRules` — declarative per-entity/document rules: `required`, `hidden`, `searchable`, `generated`, `unique`, `format`, `normalize`, `when` and `group`. The active CRM profile generates an internal `CLI-###` code, hides `code`/`category`/`description`, requires a valid unique Chilean RUT, and shows the contact field only for the selected channel (`llamada`, `correo`, `reunión`, `whatsapp`). Inactive channel values are discarded on save; hidden historical values stay in storage.
 - `detailPolicy` — controls the ficha for inherited incomplete records. With `entity.blockWhenInvalid: true`, the detail view shows the pending fields and an edit action instead of the normal query.
+- `marketing` — optional block with `privacyNoticeVersion`, `captureFields` and `automationRules`. A rule declares `event` (`entity_created`, `stage_changed`, `document_created`), optional `from`/`to` stages, `action` and `label`; each execution is stored as an `automatico` document linked to the prospect.
 
 If the rest of the configuration is invalid (unknown field types, custom field keys colliding with base fields, status transitions referencing undeclared states), the app shows the problem in a banner and falls back to the full base defaults instead of breaking.
 
@@ -113,3 +115,16 @@ If the rest of the configuration is invalid (unknown field types, custom field k
 - CRM fields render in this order: `name`, `rut`, `targetDate`, `canal_contacto` plus its active contact field, `rubro`, `ejecutivo_asignado`. `rubro` is a select labeled «Tipo de actividad» and keeps its storage key.
 - Both `12.345.678-9` and `12345678-9` are accepted for RUT and compared normalized for uniqueness. The creation heading and dashboard quick action read «Nuevo Cliente».
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.
+
+## Validación del Apartado de Marketing
+
+1. Abra `?view=capture` y envíe el formulario sin consentimiento: debe mostrar un error y no crear la entidad.
+2. Envíe el formulario con consentimiento: se crea una entidad en estado `prospecto` y se registra la ejecución automática de captura en su historial.
+3. Desde «Abrir Marketing», verifique los contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual», el embudo por etapas y el gráfico «Estado comercial de la cartera» con leyenda accesible.
+4. Cambie el estado comercial de un prospecto: los contadores, el embudo y el gráfico se actualizan sin recargar, y la regla de cambio de etapa añade una ejecución al historial.
+
+## Validación de la Navegación Lateral
+
+1. La barra lateral solo ofrece Panel, Buscar y Resumen; no aparecen Clientes ni Interacciones.
+2. El panel ofrece seis acciones rápidas, incluidas «Abrir Marketing» y «Gestionar documentos».
+3. Los enlaces profundos `?view=manage-entity` y `?view=manage-document` siguen abriendo las vistas de gestión aunque no estén en el menú lateral.

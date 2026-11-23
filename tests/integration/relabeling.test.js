@@ -6,9 +6,12 @@ import { renderEntityListHtml } from '../../src/components/entity-list.js';
 import { renderEntityDetailHtml } from '../../src/components/entity-detail.js';
 import { renderSearchBarHtml } from '../../src/components/search-bar.js';
 
+let app;
+
 function mount(rawConfig) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig });
+  app = initApp(document.getElementById('app'), { rawConfig });
+  return app;
 }
 
 afterEach(() => {
@@ -42,16 +45,16 @@ describe('Reetiquetar pantallas desde la configuración (H7)', () => {
     expect(document.querySelector('.module-name').textContent).toBe('Ventas');
     expect(document.body.textContent).toContain('Clientes');
 
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     expect(document.querySelector('[for="field-name"]').textContent).toContain('Cliente');
 
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     expect(document.body.textContent).toContain('Pedido de Venta');
   });
 
   it('no cambia el comportamiento de navegación tras remapear etiquetas', () => {
     mount(SALES_CONFIG);
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     expect(document.querySelector('.manage-view')).toBeTruthy();
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     expect(document.querySelector('.search-view')).toBeTruthy();
@@ -110,7 +113,7 @@ describe('Reetiquetar pantallas desde la configuración (H7)', () => {
     }
 
     mount(MODULE_CONFIG);
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     expect(document.getElementById('field-code')).toBeNull();
   });
 });

@@ -385,6 +385,92 @@ body {
   color: var(--text-muted);
 }
 
+.marketing-view h2 {
+  margin-top: var(--space-4);
+}
+
+.marketing-funnel .funnel-row {
+  display: grid;
+  grid-template-columns: 170px 48px 200px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.funnel-rate {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.marketing-chart {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.marketing-chart svg {
+  width: 180px;
+  height: 180px;
+}
+
+.chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 240px;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.legend-label {
+  flex: 1;
+}
+
+.legend-count {
+  font-weight: 600;
+}
+
+.marketing-leads select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.capture-view {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.capture-intro {
+  color: var(--text-muted);
+}
+
+.capture-confirmation {
+  padding: var(--space-3);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--accent-color);
+}
+
+.capture-footer {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 @media (max-width: 640px) {
   #app {
     grid-template-columns: 64px 1fr;

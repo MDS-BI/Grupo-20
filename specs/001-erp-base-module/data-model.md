@@ -1,6 +1,6 @@
 # Modelo de Datos: Módulo Base ERP
 
-**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo el perfil CRM descrito en las Historias de Usuario 2, 3, 5, 6 y 7 lo reutiliza mediante configuración, sin introducir una estructura de almacenamiento distinta.
+**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM y Marketing descritos en las Historias de Usuario 2, 3, 5, 6, 7 y 16 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
 
 Para la forma exacta de los campos y las operaciones de almacenamiento, ver `contracts/entity-storage.md`, que es la fuente autoritativa; este documento resume las relaciones y la extensión vía configuración.
 
@@ -56,6 +56,7 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `detailPolicy.entity` | object | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058). |
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067). |
 | `options` (en campos `select`) | array | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063). |
+| `marketing` | object \| null | Bloque opcional con `privacyNoticeVersion`, `automationRules` y `captureFields`; ausente = sin comportamiento de Marketing (FR-068 a FR-074). |
 | `theme.accentColor` | string | Color de acento opcional (FR-038). |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
@@ -106,3 +107,63 @@ El perfil CRM ilustrado en la especificación **no introduce entidades nuevas**:
 La búsqueda del perfil de clientes deriva sus campos de estas reglas: solo `name`, `targetDate` y campos personalizados visibles y buscables. La utilidad `src/utils/field-formats.js` expone los formatos `cl-rut`, `phone`, `email` y `nonEmpty` sin dependencias externas.
 
 **Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad.
+
+## 3. Perfil de Marketing (Historia de Usuario 16)
+
+Marketing **no introduce entidades nuevas**: usa `Entidad` para prospectos/clientes y `Documento` para interacciones y ejecuciones de automatización (FR-068, XR-001).
+
+### 3.1 Estado comercial de la entidad
+
+| Campo | Tipo | Obligatorio | Notas |
+|---|---|---|---|
+| `estado_comercial` | string (opción de `select`) | Sí en Marketing | Campo personalizado declarado en `customFields.entity`. Valores internos: `prospecto`, `en_proceso`, `en_recontacto`, `ganado`, `perdido`. Valor inicial `prospecto` (FR-068). Etiquetas: «Prospecto», «En proceso», «En recontacto», «Cliente ganado», «Perdido». |
+| `consentimiento` | boolean | Sí en la captura pública | Solo se crea un prospecto desde la captura cuando es `true` (FR-071). |
+| `consentimiento_fecha` | string (ISO timestamp) | Sí en la captura pública | Fecha y hora en que se marcó el consentimiento. |
+| `consentimiento_version` | string | Sí en la captura pública | Copia de `marketing.privacyNoticeVersion` aceptada. |
+
+Conversión a Cliente (FR-068): al pasar `estado_comercial` de cualquier estado a `ganado`, la misma `Entidad` conserva `id`, `entity_id`, documentos y campos personalizados; no se crea un registro nuevo ni se migra información.
+
+### 3.2 Correspondencia con las categorías del gráfico
+
+| Estado almacenado | Categoría mostrada |
+|---|---|
+| `ganado` | Clientes ganados |
+| `en_recontacto` | En recontacto |
+| `en_proceso` | En proceso |
+| `perdido` | Perdidos |
+| `prospecto` | Sin resultados definitivos |
+
+Cada entidad pertenece a una sola categoría. El estado inicial «Prospecto» se clasifica como «Sin resultados definitivos» hasta que avance (FR-074).
+
+### 3.3 Agregaciones derivadas (no persistidas)
+
+`computeMarketingStats({ entities })` calcula en memoria, sin escribir en `localStorage`:
+
+| Salida | Definición |
+|---|---|
+| `leadsAnalyzed` | Total de entidades. |
+| `openOpportunities` | Entidades con `estado_comercial` en `en_proceso` o `en_recontacto`. |
+| `wonClients` | Entidades con `estado_comercial = ganado`. |
+| `lossRate` | `perdido / leadsAnalyzed * 100`, o cero si no hay leads. |
+| `conversionRate` | `ganado / leadsAnalyzed * 100`, o cero si no hay leads. |
+| `funnel` | Conteo por etapa `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y tasas entre etapas consecutivas. |
+| `categories` | Arreglo de cinco `{ label, count, value }` para la torta, en el orden de la sección 3.2. |
+
+Estas cifras alimentan los contadores (FR-073), el embudo (FR-072) y la torta (FR-074); al estar derivadas de las entidades, cualquier cambio de estado se refleja sin recarga.
+
+### 3.4 Reglas de automatización
+
+`marketing.automationRules` es un arreglo opcional de objetos `{ event, from, to, action, label }`:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `event` | string | `entity_created`, `stage_changed` o `document_created` (FR-070). |
+| `from` / `to` | string \| null | Estados comercial origen/destino; `from` solo en `stage_changed`, `to` opcional. |
+| `action` | string | `create_document` (crea un `Documento` en el historial de la entidad) o `notify` (registra el aviso en ese historial). |
+| `label` | string | Texto legible mostrado en el historial y en mensajes. |
+
+Cada ejecución se persiste como un `Documento` con `notes = label`, `status = 'automatico'`, `entity_id` de la entidad afectada y `automation_key = event|from|to|label`. La clave se declara como campo personalizado oculto de `Documento` y evita repetir ejecuciones ya registradas. Por tanto, el historial de la ficha ya existente muestra la automatización sin un almacén adicional. Con `marketing` ausente o `automationRules` vacío, no se ejecuta ninguna acción.
+
+### 3.5 Navegación
+
+La retirada de Clientes e Interacciones de la barra lateral no afecta al modelo de datos: `NAV_ITEMS` es configuración de interfaz en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la captura pública se selecciona con `?view=capture` y tampoco altera datos hasta que se envía el formulario.

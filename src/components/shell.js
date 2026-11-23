@@ -11,14 +11,8 @@ function monogramSvg(moduleName) {
   `;
 }
 
-// FR-012: la barra lateral ofrece botones separados para Panel, Entidades,
-// Documentos y Buscar; Entidades/Documentos navegan a la misma pantalla de
-// gestión preseleccionando su pestaña (FR-013, FR-014). El botón de Resumen
-// es adicional (Historia de Usuario 6), más allá del mínimo exigido por FR-012.
 const NAV_ITEMS = [
   { key: 'dashboard', labelKey: 'dashboard', icon: '⌂', id: 'nav-dashboard' },
-  { key: 'manage-entity', labelKey: 'entityPlural', icon: '🏷', id: 'nav-entities' },
-  { key: 'manage-document', labelKey: 'documentPlural', icon: '📄', id: 'nav-documents' },
   { key: 'search', labelKey: 'search', icon: '🔍', id: 'nav-search' },
   { key: 'summary', labelKey: 'summary', icon: '📊', id: 'nav-summary' },
 ];

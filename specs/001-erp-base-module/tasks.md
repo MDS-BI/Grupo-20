@@ -10,7 +10,7 @@ description: "Task list for feature implementation"
 
 **Tests**: Incluidas por el Principio II de la Constitución: toda lógica de negocio y comportamiento visible debe tener cobertura automatizada. Las tareas Ampliar/Crear pruebas deben escribirse primero y fallar antes de la implementación correspondiente.
 
-**Organization**: Las tareas se agrupan por historia de usuario. Las historias ya completadas en el baseline (US1, US3, US5, US8, US9, US11, US12, US14, US15 y US6) no se duplican; solo se enumeran las tareas pendientes y las nuevas de las sesiones 2026-11-16 y 2026-11-23. Las fases 1–7 y 7b cubren la primera tanda (2026-11-16 y fecha de nacimiento) y están completadas; las fases 8–13 cubren los FR-051..FR-061 del perfil de clientes (2026-11-23) y están completadas; las fases 14–16 cubren los FR-062..FR-067 (pistas grises, etiquetas, orden y catálogo de «Tipo de actividad») y la fase 17 cubre la regresión final.
+**Organization**: Las tareas se agrupan por historia de usuario. Las historias ya completadas en el baseline (US1, US3, US5, US8, US9, US11, US12, US14, US15 y US6) no se duplican; solo se enumeran las tareas pendientes y las nuevas de las sesiones 2026-11-16 y 2026-11-23. Las fases 1�?"7 y 7b cubren la primera tanda y están completadas; las fases 8�?"13 cubren los FR-051..FR-061 del perfil de clientes y están completadas; las fases 14�?"17 cubren los FR-062..FR-067 y están completadas; las fases 18�?"23 cubren el apartado de Marketing (FR-068..FR-075 y HU16) y el ajuste de navegación (HU14/HU4), y la fase 24 cierra la regresión final.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -40,7 +40,7 @@ description: "Task list for feature implementation"
 
 **Purpose**: Contrato `entityDate`, utilidad de fecha local y validación de almacenamiento. BLOCKS las fases US7, US10 y US2.
 
-**⚠️ CRITICAL**: Ninguna tarea de historia de usuario puede comenzar hasta completar esta fase.
+**�s�️ CRITICAL**: Ninguna tarea de historia de usuario puede comenzar hasta completar esta fase.
 
 - [X] T002 [P] Crear `tests/unit/entity-date.test.js` con casos para `localTodayISO()` con fecha local fija (no UTC), `resolveEntityDateRule()` sin `entityDate`, con `min: "1910-01-01"` y con `max: "localToday"`, incluyendo `1910-01-01`, `1909-12-31`, hoy y mañana
 - [X] T003 [P] Ampliar `tests/unit/module-config.test.js` para exigir que `entityDate` acepte `{ label, min, max }`, rechace `label` vacío, `min` inválido y `max` distinto de una fecha ISO válida o `"localToday"`, y haga fallback a `DEFAULT_CONFIG` con aviso
@@ -163,7 +163,7 @@ description: "Task list for feature implementation"
 
 **Purpose**: Contrato de reglas de campo, validadores compartidos y resolución de preparación de ficha. BLOCKS las fases US8, US7, US2, US3, US9 y US12.
 
-**⚠️ CRITICAL**: Ninguna tarea de las fases 9–13 puede comenzar hasta completar esta fase.
+**�s�️ CRITICAL**: Ninguna tarea de las fases 9�?"13 puede comenzar hasta completar esta fase.
 
 - [X] T027 [P] Crear `tests/unit/field-formats.test.js` con casos válidos e inválidos para `cl-rut` (dígito verificador, normalización de puntos/guion y unicidad delegada), `phone`, `email` y `nonEmpty`, siguiendo `contracts/entity-storage.md`
 - [X] T028 [P] Crear `tests/unit/field-rules.test.js` para `resolveFieldRules(config, entityType)` con herencia de reglas globales por entidad, `isFieldVisible()`, `isFieldSearchable()`, `isConditionActive()` y `getReadinessErrors()` ante clientes heredados incompletos
@@ -275,13 +275,13 @@ description: "Task list for feature implementation"
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns (tandas 1 y 2 — completado)
+## Phase N: Polish & Cross-Cutting Concerns (tandas 1 y 2 �?" completado)
 
-**Purpose**: Regresión, documentación y calidad finales de las historias de las fases 1–13, incluidas las reglas FR-051..FR-061.
+**Purpose**: Regresión, documentación y calidad finales de las historias de las fases 1�?"13, incluidas las reglas FR-051..FR-061.
 
 - [X] T052 [P] Ampliar `README.md` y `specs/001-erp-base-module/quickstart.md` para documentar campos ocultos, código generado, RUT chileno obligatorio, campos condicionales por canal y ficha bloqueada de clientes heredados
-- [X] T053 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 8–13
-- [X] T054 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 8–13
+- [X] T053 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 8�?"13
+- [X] T054 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 8�?"13
 - [X] T055 Ejecutar de extremo a extremo las secciones "Validación del Perfil de Clientes" y "Validación del Perfil de Clientes (segunda tanda)" de `specs/001-erp-base-module/quickstart.md`
 
 ---
@@ -290,15 +290,15 @@ description: "Task list for feature implementation"
 
 **Purpose**: Extender el contrato de presentación y garantizar que el RUT con y sin puntos valide y se compare de forma idéntica. BLOCKS las fases 15 y 16.
 
-**⚠️ CRITICAL**: Ninguna tarea de las fases 15–16 puede comenzar hasta completar esta fase.
+**�s�️ CRITICAL**: Ninguna tarea de las fases 15�?"16 puede comenzar hasta completar esta fase.
 
 - [X] T056 [P] Ampliar `tests/unit/field-formats.test.js` para exigir que `isValidRut()` acepte `12.345.678-9` y `12345678-9`, que `normalizeClRut()` devuelva la misma cadena sin puntos para ambos y que `normalizeFieldValue(value, 'cl-rut')` reutilice esa normalización (FR-057, FR-062)
 - [X] T057 [P] Ampliar `tests/unit/storage.test.js` para rechazar dos clientes con RUT equivalente en formatos distintos (`12.345.678-9` frente a `12345678-9`) y verificar que la comparación de unicidad usa el valor normalizado sin reescribir el texto capturado (FR-057)
 - [X] T058 [P] Ampliar `tests/unit/module-config.test.js` para exigir validación de metadatos de presentación en `fieldRules`: `label` y `placeholder` como cadenas, `order` como número finito, `options` como cadena u objeto `{ value, label }`, con fallback a `DEFAULT_CONFIG` y aviso si son inválidos (FR-062, FR-063, FR-065, FR-066, FR-067)
-- [X] T059 Ajustar `validateFieldRules()` y `normalizeRuleMap()` en `src/module-config.js` para validar y conservar `label`, `placeholder`, `order` y `options` —cadenas u objetos `{ value, label }`— sin descartar las reglas existentes de `required`, `when`, `group` y `unique` (FR-062–FR-067)
+- [X] T059 Ajustar `validateFieldRules()` y `normalizeRuleMap()` en `src/module-config.js` para validar y conservar `label`, `placeholder`, `order` y `options` �?"cadenas u objetos `{ value, label }`�?" sin descartar las reglas existentes de `required`, `when`, `group` y `unique` (FR-062�?"FR-067)
 - [X] T060 Ajustar `normalizeClRut()` en `src/utils/field-formats.js` para eliminar puntos, guion y espacios, y confirmar que `normalizeForUniqueness()` en `src/storage.js` lo reutiliza para comparar RUT; conservar el formato original en el registro (FR-057, FR-062)
 
-**Checkpoint**: El contrato de presentación existe, el RUT se normaliza en validación y unicidad, y las pruebas fallan hasta completar la implementación; las fases 15–16 pueden comenzar.
+**Checkpoint**: El contrato de presentación existe, el RUT se normaliza en validación y unicidad, y las pruebas fallan hasta completar la implementación; las fases 15�?"16 pueden comenzar.
 
 ---
 
@@ -310,11 +310,11 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 8
 
-- [X] T061 [P] [US8] Ampliar `tests/integration/client-field-rules.test.js` para verificar que `MODULE_CONFIG` declara `placeholder` en `rut` y en los cuatro campos `contacto_*`, `order` 1–6, opciones `{ value, label }` con etiquetas «Llamada», «Correo», «Reunión» y «WhatsApp», y el catálogo exacto de diez opciones de `rubro` (FR-062–FR-067)
+- [X] T061 [P] [US8] Ampliar `tests/integration/client-field-rules.test.js` para verificar que `MODULE_CONFIG` declara `placeholder` en `rut` y en los cuatro campos `contacto_*`, `order` 1�?"6, opciones `{ value, label }` con etiquetas «Llamada», «Correo», «Reunión» y «WhatsApp», y el catálogo exacto de diez opciones de `rubro` (FR-062�?"FR-067)
 
 ### Implementation for User Story 8
 
-- [X] T062 [US8] Declarar en `fieldRules.entity` de `src/module-config.js` los metadatos de presentación: `name.order: 1`, `rut` con `placeholder: 'Ej: 11.111.111-1'` y `order: 2`, `targetDate.order: 3`, `canal_contacto` con opciones `{ value, label }` y `order: 4`, los cuatro `contacto_*` con su `placeholder` y `order: 4`, `rubro` con `label: 'Tipo de actividad'`, `type: 'select'`, diez opciones y `order: 5`, y `ejecutivo_asignado.order: 6` (FR-062–FR-067)
+- [X] T062 [US8] Declarar en `fieldRules.entity` de `src/module-config.js` los metadatos de presentación: `name.order: 1`, `rut` con `placeholder: 'Ej: 11.111.111-1'` y `order: 2`, `targetDate.order: 3`, `canal_contacto` con opciones `{ value, label }` y `order: 4`, los cuatro `contacto_*` con su `placeholder` y `order: 4`, `rubro` con `label: 'Tipo de actividad'`, `type: 'select'`, diez opciones y `order: 5`, y `ejecutivo_asignado.order: 6` (FR-062�?"FR-067)
 - [X] T063 [US8] Actualizar `RUBROS` en `src/seed.js` y las expectativas en `tests/unit/seed.test.js` para generar solo los diez valores del catálogo de «Tipo de actividad», conservando el texto descriptivo del historial (FR-066)
 
 **Checkpoint**: La configuración es la única fuente de etiquetas, pistas y catálogos; no se han tocado claves de almacenamiento.
@@ -329,8 +329,8 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 2
 
-- [X] T064 [P] [US2] Crear `tests/integration/client-form-presentation.test.js` para comprobar el orden de los campos, el placeholder del RUT, las etiquetas de «Canal de Contacto», las diez opciones de «Tipo de actividad», el título «Nuevo Cliente», la acción rápida «Nuevo Cliente» y que los placeholders no se envían como valores (FR-062–FR-066, SC-015, SC-016)
-- [X] T065 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para verificar la pista gris exacta de cada canal —`Ej: +56 9 1234 5678`, `Ej: nombre@ejemplo.cl` o `Ej: Sala 2 o enlace`— y que sigue siendo obligatoria capturar un valor real (FR-067, SC-017)
+- [X] T064 [P] [US2] Crear `tests/integration/client-form-presentation.test.js` para comprobar el orden de los campos, el placeholder del RUT, las etiquetas de «Canal de Contacto», las diez opciones de «Tipo de actividad», el título «Nuevo Cliente», la acción rápida «Nuevo Cliente» y que los placeholders no se envían como valores (FR-062�?"FR-066, SC-015, SC-016)
+- [X] T065 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para verificar la pista gris exacta de cada canal �?"`Ej: +56 9 1234 5678`, `Ej: nombre@ejemplo.cl` o `Ej: Sala 2 o enlace`�?" y que sigue siendo obligatoria capturar un valor real (FR-067, SC-017)
 
 ### Implementation for User Story 2
 
@@ -340,7 +340,7 @@ description: "Task list for feature implementation"
 - [X] T069 [P] [US2] Actualizar la acción rápida en `src/components/dashboard.js` a `Nuevo ${entityLabel}` sin forzar minúsculas, con «Cliente» como etiqueta por defecto (FR-064)
 - [X] T070 [P] [US2] Añadir o verificar en `src/styles.css` un estilo `::placeholder` en gris para los campos con pista, sin alterar el color del valor escrito (FR-062, FR-067)
 
-**Checkpoint**: Los escenarios 12–17 son verificables de extremo a extremo y las pistas no se persisten.
+**Checkpoint**: Los escenarios 12�?"17 son verificables de extremo a extremo y las pistas no se persisten.
 
 ---
 
@@ -349,9 +349,143 @@ description: "Task list for feature implementation"
 **Purpose**: Regresión, documentación y calidad finales de los FR-062..FR-067.
 
 - [X] T071 [P] Actualizar `README.md` y `specs/001-erp-base-module/quickstart.md` con la sección «Validación del Perfil de Clientes (tercera tanda)»: RUT con y sin puntos, pistas grises, opciones capitalizadas, «Nuevo Cliente», orden de campos, catálogo de «Tipo de actividad» y pistas por canal
-- [X] T072 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 14–16
-- [X] T073 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 14–16
-- [X] T074 Ejecutar de extremo a extremo los escenarios 12–17 de `specs/001-erp-base-module/spec.md` y la nueva sección de `specs/001-erp-base-module/quickstart.md`, confirmando que las pistas grises no se guardan
+- [X] T072 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 14�?"16
+- [X] T073 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 14�?"16
+- [X] T074 Ejecutar de extremo a extremo los escenarios 12�?"17 de `specs/001-erp-base-module/spec.md` y la nueva sección de `specs/001-erp-base-module/quickstart.md`, confirmando que las pistas grises no se guardan
+
+---
+
+## Phase 18: Foundational - Configuración de Marketing y estado comercial (cuarta tanda 2026-11-23)
+
+**Purpose**: Declarar el bloque `marketing`, el campo `estado_comercial` y el contrato de consentimiento; BLOCKS las fases 19�?"23.
+
+**�s�️ CRITICAL**: No iniciar las historias de Marketing ni el cambio de navegación hasta completar esta fase.
+
+- [X] T075 [P] Crear `tests/unit/marketing-config.test.js` verificando valores predeterminados, versión del aviso y reglas inválidas que retroceden con advertencia
+- [X] T076 [P] Ampliar `tests/unit/module-config.test.js` con el bloque `marketing` y la opción `estado_comercial`
+- [X] T077 [P] Ampliar `tests/unit/storage.test.js` con consentimiento obligatorio y creación de `Documento` con `status: 'automatico'`
+- [X] T078 Implementar `src/utils/marketing-config.js` normalizando `privacyNoticeVersion`, `automationRules` y `captureFields` sin dependencias nuevas
+- [X] T079 Ampliar `src/module-config.js` con el bloque `marketing`, el campo `estado_comercial` y sus cinco valores internos
+- [X] T080 Ampliar `src/storage.js` para conservar `consentimiento`, `consentimiento_fecha` y `consentimiento_version` en la entidad
+
+**Checkpoint**: Configuración y contrato Marketing listos; las historias pueden comenzar.
+
+---
+
+## Phase 19: User Story 16 - Capturar prospectos con consentimiento (Priority: P2) �YZ� MVP del incremento
+
+**Goal**: Convertir visitas en prospectos mediante un formulario público embebible con consentimiento explícito.
+
+**Independent Test**: Abrir `?view=capture`, enviar sin consentimiento y verificar que no se crea nada; enviar con consentimiento y verificar una entidad en `prospecto` con fecha y versión del aviso.
+
+### Tests for User Story 16 �s�️
+
+> **NOTE: Escribir estas pruebas FIRST y confirmar que FALLAN antes de implementar.**
+
+- [X] T081 [P] [US16] Crear `tests/integration/marketing-capture.test.js` con los escenarios 18 y 19 de `specs/001-erp-base-module/spec.md`
+- [X] T082 [P] [US16] Crear `tests/unit/capture-consent.test.js` verificando rechazo sin consentimiento y copia de la versión del aviso
+
+### Implementation for User Story 16
+
+- [X] T083 [P] [US16] Crear `src/utils/capture-prospect.js` con `createProspectFromCapture(values, config)` según `contracts/marketing.md`
+- [X] T084 [P] [US16] Crear `src/components/capture-form.js` con campo de consentimiento, mensaje de error y envío accesible
+- [X] T085 [US16] Integrar la vista `?view=capture` en `src/app.js` sin persistir el estado de la vista
+- [X] T086 [US16] Añadir estilos del formulario público en `src/styles.css`
+
+**Checkpoint**: La captura con consentimiento funciona de forma aislada.
+
+---
+
+## Phase 20: User Story 16 - Estado comercial y conversión a cliente (Priority: P1)
+
+**Goal**: Avanzar el prospecto por las cinco etapas y convertirlo en cliente conservando identidad e historial.
+
+**Independent Test**: Crear un prospecto, cambiarlo a `ganado` y comprobar que `id`, `entity_id`, documentos y campos personalizados permanecen intactos.
+
+### Tests for User Story 16 �s�️
+
+- [X] T087 [P] [US16] Crear `tests/unit/marketing-stage.test.js` con transiciones válidas, inválidas y conversión sin duplicados
+- [X] T088 [P] [US16] Ampliar `tests/integration/entity-detail.test.js` con la ficha de un prospecto convertido a cliente
+
+### Implementation for User Story 16
+
+- [X] T089 [US16] Crear `src/utils/marketing-stage.js` con `transitionStage` y validación de estados comerciales
+- [X] T090 [US16] Integrar la transición a `ganado` en `src/storage.js` conservando identificadores, documentos y campos personalizados
+
+**Checkpoint**: El ciclo comercial es verificable sin depender de las métricas.
+
+---
+
+## Phase 21: User Story 16 - Contadores, embudo y gráfico de cartera (Priority: P1)
+
+**Goal**: Mostrar los cinco contadores, el embudo por etapas y la torta «Estado comercial de la cartera».
+
+**Independent Test**: Sembrar entidades en los cinco estados y verificar contadores, tasas, conteo único y leyenda textual sin recarga.
+
+### Tests for User Story 16 �s�️
+
+- [X] T091 [P] [US16] Crear `tests/unit/marketing-stats.test.js` con `computeMarketingStats`, cero leads y categorías exhaustivas
+- [X] T092 [P] [US16] Crear `tests/integration/marketing-dashboard.test.js` con los escenarios 22�?"24 de `specs/001-erp-base-module/spec.md`
+
+### Implementation for User Story 16
+
+- [X] T093 [P] [US16] Crear `src/utils/marketing-stats.js` con `computeMarketingStats` y `categoryForStage` según `data-model.md`
+- [X] T094 [US16] Crear `src/components/marketing.js` con tarjetas, embudo y gráfico SVG accesible sin librerías nuevas
+- [X] T095 [US16] Integrar la vista `marketing` en `src/app.js` y su acción rápida desde el panel
+
+**Checkpoint**: El resumen de Marketing es completamente funcional y accesible.
+
+---
+
+## Phase 22: User Story 16 - Automatización por eventos (Priority: P2)
+
+**Goal**: Ejecutar reglas configurables y dejar constancia en el historial de la entidad.
+
+**Independent Test**: Configurar una regla `entity_created`, capturar un prospecto y verificar un `Documento` con `status: 'automatico'` en su ficha.
+
+### Tests for User Story 16 �s�️
+
+- [X] T096 [P] [US16] Crear `tests/unit/marketing-automation.test.js` con los tres eventos y sus acciones
+- [X] T097 [P] [US16] Ampliar `tests/integration/marketing-dashboard.test.js` con el registro de ejecución en el historial
+
+### Implementation for User Story 16
+
+- [X] T098 [US16] Crear `src/utils/marketing-automation.js` con `runAutomationRules(event, entity, config, documents)`
+- [X] T099 [US16] Integrar la evaluación de reglas en `src/storage.js` tras crear entidades, cambiar etapas y registrar documentos
+
+**Checkpoint**: Cada evento dispara a lo sumo una ejecución por regla y queda trazado.
+
+---
+
+## Phase 23: User Stories 14 y 4 - Navegación lateral y accesos rápidos (Priority: P1)
+
+**Goal**: Quitar Clientes e Interacciones de la barra lateral y mantener el acceso desde el panel.
+
+**Independent Test**: Recorrer todas las vistas y verificar que la barra lateral solo ofrece Panel, Buscar y Resumen, mientras el panel ofrece seis acciones rápidas incluida Marketing.
+
+### Tests for User Stories 14 y 4 �s�️
+
+- [X] T100 [P] [US14] Ampliar `tests/integration/workspace-shell.test.js` con la ausencia de Clientes e Interacciones en `NAV_ITEMS`
+- [X] T101 [P] [US4] Ampliar `tests/integration/dashboard.test.js` con la acción rápida «Abrir Marketing» y la navegación desde el panel
+
+### Implementation for User Stories 14 y 4
+
+- [X] T102 [US14] Actualizar `src/components/shell.js` eliminando `manage-entity` y `manage-document` de `NAV_ITEMS` y conservando `dashboard`, `search` y `summary`
+- [X] T103 [US4] Actualizar `src/components/dashboard.js` con la quinta y sexta acciones rápidas, reutilizando el estilo `.stat-card` solo en `src/components/marketing.js`
+- [X] T104 [US4] Ajustar `src/app.js` para que la navegación lateral no ofrezca los apartados retirados sin romper enlaces profundos
+
+**Checkpoint**: La navegación es coherente y Marketing queda accesible solo desde el panel.
+
+---
+
+## Phase 24: Polish & Cross-Cutting Concerns (cuarta tanda)
+
+**Purpose**: Regresión, documentación y calidad finales de FR-068..FR-075 y SC-018..SC-020.
+
+- [X] T105 [P] Actualizar `README.md` y `specs/001-erp-base-module/quickstart.md` con las secciones «Validación del Apartado de Marketing» y «Validación de la Navegación Lateral»
+- [X] T106 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones derivadas de las fases 18�?"23
+- [X] T107 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/`
+- [X] T108 Ejecutar de extremo a extremo los escenarios 18�?"24 de `specs/001-erp-base-module/spec.md` y las secciones nuevas de `quickstart.md`
 
 ---
 
@@ -366,16 +500,22 @@ description: "Task list for feature implementation"
 - **US2 (Phase 5)**: Depende de T005, T007, T009 y T015
 - **US13 (Phase 6)**: Depende de la base completada de US5/US11; independiente de US7, US10 y US2
 - **US4 (Phase 7)**: Depende de la base completada de US14 y de los formularios de US1/US11; independiente de la regla de fecha
-- **Foundational segunda tanda (Phase 8)**: Depende de Phase 2; BLOCKS US8, US7, US2, US3, US9 y US12 de las fases 9–13
-- **US8 (Phase 9)**: Depende de T027–T034
+- **Foundational segunda tanda (Phase 8)**: Depende de Phase 2; BLOCKS US8, US7, US2, US3, US9 y US12 de las fases 9�?"13
+- **US8 (Phase 9)**: Depende de T027�?"T034
 - **US7 segunda tanda (Phase 10)**: Depende de T030, T033 y T034
 - **US2 segunda tanda (Phase 11)**: Depende de T034, T036 y T039
 - **US3 (Phase 12)**: Depende de T030, T034, T036 y T039
 - **US9 / US12 (Phase 13)**: Dependen de T030, T034, T036 y T039
-- **Foundational tercera tanda (Phase 14)**: Depende de Phase 8; BLOCKS US8 y US2 de las fases 15–16
-- **US8 tercera tanda (Phase 15)**: Depende de T056–T060
-- **US2 tercera tanda (Phase 16)**: Depende de T056–T063
-- **Polish (Phases N y 17)**: Depende de todas las fases deseadas
+- **Foundational tercera tanda (Phase 14)**: Depende de Phase 8; BLOCKS US8 y US2 de las fases 15�?"16
+- **US8 tercera tanda (Phase 15)**: Depende de T056�?"T060
+- **US2 tercera tanda (Phase 16)**: Depende de T056�?"T063
+- **Foundational cuarta tanda (Phase 18)**: Depende de Phase 14; BLOCKS US16 y US14/US4 de las fases 19�?"23
+- **US16 captura (Phase 19)**: Depende de T075�?"T080
+- **US16 estado comercial (Phase 20)**: Depende de T075, T078�?"T080 y T083
+- **US16 métricas (Phase 21)**: Depende de T078�?"T080, T089 y T090
+- **US16 automatización (Phase 22)**: Depende de T078�?"T080, T089 y T090
+- **US14 / US4 navegación (Phase 23)**: Depende de T078�?"T080 y de la vista `marketing` integrada en T095
+- **Polish (Phases N, 17 y 24)**: Depende de todas las fases deseadas
 
 ### User Story Dependencies
 
@@ -390,7 +530,10 @@ description: "Task list for feature implementation"
 - **US3 (P1)**: Depende de US8 y US7; verificable de forma independiente con clientes heredados sembrados
 - **US9 / US12 (P2)**: Dependen de US8 y US7; verificables de forma independiente con búsquedas sembradas
 - **US8 (P1, tercera tanda)**: Puede comenzar tras Phase 14; declara metadatos sin depender de los componentes de la fase 16
-- **US2 (P2, tercera tanda)**: Depende de Phase 14 y de los metadatos de US8; cubre directamente los escenarios 12–17
+- **US2 (P2, tercera tanda)**: Depende de Phase 14 y de los metadatos de US8; cubre directamente los escenarios 12�?"17
+- **US16 (P2, cuarta tanda)**: Se divide en cuatro incrementos verificables: captura (Phase 19), estado comercial (Phase 20), métricas (Phase 21) y automatización (Phase 22); cada uno es independiente tras Phase 18
+- **US14 (P1, cuarta tanda)**: Quitar Clientes e Interacciones de la barra lateral depende de Phase 18 y de la vista Marketing; no depende de las pruebas de US16
+- **US4 (P1, cuarta tanda)**: Accesos rápidos desde el panel; verificable de forma independiente con `tests/integration/dashboard.test.js`
 - **Historias baseline (US1, US3, US5, US8, US9, US11, US12, US14, US15, US6)**: Completadas en su versión original; solo se validan en las fases de polish junto con sus incrementos
 
 ### Within Each User Story
@@ -400,6 +543,7 @@ description: "Task list for feature implementation"
 - Los componentes van antes de la integración en `src/app.js`
 - En la segunda tanda, `field-formats`/`field-rules` van antes que `module-config`/`storage`, y estos antes que componentes y búsqueda
 - En la tercera tanda, la validación y normalización van antes que la declaración de metadatos, y esta antes que `form-fields`/`entity-form`/`app`/`dashboard`
+- En la cuarta tanda, `marketing-config` y `marketing-stage` van antes que `capture-prospect`/`marketing-stats`/`marketing-automation`, y estos antes que los componentes y su integración en `app.js`
 - Cada historia se valida en su checkpoint antes de avanzar
 
 ### Parallel Opportunities
@@ -413,11 +557,18 @@ description: "Task list for feature implementation"
 - T029 puede ejecutarse en paralelo con T028 y T030; T033 va después de T031 y T034 después de T030/T032/T033
 - T035 puede ejecutarse en paralelo con T036; T038, T040, T041, T045, T046, T048 y T049 pueden ejecutarse en paralelo tras Phase 8
 - US7, US2, US3, US9 y US12 de la segunda tanda pueden avanzar en paralelo entre sí una vez completas Phase 8 y Phase 9
-- T052 puede ejecutarse en paralelo con las últimas implementaciones; T053–T055 van al final
+- T052 puede ejecutarse en paralelo con las últimas implementaciones; T053�?"T055 van al final
 - T056, T057 y T058 pueden ejecutarse en paralelo al iniciar Phase 14; T059 y T060 van después de esas pruebas
 - T061, T064 y T065 pueden ejecutarse en paralelo como pruebas escribiéndose primero; T062 va después de T061
 - T066, T068, T069 y T070 pueden ejecutarse en paralelo; T067 va después de T062 y T066
-- T071 puede ejecutarse en paralelo con las últimas implementaciones; T072–T074 van al final
+- T071 puede ejecutarse en paralelo con las últimas implementaciones; T072�?"T074 van al final
+- T075, T076 y T077 pueden ejecutarse en paralelo al iniciar Phase 18; T078 y T079 van después de esas pruebas
+- T081 y T082 pueden ejecutarse en paralelo; T083 y T084 también, una vez fallidas las pruebas
+- T087 y T088 pueden ejecutarse en paralelo; T089 precede a T090
+- T091 y T092 pueden ejecutarse en paralelo; T093 va después de T091 y T094/T095 después de T092
+- T096 y T097 pueden ejecutarse en paralelo; T098 precede a T099
+- T100 y T101 pueden ejecutarse en paralelo; T102 y T103 también, con T104 al final
+- T105 puede ejecutarse en paralelo con las últimas implementaciones; T106�?"T108 van al final
 
 ---
 
@@ -470,6 +621,19 @@ Task: "Crear tests/integration/client-form-presentation.test.js"
 Task: "Ampliar tests/integration/register-client-contact.test.js"
 ```
 
+### Parallel Example: Cuarta tanda
+
+```bash
+# Escribir pruebas y utilidades independientes en paralelo:
+Task: "Crear tests/unit/marketing-config.test.js"
+Task: "Crear tests/integration/marketing-capture.test.js"
+Task: "Crear tests/unit/marketing-stats.test.js"
+Task: "Crear tests/unit/marketing-automation.test.js"
+Task: "Ampliar tests/integration/workspace-shell.test.js"
+Task: "Implementar src/utils/marketing-config.js"
+Task: "Implementar src/utils/marketing-stats.js"
+```
+
 ---
 
 ## Implementation Strategy
@@ -490,34 +654,47 @@ Task: "Ampliar tests/integration/register-client-contact.test.js"
 4. **DETENERSE y VALIDAR**: ejecutar `tests/integration/client-form-presentation.test.js` y `tests/integration/register-client-contact.test.js`
 5. Desplegar/demostrar si está listo
 
+### MVP First (Cuarta tanda 2026-11-23)
+
+1. Completar Phase 18 (configuración de Marketing y estado comercial)
+2. Completar Phase 19 (US16: captura con consentimiento)
+3. **DETENERSE y VALIDAR**: ejecutar `tests/integration/marketing-capture.test.js` y `tests/unit/capture-consent.test.js`
+4. Desplegar/demostrar si está listo
+
 ### Incremental Delivery
 
-1. Foundational primera tanda → contrato de fecha listo
-2. US7 → terminología coherente
-3. US10 → fecha válida y dinámica
-4. US2 → perfil cliente completo
-5. US13 y US4 → aclaraciones 2026-11-16 pendientes
-6. Foundational segunda tanda → reglas de campo y validadores listos
-7. US8 → configuración declarativa del perfil cliente
-8. US7 → campos retirados invisibles sin pérdida de datos
-9. US2 → registro con obligatorios, código generado y campos condicionales
-10. US3 → ficha bloqueada de clientes heredados con edición correctora
-11. US9 / US12 → búsqueda coherente con campos visibles
-12. Foundational tercera tanda → RUT normalizado y contrato de presentación
-13. US8 → metadatos de pistas, orden, etiquetas y catálogos
-14. US2 → formulario con «Nuevo Cliente», pistas grises y orden solicitado
-15. Polish → regresión y documentación
+1. Foundational primera tanda �?' contrato de fecha listo
+2. US7 �?' terminología coherente
+3. US10 �?' fecha válida y dinámica
+4. US2 �?' perfil cliente completo
+5. US13 y US4 �?' aclaraciones 2026-11-16 pendientes
+6. Foundational segunda tanda �?' reglas de campo y validadores listos
+7. US8 �?' configuración declarativa del perfil cliente
+8. US7 �?' campos retirados invisibles sin pérdida de datos
+9. US2 �?' registro con obligatorios, código generado y campos condicionales
+10. US3 �?' ficha bloqueada de clientes heredados con edición correctora
+11. US9 / US12 �?' búsqueda coherente con campos visibles
+12. Foundational tercera tanda �?' RUT normalizado y contrato de presentación
+13. US8 �?' metadatos de pistas, orden, etiquetas y catálogos
+14. US2 �?' formulario con «Nuevo Cliente», pistas grises y orden solicitado
+15. Polish �?' regresión y documentación
+16. Foundational cuarta tanda �?' bloque `marketing`, consentimiento y estado comercial
+17. US16 �?' captura pública con consentimiento
+18. US16 �?' conversión a cliente conservando historial
+19. US16 �?' contadores, embudo y torta accesible
+20. US16 �?' automatización por eventos
+21. US14 / US4 �?' barra lateral reducida y accesos rápidos; Polish final
 
 ### Parallel Team Strategy
 
 1. El equipo completa Setup + Foundational de la primera tanda
 2. Tras la base:
-   - Desarrollador A: US7 → US10 → US2
+   - Desarrollador A: US7 �?' US10 �?' US2
    - Desarrollador B: US13
    - Desarrollador C: US4
 3. Tras esas fases, completar Phase 8 y Phase 9 juntos
 4. Tras Phase 9:
-   - Desarrollador A: US7 (ocultar campos) → US2 (registro)
+   - Desarrollador A: US7 (ocultar campos) �?' US2 (registro)
    - Desarrollador B: US3 (ficha heredada)
    - Desarrollador C: US9 / US12 (búsqueda)
 5. Tras Phase 14, completar Phase 15 entre todos y repartir Phase 16:
@@ -525,6 +702,11 @@ Task: "Ampliar tests/integration/register-client-contact.test.js"
    - Desarrollador B: `app.js` y `dashboard.js`
    - Desarrollador C: `styles.css` y documentación de quickstart
 6. Integrar cada historia en su checkpoint y ejecutar Phase 17 al final
+7. Tras Phase 18, repartir la cuarta tanda:
+   - Desarrollador A: `capture-form.js`, `capture-prospect.js` y vista `?view=capture`
+   - Desarrollador B: `marketing-stage.js`, `marketing-stats.js` y `marketing.js`
+   - Desarrollador C: `marketing-automation.js`, `shell.js` y `dashboard.js`
+8. Integrar en los checkpoints de las fases 19�?"23 y ejecutar Phase 24 al final
 
 ---
 
@@ -538,4 +720,7 @@ Task: "Ampliar tests/integration/register-client-contact.test.js"
 - Confirmar con `npm test`, `npm run lint` y `npm run build` antes de cerrar cada fase
 - Los metadatos de presentación no cambian claves de almacenamiento: `rubro` conserva su clave y valores internos
 - Las pistas grises son `placeholder`: nunca se validan, se guardan ni se cuentan como captura
+- El bloque `marketing` es opcional: sin él no se ejecuta automatización ni se ofrece captura pública
+- El gráfico de torta se construye con SVG nativo; no se añaden dependencias de gráficos
+- Cada entidad se contabiliza una sola vez: la categoría se deriva de `estado_comercial`, no de un campo duplicado
 - Evitar tareas vagas, conflictos de archivo y dependencias que rompan la independencia

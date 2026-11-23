@@ -52,6 +52,11 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Qué texto de ejemplo en color gris debe mostrarse como pista en la casilla «RUT» del formulario de clientes? → A: `Ej: 11.111.111-1`, en letra gris como pista.
 - Q: ¿Qué etiquetas exactas deben mostrarse en la lista desplegable de «Canal de Contacto»? → A: «Llamada», «Correo», «Reunión» y «WhatsApp» (mayúscula inicial).
 - Q: ¿En qué lugares del perfil de clientes debe reemplazarse el título «Nueva cliente» por «Nuevo Cliente»? → A: El título del formulario y el botón o acción rápida de creación de clientes.
+- Q: ¿Debe representarse un prospecto como un registro independiente o como una entidad en estado inicial dentro del modelo de entidades actual? → A: Un prospecto es una Entidad con estado inicial «Prospecto» que se convierte en Cliente al avanzar de etapa.
+- Q: ¿Cuál debe ser el mecanismo principal de captación de prospectos desde las visitas? → A: Formulario web público embebible que crea el prospecto automáticamente.
+- Q: ¿Qué debe desencadenar las acciones automáticas sobre un prospecto en el apartado de Marketing? → A: Reglas configurables por evento (captura, cambio de etapa o interacción) que ejecutan una acción sobre el prospecto.
+- Q: ¿Qué requisito de consentimiento debe exigirse al capturar datos personales de un prospecto mediante el formulario web? → A: Consentimiento explícito obligatorio con registro de la fecha y la versión del aviso aceptado.
+- Q: ¿Cómo debe medirse la conversión de visitas en clientes en el apartado de Marketing? → A: Embudo por etapas con conteo por etapa y tasa de conversión entre etapas, derivado del estado de la Entidad.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -124,15 +129,15 @@ Como ejecutivo de atención al cliente, quiero buscar clientes y consultar su fi
 
 Como usuario de negocio, quiero una pantalla dedicada donde pueda añadir, editar y eliminar entidades y sus documentos, para poder gestionar los datos del módulo en un lugar enfocado.
 
-**Por qué esta prioridad**: Esto preserva el valor central de las capacidades de gestión del módulo, presentado como una única pantalla de gestión accesible desde la barra lateral y las acciones rápidas del panel.
+**Por qué esta prioridad**: Esto preserva el valor central de las capacidades de gestión del módulo, presentado como una única pantalla de gestión accesible únicamente desde las acciones rápidas del panel.
 
-**Prueba Independiente**: Un usuario puede navegar a la pantalla de gestión mediante la barra lateral o una acción rápida, alternar entre la gestión de entidades y documentos, y volver al panel, añadiendo, editando y eliminando con éxito una entidad y un documento.
+**Prueba Independiente**: Un usuario puede navegar a la pantalla de gestión mediante una acción rápida del panel, alternar entre la gestión de entidades y documentos, y volver al panel, añadiendo, editando y eliminando con éxito una entidad y un documento.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el usuario está en la pantalla de gestión, **cuando** mira la navegación, **entonces** la barra lateral del espacio de trabajo ofrece botones de módulo para Entidades, Documentos y Panel con el módulo activo resaltado.
-2. **Dada** la barra lateral visible, **cuando** el usuario activa el botón Entidades, **entonces** se muestra el contenido de gestión de entidades.
-3. **Dada** la barra lateral visible, **cuando** el usuario activa el botón Documentos, **entonces** se muestra el contenido de gestión de documentos.
+1. **Dado** el panel principal, **cuando** el usuario mira la navegación, **entonces** ofrece accesos a la gestión de entidades y documentos y la barra lateral NO ofrece botones para esos apartados.
+2. **Dado** el panel principal, **cuando** el usuario activa el acceso a entidades, **entonces** se muestra el contenido de gestión de entidades.
+3. **Dado** el panel principal, **cuando** el usuario activa el acceso a documentos, **entonces** se muestra el contenido de gestión de documentos.
 4. **Dado** que el usuario está en la pantalla de gestión, **cuando** mira la pantalla, **entonces** la lista de entidades no se muestra.
 5. **Dado** que el usuario está en la pantalla de gestión, **cuando** crea una nueva entidad, **entonces** la entidad se guarda.
 6. **Dada** una entidad existente, **cuando** el usuario edita sus detalles, **entonces** la información actualizada se guarda.
@@ -305,12 +310,12 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 
 **Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 15 y 4).
 
-**Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Entidades, Documentos y Buscar con el módulo activo resaltado visualmente, y navegar entre módulos nunca pierde datos.
+**Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Buscar y Resumen con el módulo activo resaltado visualmente, los apartados «Clientes» (entidades) e «Interacciones» (documentos) solo se acceden desde el panel principal, y navegar entre módulos nunca pierde datos.
 
 **Escenarios de Aceptación**:
 
 1. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la página, **entonces** es visible una barra superior que contiene un logotipo SVG en línea derivado del nombre del módulo y el nombre del módulo configurado.
-2. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la barra lateral, **entonces** se muestran botones de módulo para Panel, Entidades, Documentos y Buscar usando la terminología configurada.
+2. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la barra lateral, **entonces** se muestran botones de módulo para Panel, Buscar y Resumen usando la terminología configurada, y NO aparecen «Clientes» ni «Interacciones» (entidades y documentos).
 3. **Dado** que el usuario está en cualquier pantalla, **cuando** mira la barra lateral, **entonces** el botón del módulo activo está resaltado visualmente.
 4. **Dado** que la ventana gráfica es estrecha, **cuando** se usa la aplicación en una pantalla pequeña, **entonces** la barra lateral se contrae a una columna de iconos manteniéndose utilizable y etiquetada de forma accesible.
 5. **Dada** una configuración que define un color de acento, **cuando** cualquier pantalla carga, **entonces** el marco lo usa consistentemente para resaltados y controles principales; sin valor configurado o con un valor inválido, se usan los valores predeterminados integrados sin errores.
@@ -324,14 +329,34 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 
 **Por qué esta prioridad**: El panel es la pantalla de entrada de todo el espacio de trabajo (Historia de Usuario 14); sin accesos rápidos ni estadísticas visibles, un usuario nuevo no tiene un punto de partida claro para crear, gestionar o buscar registros.
 
-**Prueba Independiente**: Un usuario abre la aplicación, ve el panel con al menos cuatro acciones rápidas y tarjetas de estadísticas, y cada acción lo lleva al destino correcto con un formulario vacío o la búsqueda enfocada.
+**Prueba Independiente**: Un usuario abre la aplicación, ve el panel con al menos cinco acciones rápidas y tarjetas de estadísticas, y cada acción lo lleva al destino correcto con un formulario vacío o la búsqueda enfocada.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cuatro botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, buscar registros).
+1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cinco botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros), sin que la barra lateral ofrezca accesos a esos apartados.
 2. **Dado** que el usuario activa la acción rápida de nueva entidad o nuevo documento, **cuando** se ejecuta, **entonces** se abre el área de gestión correspondiente con un formulario vacío listo para introducir datos.
 3. **Dado** que existen entidades y documentos almacenados, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas reflejan el número actual de cada uno.
 4. **Dado** que no existen entidades ni documentos, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas muestran cero sin errores.
+
+---
+
+### Historia de Usuario 16 - Capturar y convertir prospectos desde Marketing (Prioridad: P2)
+
+Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automatizar su seguimiento y medir su conversión a clientes, para convertir visitas en clientes de forma trazable.
+
+**Por qué esta prioridad**: El apartado de Marketing completa el ciclo comercial del módulo al aprovechar las entidades, documentos e indicadores ya existentes para transformar cada visita en un registro gestionable y medible.
+
+**Prueba Independiente**: Un visitante envía el formulario web con consentimiento explícito; el sistema crea un prospecto, una regla por evento registra una interacción automática, el prospecto avanza a Cliente conservando su historial y el resumen muestra el embudo actualizado.
+
+**Escenarios de Aceptación**:
+
+1. **Dado** un visitante en el formulario web embebible, **cuando** envía sus datos con el consentimiento explícito marcado, **entonces** se crea una Entidad en estado «Prospecto» con la fecha y la versión del aviso aceptado (FR-068, FR-069, FR-071).
+2. **Dado** un visitante que no marca el consentimiento explícito, **cuando** envía el formulario, **entonces** el prospecto no se crea y se le explica el motivo (FR-071).
+3. **Dado** un prospecto con una regla configurada, **cuando** se captura, cambia de etapa o se registra una interacción, **entonces** se ejecuta la acción configurada y la ejecución queda en su historial (FR-070).
+4. **Dado** un prospecto que avanza a la etapa de Cliente, **cuando** se consulta su ficha, **entonces** conserva su identificador, sus documentos y sus campos personalizados (FR-068).
+5. **Dado** el resumen del apartado de Marketing, **cuando** se consulta tras un cambio de etapa, **entonces** el embudo muestra los conteos por etapa y las tasas de conversión derivadas de los estados almacenados, sin requerir recarga (FR-072).
+6. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** se muestran los contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual» con la misma presentación de las tarjetas del panel principal, y se actualizan al cambiar el estado de un prospecto (FR-073).
+7. **Dado** el apartado de Marketing, **cuando** se consulta el gráfico «Estado comercial de la cartera», **entonces** se muestran las cinco categorías con la cantidad de entidades correspondiente y cada entidad se contabiliza una sola vez (FR-074).
 
 ---
 
@@ -361,6 +386,8 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Cómo identifica el resumen de indicadores los documentos "pendientes"? → Con ciclo de vida, los estados marcados explícitamente como pendientes en la configuración; sin ciclo de vida, coincidencia del estado normalizado con "pendiente" (resuelto en aclaraciones 2026-11-12 y 2026-11-16).
 - ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
 - ¿Qué ocurre si una sesión del perfil de clientes permanece abierta al cruzar la medianoche? → El límite máximo de "Fecha de nacimiento" se actualiza automáticamente al nuevo día (FR-048).
+- ¿Qué ocurre si el visitante envía el formulario público sin marcar el consentimiento explícito? → El prospecto no se crea y el formulario explica que falta el consentimiento (FR-071).
+- ¿Qué ocurre cuando el apartado de Marketing no tiene prospectos registrados? → Los contadores muestran cero y el gráfico de torta muestra un estado vacío claro con las cinco categorías en cero (FR-073, FR-074).
 
 ## Requisitos *(obligatorio)*
 
@@ -377,9 +404,9 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-009**: El sistema DEBE asociar cada documento exactamente a una entidad y eliminar los documentos asociados cuando la entidad se elimina.
 - **FR-010**: El sistema DEBE mostrar un panel de inicio como vista inicial, con botones de acción rápida claramente etiquetados para las tareas ERP clave.
 - **FR-011**: El sistema DEBE envolver cada pantalla en un marco de espacio de trabajo persistente compuesto por una barra superior con marca y una barra lateral de navegación de módulos.
-- **FR-012**: La barra lateral DEBE proporcionar botones de módulo para Panel, Entidades, Documentos y Buscar, etiquetados desde la configuración del módulo.
-- **FR-013**: El botón de módulo Entidades DEBE mostrar el contenido de gestión de entidades.
-- **FR-014**: El botón de módulo Documentos DEBE mostrar el contenido de gestión de documentos en la pantalla de gestión.
+- **FR-012**: La barra lateral DEBE proporcionar botones de módulo para Panel, Buscar y Resumen, etiquetados desde la configuración del módulo, y NO DEBE incluir botones para «Clientes» (entidades) ni «Interacciones» (documentos).
+- **FR-013**: El acceso a entidades desde el panel principal DEBE mostrar el contenido de gestión de entidades.
+- **FR-014**: El acceso a documentos desde el panel principal DEBE mostrar el contenido de gestión de documentos en la pantalla de gestión.
 - **FR-015**: El botón de módulo Panel DEBE devolver al usuario al panel de inicio.
 - **FR-016**: La pantalla de gestión NO DEBE mostrar la lista de entidades.
 - **FR-017**: La pantalla de gestión DEBE proporcionar la funcionalidad de crear, editar y eliminar entidades.
@@ -398,7 +425,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-030**: El sistema DEBE aplicar las transiciones de estado configuradas en los documentos independientemente de cómo se envíe un cambio.
 - **FR-031**: El sistema DEBE mantener el estado del documento como texto libre cuando no hay ciclo de vida configurado.
 - **FR-032**: El sistema DEBE mantener el renderizado de listas y la búsqueda ágiles y correctos para conjuntos de datos de al menos 500 registros de entidad.
-- **FR-033**: El panel DEBE ofrecer al menos cuatro botones de acción rápida: nueva entidad, nuevo documento, abrir gestión de entidades y buscar registros.
+- **FR-033**: El panel DEBE ofrecer al menos cinco botones de acción rápida: nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos y buscar registros; estos accesos DEBEN ser el único punto de entrada a los apartados «Clientes» (entidades) e «Interacciones» (documentos).
 - **FR-034**: Activar la acción rápida de nueva entidad o nuevo documento DEBE abrir el área de gestión correspondiente con un formulario vacío listo para introducir datos.
 - **FR-035**: El panel DEBE mostrar tarjetas de estadísticas con el número de entidades y documentos almacenados, actualizadas cada vez que se muestra el panel.
 - **FR-036**: La barra superior DEBE mostrar un logotipo derivado del nombre del módulo junto con el nombre del módulo configurado en cada pantalla.
@@ -433,6 +460,13 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-065**: En el perfil de clientes, el formulario de registro y edición DEBE mostrar las casillas en este orden: 1) «Nombre de Cliente», 2) «RUT», 3) «Fecha de nacimiento», 4) «Canal de Contacto» seguido inmediatamente de su casilla adicional correspondiente según el canal (FR-060), 5) «Tipo de actividad» y 6) «Ejecutivo Asignado».
 - **FR-066**: En el perfil de clientes, la casilla antes denominada «Rubro» DEBE mostrarse con la etiqueta «Tipo de actividad» y como lista desplegable con exactamente estas opciones: «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante». La clave de almacenamiento `rubro` se conserva sin cambios.
 - **FR-067**: En el perfil de clientes, la casilla adicional que aparece según el «Canal de Contacto» DEBE mostrar en color gris una pista acorde al formato del canal: «Ej: +56 9 1234 5678» para «Llamada» y «WhatsApp», «Ej: nombre@ejemplo.cl» para «Correo» y «Ej: Sala 2 o enlace» para «Reunión». La pista NO DEBE considerarse un valor capturado ni usarse en la validación o el guardado (FR-061).
+- **FR-068**: En el apartado de Marketing, un prospecto DEBE registrarse como una Entidad con el estado inicial «Prospecto» y DEBE convertirse en Cliente al avanzar a la etapa correspondiente, conservando su identificador, su historial de documentos y sus campos personalizados.
+- **FR-069**: El apartado de Marketing DEBE ofrecer un formulario web público embebible que capture cada visita y cree automáticamente una Entidad en estado «Prospecto»; DEBE validar los campos obligatorios antes de crear el registro y DEBE mostrar una confirmación clara al visitante.
+- **FR-070**: La automatización del apartado de Marketing DEBE ejecutarse mediante reglas configurables por evento —captura del prospecto, cambio de etapa o registro de una interacción— que producen una acción sobre el prospecto, y DEBE registrar cada ejecución en su historial.
+- **FR-071**: El formulario público de captura DEBE exigir una casilla de consentimiento explícito marcada por el visitante; sin ella el guardado DEBE rechazarse, y el sistema DEBE conservar en el prospecto la fecha del consentimiento y la versión del aviso de privacidad aceptado.
+- **FR-072**: El resumen del apartado de Marketing DEBE mostrar un embudo con el número de prospectos por etapa y la tasa de conversión entre etapas, calculados a partir de los estados almacenados de las Entidades y actualizados cuando cambia el estado de un prospecto.
+- **FR-073**: El apartado de Marketing DEBE mostrar tarjetas de contadores con la misma presentación que las del panel principal (FR-035): «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual». Los contadores DEBEN calcularse sobre las entidades almacenadas y actualizarse cada vez que se muestra el apartado o cambia el estado de un prospecto. «Leads analizados» DEBE ser el total de entidades del apartado; «Oportunidades abiertas» DEBE contar las entidades en «En proceso» o «En recontacto»; «Tasa de pérdida» DEBE ser el porcentaje de entidades en «Perdidos» sobre «Leads analizados»; y «Conversión actual» DEBE ser el porcentaje de «Clientes ganados» sobre «Leads analizados».
+- **FR-074**: El apartado de Marketing DEBE mostrar un gráfico de torta titulado «Estado comercial de la cartera» con exactamente cinco categorías: «Clientes ganados», «En recontacto», «En proceso», «Perdidos» y «Sin resultados definitivos». Cada entidad DEBE contabilizarse en una sola categoría según su estado comercial almacenado; un prospecto en estado inicial «Prospecto» sin resultado registrado DEBE contabilizarse en «Sin resultados definitivos» y una entidad convertida en Cliente DEBE contabilizarse en «Clientes ganados».
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -446,8 +480,9 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 ### Entidades Clave *(incluir si la funcionalidad implica datos)*
 
-- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
+- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). En el apartado de Marketing, una Entidad con estado inicial «Prospecto» representa una visita capturada que puede convertirse en Cliente conservando su identidad e historial (FR-068). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
 - **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
+- **Estado comercial**: Clasificación de cada entidad del apartado de Marketing en una de cinco categorías —«Clientes ganados», «En recontacto», «En proceso», «Perdidos» y «Sin resultados definitivos»— utilizada por los contadores y el gráfico de torta (FR-073, FR-074). El estado inicial «Prospecto» (FR-068) se clasifica como «Sin resultados definitivos» hasta registrar un resultado.
 - **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -458,7 +493,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-002**: Los usuarios pueden encontrar una entidad existente mediante la búsqueda en menos de 10 segundos tras introducir un término relevante.
 - **SC-003**: Al menos el 90% de los usuarios de prueba pueden completar tareas de crear, editar, eliminar y buscar sin ayuda.
 - **SC-004**: El sistema sigue siendo utilizable para un conjunto de datos de al menos 500 registros de entidad sin pérdida de funcionalidad central.
-- **SC-005**: Un usuario puede alcanzar las pantallas de gestión y búsqueda desde el panel o la barra lateral en menos de 10 segundos en el primer uso.
+- **SC-005**: Un usuario puede alcanzar las pantallas de gestión desde el panel y la de búsqueda desde el panel o la barra lateral en menos de 10 segundos en el primer uso.
 - **SC-006**: Toda la funcionalidad existente de gestión de entidades y documentos sigue operativa tras el rediseño del marco ERP y el panel (sin regresiones).
 - **SC-007**: Los usuarios pueden navegar entre las pantallas de panel, gestión y búsqueda sin perder ninguna entidad ni documento almacenado.
 - **SC-008**: Un desarrollador puede producir un módulo adaptado usando solo el archivo de configuración, con cero modificaciones en archivos fuente centrales.
@@ -471,6 +506,9 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-015**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris `Ej: 11.111.111-1` en «RUT», las opciones «Llamada», «Correo», «Reunión» y «WhatsApp» con mayúscula inicial y el texto «Nuevo Cliente» en el formulario y la acción de creación.
 - **SC-016**: En el perfil de clientes, el 100% de las verificaciones de interfaz confirman el orden de casillas «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado», y que «Tipo de actividad» ofrece solo las diez opciones definidas en FR-066.
 - **SC-017**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris correcta en la casilla adicional de contacto para cada uno de los cuatro canales, conforme a FR-067.
+- **SC-018**: En el apartado de Marketing, el 100% de las verificaciones confirman que el embudo coincide con los estados almacenados de las entidades, que cada cambio de etapa se refleja sin recarga y que los prospectos sin consentimiento explícito no se crean.
+- **SC-019**: En el apartado de Marketing, el 100% de las verificaciones confirman que los cinco contadores y las cinco categorías del gráfico «Estado comercial de la cartera» coinciden con las entidades almacenadas, que cada entidad se contabiliza una sola vez y que todo cambio de estado se refleja sin recarga.
+- **SC-020**: El 100% de las verificaciones de interfaz confirman que «Clientes» e «Interacciones» no aparecen en la barra lateral, que solo se acceden desde el panel principal y que el resto de la navegación sigue funcionando.
 
 ## Suposiciones
 
@@ -480,7 +518,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - La versión inicial se centra en la gestión central de datos maestros y documentos en lugar de capacidades ERP avanzadas como flujos de aprobación, períodos de contabilización o informes.
 - La búsqueda se realiza sobre los registros de entidad almacenados.
 - La pantalla de gestión consolida los formularios de añadir/editar entidad y añadir/editar documento en una sola pantalla de gestión.
-- La navegación entre áreas ocurre mediante una barra lateral persistente; la pantalla de gestión aloja ambos paneles de gestión y no muestra la lista de entidades.
+- La navegación entre Panel, Buscar y Resumen ocurre mediante una barra lateral persistente, mientras que Clientes e Interacciones solo se acceden desde el panel principal; la pantalla de gestión aloja ambos paneles de gestión y no muestra la lista de entidades.
 - El logotipo se genera como un monograma SVG en línea derivado del nombre del módulo; no se requieren recursos de imagen externos.
 - Se puede configurar un color de acento opcional para la marca; el resto de la paleta base permanece fija.
 - Solo se muestra una pantalla a la vez; no hay diseño lado a lado del contenido de gestión y búsqueda.

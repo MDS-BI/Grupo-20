@@ -6,8 +6,10 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 function openForm() {
@@ -38,7 +40,7 @@ const CONTACT_FIELDS = CHANNELS.map(({ field }) => field);
 describe('Campos condicionales por canal (T041)', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
-    initApp(document.getElementById('app'));
+    app = initApp(document.getElementById('app'));
   });
 
   it('muestra solo la casilla del canal elegido', () => {

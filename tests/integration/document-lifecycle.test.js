@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { initApp } from '../../src/app.js';
 
+let app;
+
 function mount(rawConfig) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig });
+  app = initApp(document.getElementById('app'), { rawConfig });
+  return app;
 }
 
 const LIFECYCLE_CONFIG = {
@@ -14,11 +17,11 @@ const LIFECYCLE_CONFIG = {
 };
 
 function createEntityAndSelectForDocuments() {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+  app.navigate('manage-entity');
   document.getElementById('field-name').value = 'Acme';
   document.getElementById('field-code').value = 'AC-1';
   document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-  document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+  app.navigate('manage-document');
   const select = document.getElementById('document-entity-select');
   select.value = select.querySelector('option:not([value=""])').value;
   select.dispatchEvent(new Event('change', { bubbles: true }));

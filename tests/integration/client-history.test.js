@@ -17,8 +17,10 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 function searchAndOpen(term) {
@@ -35,7 +37,7 @@ describe('User Story 3 - consult entity history', () => {
     document.body.innerHTML = '<div id="app"></div>';
     localStorage.clear();
     globalThis.confirm = vi.fn(() => true);
-    initApp(document.getElementById('app'), { rawConfig: CONFIG });
+    app = initApp(document.getElementById('app'), { rawConfig: CONFIG });
   });
 
   it('opens the entity profile with its document history sorted by date', () => {
@@ -91,7 +93,7 @@ describe('User Story 3 - consult entity history', () => {
     addDocument({ entity_id: entity.entity_id, notes: 'Historial visible', startDate: '2026-01-01' });
 
     document.body.innerHTML = '<div id="app"></div>';
-    initApp(document.getElementById('app'));
+    app = initApp(document.getElementById('app'));
     searchAndOpen('legacy visible');
 
     const detail = qs('entity-detail');

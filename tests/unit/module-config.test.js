@@ -5,6 +5,7 @@ import {
   validateConfig,
   getLabel,
   DEFAULT_CONFIG,
+  MODULE_CONFIG,
 } from '../../src/module-config.js';
 import { sanitizeAccentColor } from '../../src/module-config.js';
 
@@ -173,5 +174,24 @@ describe('Carga de configuración del módulo (H5)', () => {
     const { config, warning } = loadModuleConfig({ moduleName: 'CRM', fieldRules: { entity: { rut: { format: 'nope' } } } });
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warning).toBeTruthy();
+  });
+
+  it('conserva el bloque marketing y el campo estado_comercial del perfil activo', () => {
+    const { config, warning } = loadModuleConfig(MODULE_CONFIG);
+    expect(warning).toBeNull();
+    expect(config.marketing.privacyNoticeVersion).toBeTruthy();
+    expect(config.marketing.automationRules.length).toBeGreaterThan(0);
+    expect(config.customFields.entity.some((def) => def.key === 'estado_comercial')).toBe(true);
+    expect(config.fieldRules.entity.estado_comercial).toMatchObject({ hidden: true, searchable: false });
+  });
+
+  it('rechaza un bloque marketing con una regla inválida', () => {
+    const errors = validateConfig({
+      marketing: {
+        privacyNoticeVersion: 'v1',
+        automationRules: [{ event: 'entity_created', action: 'borrar', label: 'Regla' }],
+      },
+    });
+    expect(errors.join(' ')).toContain('marketing');
   });
 });

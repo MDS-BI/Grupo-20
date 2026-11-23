@@ -59,10 +59,19 @@ function buildRutBody(index) {
   return 10000000 + index * 7919 + index * index * 13;
 }
 
+const NON_SEED_CUSTOM_KEYS = new Set([
+  'estado_comercial',
+  'consentimiento',
+  'consentimiento_fecha',
+  'consentimiento_version',
+  'automation_key',
+]);
+
 function customValues(defs, index, ctx) {
   const values = {};
   for (const def of defs || []) {
     const key = def.key;
+    if (NON_SEED_CUSTOM_KEYS.has(key)) continue;
     if (key.startsWith('contacto_')) {
       if (key === ctx.contact.key) values[key] = ctx.contact.value;
     } else if (key === 'rut') values[key] = ctx.rut;

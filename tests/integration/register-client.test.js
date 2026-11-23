@@ -16,8 +16,10 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 describe('User Story 2 - register clients and commercial contacts', () => {
@@ -25,7 +27,7 @@ describe('User Story 2 - register clients and commercial contacts', () => {
     document.body.innerHTML = '<div id="app"></div>';
     localStorage.clear();
     globalThis.confirm = vi.fn(() => true);
-    initApp(document.getElementById('app'), { rawConfig: CONFIG });
+    app = initApp(document.getElementById('app'), { rawConfig: CONFIG });
   });
 
   it('registers an entity with an associated document and shows it in the entity profile', () => {
@@ -67,7 +69,7 @@ describe('Alta de clientes con perfil CRM (T040)', () => {
     document.body.innerHTML = '<div id="app"></div>';
     localStorage.clear();
     globalThis.confirm = vi.fn(() => true);
-    initApp(document.getElementById('app'));
+    app = initApp(document.getElementById('app'));
   });
 
   function openForm() {

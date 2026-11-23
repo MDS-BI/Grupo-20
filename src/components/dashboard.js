@@ -85,6 +85,8 @@ export function renderDashboardHtml(config, stats) {
         <button type="button" data-action="quick-new-document">Nueva ${escapeHtml(documentLabel.toLowerCase())}</button>
         <button type="button" data-action="quick-manage">Abrir gestión de ${escapeHtml(entityPlural.toLowerCase())}</button>
         <button type="button" data-action="quick-search">Buscar registros</button>
+        <button type="button" data-action="navigate" data-view="marketing">Abrir Marketing</button>
+        <button type="button" data-action="navigate" data-view="manage-document">Gestionar ${escapeHtml(documentPlural.toLowerCase())}</button>
       </div>
       ${stats.isDemo ? '<p class="demo-note">Valores de referencia de demostración. Se actualizan automáticamente cuando registres clientes o interacciones.</p>' : ''}
       <div class="summary-cards">

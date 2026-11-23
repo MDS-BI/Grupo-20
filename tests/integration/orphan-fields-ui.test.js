@@ -9,8 +9,10 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 async function seedWithRegion() {
@@ -26,7 +28,7 @@ async function bootWith(configOverride) {
   const { initApp } = await import('../../src/app.js');
   const moduleConfig = await import('../../src/module-config.js');
   document.body.innerHTML = '<div id="app"></div>';
-  await initApp(document.getElementById('app'), moduleConfig.normalizeConfig(configOverride));
+  app = await initApp(document.getElementById('app'), moduleConfig.normalizeConfig(configOverride));
 }
 
 function searchFor(term) {

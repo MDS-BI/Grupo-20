@@ -5,6 +5,7 @@ import {
   loadDocuments,
   addEntity,
   updateEntity,
+  updateEntityStage,
   deleteEntity,
   countDocumentsForEntity,
   addDocument,
@@ -35,6 +36,10 @@ import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
+import { renderCaptureFormHtml, collectCaptureFormData } from './components/capture-form.js';
+import { createProspectFromCapture, CaptureError } from './utils/capture-prospect.js';
+import { renderMarketingHtml } from './components/marketing.js';
+import { computeMarketingStats } from './utils/marketing-stats.js';
 import { resolveEntityDateRule, watchLocalDayChange } from './utils/entity-date.js';
 import { isFieldPotentiallySearchable, resolveFieldRules } from './utils/field-rules.js';
 
@@ -66,13 +71,28 @@ export function initApp(rootEl = null, options = {}) {
   setActiveConfig(config);
   if (typeof document !== 'undefined') document.title = config.moduleName;
 
+  const initialParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location?.search || '')
+    : new URLSearchParams();
+  const requestedView = initialParams.get('view');
+  const isManageDeepLink = requestedView === 'manage-entity' || requestedView === 'manage-document';
+  const initialView =
+    (requestedView === 'capture' || requestedView === 'marketing') && config.marketing
+      ? requestedView
+      : isManageDeepLink
+        ? 'manage'
+        : 'dashboard';
+
   const state = {
     config,
     warning,
     entities: [],
     documents: [],
-    view: 'dashboard',
-    manageTab: 'entity',
+    view: initialView,
+    captureValues: {},
+    captureErrors: {},
+    captureSubmitted: false,
+    manageTab: requestedView === 'manage-document' ? 'document' : 'entity',
     editingEntityId: null,
     editingDocumentId: null,
     documentEntityId: null,
@@ -221,8 +241,17 @@ export function initApp(rootEl = null, options = {}) {
     return renderCommercialSummaryHtml(state.config, summary);
   }
 
+  function renderMarketingView() {
+    const stats = computeMarketingStats({ entities: state.entities });
+    return renderMarketingHtml(state.config, stats, state.entities);
+  }
+
   function renderCurrentView() {
     switch (state.view) {
+      case 'marketing':
+        return renderMarketingView();
+      case 'capture':
+        return renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted);
       case 'manage':
         return renderManageView();
       case 'search':
@@ -470,6 +499,21 @@ export function initApp(rootEl = null, options = {}) {
     } else if (event.target.id === 'document-form') {
       event.preventDefault();
       onDocumentFormSubmit(event.target);
+    } else if (event.target.id === 'capture-form') {
+      event.preventDefault();
+      const values = collectCaptureFormData(event.target, state.config, state.captureValues);
+      try {
+        createProspectFromCapture(values, state.config);
+        state.captureValues = {};
+        state.captureErrors = {};
+        state.captureSubmitted = true;
+        render();
+      } catch (err) {
+        if (!(err instanceof CaptureError)) throw err;
+        state.captureValues = values;
+        state.captureErrors = err.errors;
+        render();
+      }
     } else if (event.target.id === 'search-form') {
       event.preventDefault();
     }
@@ -483,6 +527,19 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function handleChange(event) {
+    if (event.target.matches?.('[data-role="marketing-stage"]')) {
+      updateEntityStage(event.target.dataset.id, event.target.value);
+      render();
+      return;
+    }
+    const captureForm = event.target.closest?.('#capture-form');
+    if (captureForm && event.target.name === 'canal_contacto') {
+      const values = collectCaptureFormData(captureForm, state.config, state.captureValues);
+      state.captureValues = { ...values, canal_contacto: event.target.value };
+      state.captureErrors = {};
+      render();
+      return;
+    }
     const entityForm = event.target.closest?.('#entity-form');
     if (entityForm && event.target.name) {
       const rules = resolveFieldRules(state.config, 'entity');

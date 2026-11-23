@@ -172,6 +172,62 @@
 
 ### Decisión: Título «Nuevo Cliente» sin género codificado
 
-- **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
-- **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
-- **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).
+ - **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
+ - **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
+ - **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).
+
+## Decisiones de diseño (apartado de Marketing)
+
+### Decisión: El prospecto reutiliza `Entidad` con un campo `estado_comercial` declarado
+
+- **Decisión**: Añadir un campo personalizado de entidad `estado_comercial` (`select`) con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`, etiquetas «Prospecto», «En proceso», «En recontacto», «Cliente ganado» y «Perdido», y valor inicial `prospecto`. El estado inicial «Prospecto» de FR-068 queda representado sin crear un tipo de registro nuevo (XR-001).
+- **Justificación**: El módulo base ya persiste entidades, documentos, campos personalizados y reglas `fieldRules`; un campo declarado mantiene la adaptación por configuración y evita una segunda estructura de almacenamiento. Los cinco valores permiten derivar las cinco categorías del gráfico sin duplicar datos.
+- **Alternativas consideradas**: Crear una entidad `Prospecto` separada (contradice la aclaración del usuario y duplica identidad/historial); usar `Documento.status` (en el módulo base gobierna documentos, no entidades, y no permite convertir la entidad en cliente); guardar una categoría calculada sin campo (no se puede editar el avance comercial).
+
+### Decisión: Categorías del gráfico derivadas del estado comercial, con regla determinista para el estado inicial
+
+- **Decisión**: `ganado → Clientes ganados`, `en_recontacto → En recontacto`, `en_proceso → En proceso`, `perdido → Perdidos`, `prospecto → Sin resultados definitivos`. Cada entidad cuenta exactamente en una categoría. La asignación se implementa en una única función pura `computeMarketingStats()` en `src/utils/marketing-stats.js`.
+- **Justificación**: FR-074 exige cinco categorías mutuamente exclusivas, pero el estado inicial acordado es «Prospecto», que no aparece como categoría. La correspondencia explícita resuelve la aparente contradicción y hace comprobable el gráfico.
+- **Alternativas consideradas**: Añadir «Prospecto» como sexta categoría (contradice FR-074); dejar los prospectos fuera del gráfico (los contadores no cuadrarían con el total de leads).
+
+### Decisión: Contadores y tasas calculados en una sola utilidad pura
+
+- **Decisión**: `computeMarketingStats({ entities })` devuelve `{ leadsAnalyzed, openOpportunities, wonClients, lossRate, conversionRate, funnel, categories }`. `leadsAnalyzed` es el total de entidades; `openOpportunities` cuenta `en_proceso` y `en_recontacto`; `wonClients` cuenta `ganado`; `lossRate = perdido / leadsAnalyzed * 100`; `conversionRate = ganado / leadsAnalyzed * 100`; con cero leads, ambas tasas son cero.
+- **Justificación**: FR-073 exige fórmulas verificables y FR-072 un embudo derivado de los mismos estados; una sola función evita dos fuentes de verdad y permite pruebas unitarias sin DOM.
+- **Alternativas consideradas**: Calcular en el componente HTML (difícil de probar y duplica la lógica); almacenar contadores en `localStorage` (pueden quedar desincronizados tras editar una entidad).
+
+### Decisión: Gráfico de torta sin dependencias, con SVG accesible
+
+- **Decisión**: Renderizar la torta con un `<svg>` de cinco sectores generados a partir de los conteos, usando cinco tokens CSS de categoría y una leyenda textual con etiqueta y valor. El `<svg>` lleva `role="img"` y `aria-label` con el detalle de las cinco categorías. Sin estado, se muestran las cinco categorías a cero.
+- **Justificación**: El proyecto no tiene librería de gráficos y la constitución exige huella mínima de librerías; SVG es nativo, escalable y accesible, y reutiliza el patrón de HTML generado por componentes puros.
+- **Alternativas consideradas**: Instalar Chart.js o similar (dependencia nueva innecesaria); `conic-gradient` CSS (menos preciso para etiquetas y más difícil de hacer accesible); `<canvas>` (no ofrece semántica accesible sin trabajo adicional).
+
+### Decisión: Captura pública como vista autónoma por parámetro de URL
+
+- **Decisión**: La aplicación reconoce `?view=capture` al arrancar y renderiza el formulario de captura sin el marco del espacio de trabajo. El formulario crea una entidad en `localStorage` con `estado_comercial: 'prospecto'` y el consentimiento registrado. Es embebible mediante un `<iframe>` que apunte a esa URL del mismo origen.
+- **Justificación**: No hay backend (decisión ya aprobada), por lo que un formulario servido desde otro dominio no podría escribir en el `localStorage` de la aplicación. La vista autónoma cumple FR-069 dentro de la arquitectura existente y mantiene la huella mínima.
+- **Alternativas consideradas**: Añadir un backend para captura externa (rompe la arquitectura sin servidor y amplía el alcance); formulario dentro del panel con la barra lateral (no es público ni embebible); nueva entrada HTML con configuración multi-página de Vite (más superficie de build para el mismo resultado).
+
+### Decisión: Consentimiento como campos de entidad y validación en la captura
+
+- **Decisión**: El formulario de captura exige una casilla `consentimiento` marcada; al crear la entidad se guardan `consentimiento: true`, `consentimiento_fecha` (ISO) y `consentimiento_version` (texto de configuración `marketing.privacyNoticeVersion`). Sin la casilla no se crea la entidad y se muestra un error (FR-071).
+- **Justificación**: Registrar fecha y versión hace auditable el consentimiento y reutiliza el mecanismo de campos personalizados sin nueva estructura. La validación se concentra en la lógica de captura, que es el único punto de entrada público.
+- **Alternativas consideradas**: Solo aviso informativo (no cumple FR-071); guardar el consentimiento en `sessionStorage` (se pierde y no es auditable).
+
+### Decisión: Automatización declarativa por eventos con historial en `Documento`
+
+- **Decisión**: Añadir `marketing.automationRules` a la configuración: arreglo de `{ event: 'entity_created' | 'stage_changed' | 'document_created', from?, to?, action: 'create_document' | 'notify', label }`. Las reglas se evalúan en un único punto después de `addEntity()`/`updateEntity()`/`addDocument()`. Cada ejecución se registra como un `Documento` asociado a la entidad (`notes` con la descripción de la regla, `status: 'automatico'`), de modo que quede visible en su historial (FR-070).
+- **Justificación**: Reutilizar `Documento` como registro de ejecución evita un nuevo tipo de dato y hace que la automatización aparezca en la ficha ya existente. Las reglas en configuración mantienen el patrón de adaptación del módulo base.
+- **Alternativas consideradas**: Motor de reglas concriptor en código central (rompe XR-002); tabla de ejecuciones nueva (duplica historial y requiere migración); ejecutar reglas en la interfaz (se pierde si la mutación llega por otra vía).
+
+### Decisión: Entrada a Marketing desde una acción rápida del panel
+
+- **Decisión**: No añadir Marketing a la barra lateral; el panel ofrece una acción rápida adicional «Abrir Marketing» que navega a `state.view = 'marketing'`. La barra lateral conserva Panel, Buscar y Resumen.
+- **Justificación**: El usuario pidió reducir la barra lateral, no ampliarla; el panel es el punto de entrada acordado para los apartados de gestión. Mantener la barra en tres elementos evita reintroducir la navegación que se está retirando.
+- **Alternativas consideradas**: Añadir un botón «Marketing» en la barra lateral (contradice la dirección del cambio pedido); accesible solo por URL (poca descubribilidad).
+
+### Decisión: Retirar solo «Clientes» e «Interacciones» de la barra lateral
+
+- **Decisión**: Eliminar `manage-entity` y `manage-document` de `NAV_ITEMS` en `src/components/shell.js`; conservar `dashboard`, `search` y `summary`. Añadir una quinta acción rápida «abrir gestión de documentos» en `src/components/dashboard.js` para que ambos apartados sigan siendo accesibles solo desde el panel (FR-012, FR-013, FR-014, FR-033).
+- **Justificación**: El usuario nombró únicamente esos dos apartados; retirar también «Resumen» sería un cambio no solicitado. Las pruebas de integración que navegaban por `#nav-entities`/`#nav-documents` deben usar las acciones rápidas o `app.navigate(...)`.
+- **Alternativas consideradas**: Retirar también «Resumen» (excede la petición); ocultar los botones con CSS (deja el marcado y los selectores accesibles, contradictorio con «eliminar»).

@@ -8,7 +8,7 @@
 
 ## Flujo de Usuario Principal
 
-1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades o buscar registros).
+1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos, buscar registros o abrir Marketing).
 2. Cree una entidad usando el formulario y añádale un documento asociado.
 3. Busque una entidad usando la pantalla de búsqueda y abra su ficha para ver el historial de documentos ordenado por fecha.
 4. Edite o elimine una entidad desde el área de gestión; confirme que la ficha de esa entidad refleja el cambio.
@@ -68,6 +68,27 @@ La forma de las reglas está en [`contracts/entity-storage.md`](contracts/entity
 6. Despliegue «Tipo de actividad» y confirme que ofrece solo «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante», y que la clave almacenada sigue siendo `rubro`.
 
 La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-presentación-del-formulario-de-clientes) y su efecto en el modelo en [`data-model.md`](data-model.md#22-reglas-de-campo-del-perfil-de-clientes).
+
+## Validación del Apartado de Marketing
+
+1. Abra el panel principal y confirme que la barra lateral muestra solo Panel, Buscar y Resumen: «Clientes» e «Interacciones» no aparecen.
+2. Compruebe que el panel ofrece las acciones rápidas de nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros y abrir Marketing; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí.
+3. Abra Marketing y confirme los cinco contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual», además del embudo por etapas y del gráfico «Estado comercial de la cartera».
+4. Con cero prospectos, verifique que los contadores muestran cero y que la torta muestra las cinco categorías en cero con un estado vacío claro.
+5. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe explicarse el motivo.
+6. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas.
+7. Avance el prospecto a «En proceso», «En recontacto» y «Cliente ganado»; tras cada cambio, compruebe que los contadores, el embudo y la torta se actualizan sin recargar y que cada entidad cuenta una sola vez.
+8. Confirme que el gráfico ofrece leyenda textual con las cinco categorías y que su descripción accesible enumera las cantidades.
+9. Verifique que las reglas configuradas en `marketing.automationRules` se ejecutan al capturar o cambiar de etapa y que cada ejecución aparece como un documento en el historial de la entidad.
+
+La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/marketing.md) y su efecto en el modelo en [`data-model.md`](data-model.md#3-perfil-de-marketing-historia-de-usuario-16).
+
+## Validación de la Navegación Lateral
+
+1. Recorra todas las pantallas y confirme que la barra lateral mantiene Panel, Buscar y Resumen con el elemento activo resaltado.
+2. Intente localizar los botones de Clientes e Interacciones en la barra lateral: no deben existir en el marcado.
+3. Navegue a la gestión de entidades y de documentos desde las acciones rápidas del panel y vuelva al panel: los registros deben permanecer intactos.
+4. Abra `?view=manage-entity` y `?view=manage-document`: las vistas deben seguir funcionando como enlaces profundos aunque no figuren en la barra lateral.
 
 ## Extender el Módulo Base
 

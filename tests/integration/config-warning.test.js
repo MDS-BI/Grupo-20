@@ -28,8 +28,10 @@ describe('User Story 5 - invalid configuration fallback', () => {
     expect(qs('config-warning').textContent).toContain('Configuración');
     expect(qs('brand-name').textContent).toBe('Módulo Base ERP');
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#2563eb');
-    expect(qs('nav-entities-label').textContent).toBe('Entidades');
-    expect(qs('nav-documents-label').textContent).toBe('Documentos');
+    expect(qs('nav-entities-label')).toBeNull();
+    expect(qs('nav-documents-label')).toBeNull();
+    expect(qs('nav-search-label').textContent).toBe('Buscar');
+    expect(qs('nav-summary-label').textContent).toBe('Resumen');
   });
 
   it('does not show the warning for a valid configuration', () => {

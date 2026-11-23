@@ -9,6 +9,8 @@ import {
   resolveFieldRules,
 } from './utils/field-rules.js';
 import { getConfig } from './module-config.js';
+import { transitionStage } from './utils/marketing-stage.js';
+import { runAutomationRules } from './utils/marketing-automation.js';
 
 const ENTITIES_KEY = 'erp_entities';
 const DOCUMENTS_KEY = 'erp_documents';
@@ -64,6 +66,28 @@ export function generateEntityId() {
 
 function generateRecordId() {
   return generateId('rec');
+}
+
+function persistAutomation(event, entity, context = {}) {
+  const config = getConfig();
+  if (!config?.marketing || !entity) return [];
+  const documents = loadDocuments();
+  const pending = runAutomationRules(event, entity, config, documents, context);
+  if (!pending.length) return [];
+  const now = new Date().toISOString();
+  const created = pending.map((item) => ({
+    id: generateRecordId(),
+    entity_id: item.entity_id,
+    startDate: '',
+    endDate: '',
+    notes: item.notes,
+    status: item.status,
+    automation_key: item.automation_key,
+    createdAt: now,
+    updatedAt: now,
+  }));
+  saveDocuments([...documents, ...created]);
+  return created;
 }
 
 function normalizeCode(code) {
@@ -253,6 +277,7 @@ export function addEntity(data, { customFieldDefs = null } = {}) {
   };
   entities.push(entity);
   saveEntities(entities);
+  if (entity.estado_comercial) persistAutomation('entity_created', entity);
   return entity;
 }
 
@@ -287,6 +312,16 @@ export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   const index = entities.findIndex((e) => e.id === id);
   entities[index] = updated;
   saveEntities(entities);
+  return updated;
+}
+
+export function updateEntityStage(id, toStage) {
+  const entity = loadEntities().find((e) => e.id === id);
+  if (!entity) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
+  const result = transitionStage(entity, toStage);
+  if (!result.valid) throw new ValidationError(result.errors);
+  const updated = updateEntity(id, result.data, { customFieldDefs: getConfig()?.customFields?.entity || [] });
+  persistAutomation('stage_changed', updated, { from: entity.estado_comercial, to: toStage });
   return updated;
 }
 
@@ -392,6 +427,8 @@ export function addDocument(data, { customFieldDefs = null, statusLifecycle = nu
   };
   documents.push(document);
   saveDocuments(documents);
+  const linkedEntity = entities.find((e) => e.entity_id === document.entity_id);
+  if (linkedEntity?.estado_comercial) persistAutomation('document_created', linkedEntity);
   return document;
 }
 

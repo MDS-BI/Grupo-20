@@ -1,20 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { initApp } from '../../src/app.js';
 
+let app;
+
 function mount(rawConfig = {}) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig });
+  app = initApp(document.getElementById('app'), { rawConfig });
+  return app;
 }
 
 describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
   it('código único sin distinguir mayúsculas ni espacios', () => {
     mount();
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Otra';
     document.getElementById('field-code').value = ' Ac-1 ';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -23,12 +26,12 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
 
   it('confirmación de eliminación indica cuántos documentos se eliminarán', () => {
     mount();
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -55,14 +58,14 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
   it('los valores de campos personalizados retirados se conservan ocultos y reaparecen al redeclarar el campo', () => {
     const withField = { customFields: { entity: [{ key: 'vip', label: 'VIP', type: 'text' }] } };
     mount(withField);
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('field-vip').value = 'si';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     mount(null);
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     expect(document.getElementById('field-vip')).toBeNull();
 
     mount(withField);
@@ -73,11 +76,11 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
 
   it('el estado del documento permanece como texto libre sin ciclo de vida configurado', () => {
     mount();
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));

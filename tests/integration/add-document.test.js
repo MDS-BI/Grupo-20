@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
 
+let app;
+
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig: {} });
+  app = initApp(document.getElementById('app'), { rawConfig: {} });
+  return app;
 }
 
 function createEntity(name, code) {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+  app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
   document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -20,7 +23,7 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
 
   it('añade un documento y queda asociado a la entidad', () => {
     createEntity('Acme', 'AC-1');
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -31,7 +34,7 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
 
   it('elimina los documentos asociados cuando se elimina la entidad', () => {
     createEntity('Acme', 'AC-1');
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -42,13 +45,13 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     document.querySelector('[data-action="edit-entity"]').click();
     document.querySelector('[data-action="delete-entity"]').click();
 
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     expect(document.getElementById('document-entity-select').querySelectorAll('option').length).toBe(1);
   });
 
   it('impide guardar un documento cuando falta información obligatoria y explica qué corregir', () => {
     createEntity('Acme', 'AC-1');
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));

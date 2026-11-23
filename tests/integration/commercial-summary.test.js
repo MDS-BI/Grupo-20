@@ -16,20 +16,23 @@ const SUMMARY_CONFIG = {
   },
 };
 
+let app;
+
 function mount(rawConfig = {}) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig });
+  app = initApp(document.getElementById('app'), { rawConfig });
+  return app;
 }
 
 function createEntity(name, code) {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+  app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
   document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 function addDocumentWithStatus(status) {
-  document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+  app.navigate('manage-document');
   const select = document.getElementById('document-entity-select');
   select.value = select.querySelector('option:not([value=""])').value;
   select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -60,7 +63,7 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     expect(values).toEqual(['1', '1', '1']);
     expect(document.querySelector('.pending-list').textContent).toContain('Cliente Uno');
 
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));

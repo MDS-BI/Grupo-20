@@ -6,8 +6,10 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 function openForm() {
@@ -41,7 +43,7 @@ const CHANNEL_LABELS = ['Llamada', 'Correo', 'Reunión', 'WhatsApp'];
 describe('Presentación del formulario de clientes (T064)', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
-    initApp(document.getElementById('app'));
+    app = initApp(document.getElementById('app'));
   });
 
   it('muestra «Nuevo Cliente» en el formulario y en la acción rápida', () => {

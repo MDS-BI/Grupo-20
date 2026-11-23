@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 
+let app;
+
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig: {} });
+  app = initApp(document.getElementById('app'), { rawConfig: {} });
+  return app;
 }
 
 function createEntity(name, code) {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+  app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
   document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -31,7 +34,7 @@ describe('Editar y eliminar entidades con confirmación (H4)', () => {
 
   it('pide confirmación indicando cuántos documentos se eliminarán y cancela si el usuario rechaza', () => {
     createEntity('Acme', 'AC-1');
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
+    app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));

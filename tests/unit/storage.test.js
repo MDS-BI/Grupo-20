@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
-import { setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
+import { setActiveConfig, DEFAULT_CONFIG, MODULE_CONFIG, loadModuleConfig } from '../../src/module-config.js';
 import { localTodayISO } from '../../src/utils/entity-date.js';
 import {
   addEntity,
@@ -407,5 +407,47 @@ describe('Fecha de nacimiento del perfil de clientes (FR-047 a FR-050)', () => {
     expect(() => updateEntity(legacy.id, { name: 'Legacy Corregido' })).toThrow(ValidationError);
     const corrected = updateEntity(legacy.id, { name: 'Legacy', targetDate: '1980-05-05' });
     expect(corrected.targetDate).toBe('1980-05-05');
+  });
+});
+
+describe('Persistencia de Marketing (T077)', () => {
+  const { config: marketingConfig } = loadModuleConfig({
+    ...MODULE_CONFIG,
+    entityDate: null,
+    fieldRules: { entity: {}, document: {} },
+  });
+
+  it('conserva el estado comercial y los datos de consentimiento en la entidad', () => {
+    setActiveConfig(marketingConfig);
+    const entity = addEntity(
+      {
+        name: 'Prospecto Web',
+        code: 'MKT-1',
+        estado_comercial: 'prospecto',
+        consentimiento: true,
+        consentimiento_fecha: '2026-11-23T12:00:00.000Z',
+        consentimiento_version: '2026-11-23',
+      },
+      { customFieldDefs: marketingConfig.customFields.entity },
+    );
+    const stored = loadEntities().find((e) => e.id === entity.id);
+    expect(stored.estado_comercial).toBe('prospecto');
+    expect(stored.consentimiento).toBe(true);
+    expect(stored.consentimiento_fecha).toBe('2026-11-23T12:00:00.000Z');
+    expect(stored.consentimiento_version).toBe('2026-11-23');
+  });
+
+  it('guarda documentos automáticos con su estado y la entidad asociada', () => {
+    const entity = addEntity({ name: 'Base', code: 'MKT-2' });
+    const doc = addDocument({
+      entity_id: entity.entity_id,
+      notes: 'Registro de bienvenida',
+      status: 'automatico',
+    });
+    expect(loadDocuments().find((d) => d.id === doc.id)).toMatchObject({
+      notes: 'Registro de bienvenida',
+      status: 'automatico',
+      entity_id: entity.entity_id,
+    });
   });
 });

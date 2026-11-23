@@ -6,6 +6,7 @@
 // `null` ejecuta el módulo base sin adaptación (FR-024).
 import { LOCAL_TODAY, isValidISODate } from './utils/entity-date.js';
 import { hasFormat } from './utils/field-formats.js';
+import { normalizeMarketingConfig, validateMarketingConfig } from './utils/marketing-config.js';
 
 //
 // PERFIL ACTIVO: CRM Comercial (sesión 2026-11-16)
@@ -31,12 +32,47 @@ export const MODULE_CONFIG = {
       { key: 'contacto_correo', type: 'text', label: 'Correo electrónico' },
       { key: 'contacto_lugar', type: 'text', label: 'Lugar/Enlace de reunión' },
       { key: 'contacto_whatsapp', type: 'text', label: 'WhatsApp' },
+      {
+        key: 'estado_comercial',
+        type: 'select',
+        label: 'Estado comercial',
+        options: ['prospecto', 'en_proceso', 'en_recontacto', 'ganado', 'perdido'],
+      },
+      { key: 'consentimiento', type: 'boolean', label: 'Consentimiento' },
+      { key: 'consentimiento_fecha', type: 'text', label: 'Fecha del consentimiento' },
+      { key: 'consentimiento_version', type: 'text', label: 'Versión del aviso' },
     ],
-    document: [{ key: 'importe', type: 'number', label: 'Importe (USD)' }],
+    document: [
+      { key: 'importe', type: 'number', label: 'Importe (USD)' },
+      { key: 'automation_key', type: 'text', label: 'Clave de automatización' },
+    ],
   },
   statusLifecycle: {
     states: ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'cerrado perdido', 'pendiente'],
     transitions: {},
+  },
+  marketing: {
+    privacyNoticeVersion: '2026-11-23',
+    captureFields: [
+      'name',
+      'targetDate',
+      'rut',
+      'canal_contacto',
+      'contacto_telefono',
+      'contacto_correo',
+      'contacto_lugar',
+      'contacto_whatsapp',
+    ],
+    automationRules: [
+      { event: 'entity_created', action: 'create_document', label: 'Registro de bienvenida' },
+      {
+        event: 'stage_changed',
+        from: 'prospecto',
+        to: 'en_proceso',
+        action: 'notify',
+        label: 'Prospecto en seguimiento',
+      },
+    ],
   },
   theme: {
     accentColor: '#0f766e',
@@ -128,8 +164,22 @@ export const MODULE_CONFIG = {
         ],
       },
       ejecutivo_asignado: { order: 6 },
+      estado_comercial: {
+        hidden: true,
+        searchable: false,
+        options: [
+          { value: 'prospecto', label: 'Prospecto' },
+          { value: 'en_proceso', label: 'En proceso' },
+          { value: 'en_recontacto', label: 'En recontacto' },
+          { value: 'ganado', label: 'Cliente ganado' },
+          { value: 'perdido', label: 'Perdido' },
+        ],
+      },
+      consentimiento: { hidden: true, searchable: false },
+      consentimiento_fecha: { hidden: true, searchable: false },
+      consentimiento_version: { hidden: true, searchable: false },
     },
-    document: {},
+    document: { automation_key: { hidden: true, searchable: false } },
   },
   detailPolicy: {
     entity: { blockWhenInvalid: true, offerEditAction: true },
@@ -167,6 +217,7 @@ export const DEFAULT_CONFIG = {
   },
   customFields: { entity: [], document: [] },
   statusLifecycle: null,
+  marketing: null,
   theme: { accentColor: null },
   entityDate: null,
   fieldRules: { entity: {}, document: {} },
@@ -368,6 +419,7 @@ export function validateConfig(raw) {
 
   if (raw.fieldRules !== undefined) validateFieldRules(raw.fieldRules, errors);
   if (raw.detailPolicy !== undefined) validateDetailPolicy(raw.detailPolicy, errors);
+  if (raw.marketing !== undefined) validateMarketingConfig(raw.marketing, errors);
 
   if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
     const lifecycle = raw.statusLifecycle;
@@ -430,6 +482,7 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
       document: rawConfig.customFields?.document || [],
     },
     statusLifecycle: rawConfig.statusLifecycle || null,
+    marketing: rawConfig.marketing ? normalizeMarketingConfig(rawConfig.marketing).config : null,
     theme: {
       ...DEFAULT_CONFIG.theme,
       ...(rawConfig.theme || {}),
@@ -482,6 +535,7 @@ export function normalizeConfig(rawConfig) {
     labels: isPlainObject(rawConfig.labels) ? rawConfig.labels : rawConfig.labels === undefined ? {} : rawConfig.labels,
     customFields: normalizeCustomFields(rawConfig.customFields),
     statusLifecycle: rawConfig.statusLifecycle ?? null,
+    marketing: rawConfig.marketing ?? null,
     theme: isPlainObject(rawConfig.theme) ? rawConfig.theme : rawConfig.theme === undefined ? {} : rawConfig.theme,
     entityDate: rawConfig.entityDate ?? null,
     fieldRules: rawConfig.fieldRules ?? {},
@@ -498,6 +552,7 @@ export function normalizeConfig(rawConfig) {
       labels: { ...DEFAULT_CONFIG.labels, ...candidate.labels },
       customFields: candidate.customFields,
       statusLifecycle: candidate.statusLifecycle,
+      marketing: candidate.marketing ? normalizeMarketingConfig(candidate.marketing).config : null,
       theme: {
         ...DEFAULT_CONFIG.theme,
         ...candidate.theme,

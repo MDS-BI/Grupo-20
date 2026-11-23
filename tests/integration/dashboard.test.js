@@ -15,6 +15,15 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
     expect(document.querySelectorAll('.quick-actions button').length).toBeGreaterThanOrEqual(4);
   });
 
+  it('ofrece acceso rápido a Marketing desde el panel', () => {
+    const quickActions = document.querySelectorAll('.quick-actions button');
+    expect(quickActions.length).toBeGreaterThanOrEqual(6);
+    const marketingAction = document.querySelector('[data-action="navigate"][data-view="marketing"]');
+    expect(marketingAction.textContent).toContain('Marketing');
+    marketingAction.click();
+    expect(document.querySelector('.marketing-view')).toBeTruthy();
+  });
+
   it('la acción de nueva entidad abre la gestión con un formulario vacío', () => {
     document.querySelector('[data-action="quick-new-entity"]').click();
     expect(document.querySelector('.manage-view')).toBeTruthy();

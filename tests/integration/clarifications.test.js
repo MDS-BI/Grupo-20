@@ -9,11 +9,14 @@ function qs(id) {
 
 function mount(configOverride) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), normalizeConfig(configOverride));
+  app = initApp(document.getElementById('app'), normalizeConfig(configOverride));
+  return app;
 }
 
+let app;
+
 function navigate(view) {
-  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
+  app.navigate(view);
 }
 
 function submitEntity(name, code) {

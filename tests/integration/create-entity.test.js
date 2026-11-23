@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
 
+let app;
+
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'), { rawConfig: {} });
+  app = initApp(document.getElementById('app'), { rawConfig: {} });
+  return app;
 }
 
 describe('Crear entidad y rechazar código duplicado (H1)', () => {
@@ -12,7 +15,7 @@ describe('Crear entidad y rechazar código duplicado (H1)', () => {
   });
 
   it('crea una entidad desde el formulario de gestión y aparece en los resultados de búsqueda', () => {
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme Corp';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -24,12 +27,12 @@ describe('Crear entidad y rechazar código duplicado (H1)', () => {
   });
 
   it('rechaza un código duplicado con un mensaje claro', () => {
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme Corp';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Otra Empresa';
     document.getElementById('field-code').value = ' ac-1 ';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
