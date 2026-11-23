@@ -62,11 +62,11 @@ Como ejecutivo de ventas, quiero registrar clientes y sus interacciones para org
 
 **Por qué esta prioridad**: Se encuentra en este nivel de prioridad dado que permite ingresar la información principal del CRM, una vez definida la estructura de datos en la Historia de Usuario 1. Sin los registros no sería posible consultar antecedentes ni gestionar seguimientos. 
 
-**Prueba Independiente**: Un ejecutivo registra un cliente y una llamada asociada a él; comprueba que el cliente aparece en la lista de registros y que la llamada queda guardada en su ficha. 
+**Prueba Independiente**: Un ejecutivo registra un cliente y una llamada asociada a él; comprueba que el registro queda guardado y es localizable (mediante búsqueda, selectores o su ficha) sin requerir una lista de entidades en la pantalla de gestión, y que la llamada queda guardada en su ficha. 
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el ejecutivo completa los datos obligatorios del cliente, **cuando** los guarda, **entonces** parece en la lista de clientes. 
+1. **Dado** que el ejecutivo completa los datos obligatorios del cliente, **cuando** los guarda, **entonces** el registro se guarda y queda disponible para búsqueda, selección y consulta en su ficha (la pantalla de gestión no muestra una lista de entidades, FR-016). 
 2. **Dado** que existe un cliente, **cuando** registra una llamada con fecha y descripción, **entonces** queda guardada en la ficha de ese cliente.
 3. **Dado**  que faltan datos obligatorios o el codigo del cliente está repetido, **cuando** se intenta guardar, **entonces** el sistema rechaza el registro y explica qué se debe corregir. 
 ---
@@ -132,6 +132,8 @@ Como desarrollador de módulos, quiero declarar un único archivo de configuraci
 ### Historia de Usuario 6 - Consultar indicadores de Gestión Comercial (Prioridad: P6)
 
 Como Gerente Comercial, quiero visualizar un resumen de clientes, interacciones y seguimientos pendientes para identificar necesidades de atención y organizar el trabajo del equipo.
+
+> Nota: Esta historia describe una vista de perfil (p. ej. CRM con etiquetas configuradas) sobre el comportamiento genérico del resumen de indicadores definido en FR-044 a FR-046 (entidades, documentos y documentos pendientes).
 
 **Por qué esta prioridad**: Se ubica en este nivel porque entrega al Gerente Comercial una vista consolidada para priorizar la gestión del equipo, apoyándose en los clientes e historiales ya registrados en las Historias de Usuario 2 y 3. Sin esos registros, los indicadores no tendrían información que resumir.
 
@@ -372,7 +374,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-041**: El sistema DEBE ofrecer una vista de detalle de entidad ("ficha"), accesible al seleccionar una entidad desde los resultados de búsqueda, que muestre los datos de la entidad junto con sus documentos asociados.
 - **FR-042**: La vista de detalle de entidad DEBE ordenar los documentos asociados por fecha para presentar el historial de forma cronológica.
 - **FR-043**: La vista de detalle de entidad DEBE reflejar las actualizaciones realizadas desde la pantalla de gestión (creación, edición o eliminación de la entidad o de sus documentos) la próxima vez que se consulte.
-- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos "pendientes" por entidad. Si hay ciclo de vida configurado, la configuración DEBE marcar explícitamente uno o más estados como pendientes y solo esos se cuentan; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado (minúsculas y recorte) coincide con `pendiente`; si no hay coincidencias, el indicador es cero.
+- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos cuyo estado corresponda a "pendiente". La determinación de "pendiente" sigue esta precedencia: (1) si hay `statusLifecycle` configurado, se cuentan únicamente los estados que la configuración del módulo marque explícitamente como pendientes; (2) si no hay ciclo de vida, se considera pendiente cuando el estado de texto libre, tras normalizar (minúsculas y recorte), coincide con `"pendiente"` (comportamiento base por defecto). Si no hay coincidencias, el indicador es cero. Los documentos pendientes se identifican por entidad.
 - **FR-045**: El resumen de indicadores DEBE actualizarse cada vez que se crea, edita o elimina una entidad o un documento, y DEBE permitir seleccionar una entidad listada para abrir su ficha de detalle (FR-041).
 - **FR-046**: Cuando no existan entidades, documentos ni documentos pendientes, el resumen de indicadores DEBE mostrar un estado vacío con los valores en cero e indicar cómo comenzar a registrar información.
 - **FR-047**: En el perfil de clientes, el campo de fecha objetivo DEBE mostrarse con la etiqueta "Fecha de nacimiento" en todos los lugares visibles (formularios, listas, ficha, búsqueda y filtros) y DEBE aceptar únicamente fechas de calendario válidas entre el 1 de enero de 1910 y la fecha actual, inclusive.
