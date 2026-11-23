@@ -136,4 +136,42 @@
 
 - **Decisión**: `matchesQuery()` construye el "haystack" solo con campos base y personalizados cuyo `searchable` no sea `false`; `renderSearchBarHtml()` toma el texto de ayuda de la configuración en lugar de texto fijo que menciona código/categoría.
 - **Rationale**: Evita que un dato oculto influya en resultados que el usuario no puede explicar (FR-055) y mantiene el comportamiento base intacto cuando no hay reglas (todos los campos siguen siendo buscables).
-- **Alternativas consideradas**: Mantener todos los campos en la búsqueda (contradice FR-055); quitar código/categoría del buscador global (rompería otros módulos).
+ - **Alternativas consideradas**: Mantener todos los campos en la búsqueda (contradice FR-055); quitar código/categoría del buscador global (rompería otros módulos).
+
+## Decisiones de aclaración (sesión 2026-11-23, tercera tanda: presentación del formulario de clientes)
+
+### Decisión: Aceptar dos formatos de RUT con una sola comparación normalizada
+
+- **Decisión**: Mantener `format: "cl-rut"` y `normalize: "cl-rut"`; el validador existente ya acepta `12345678-9` y `12.345.678-9`, y `normalizeClRut()` elimina puntos, guion y espacios y uniformiza la `K`. La unicidad se comprueba sobre ese valor normalizado.
+- **Rationale**: El usuario pidió ampliar el formato permitido sin relajar el dígito verificador. Reutilizar la normalización ya presente evita duplicados del mismo RUT escrito de dos maneras y mantiene una sola fuente de verdad (FR-057).
+- **Alternativas consideradas**: Aceptar solo un formato (contradice la decisión del usuario); guardar el texto tal cual y compararlo literalmente (permite duplicados); añadir una librería de RUT (huella innecesaria).
+
+### Decisión: Pistas grises declarativas por campo
+
+- **Decisión**: Añadir `placeholder` opcional a las definiciones de campo y a `fieldRules`, renderizarlo como atributo `placeholder` del control y aplicar color gris mediante CSS. El «RUT» usa `Ej: 11.111.111-1`; los campos de contacto usan `Ej: +56 9 1234 5678` (llamada y WhatsApp), `Ej: nombre@ejemplo.cl` (correo) y `Ej: Sala 2 o enlace` (reunión). El texto no se persiste ni se valida.
+- **Rationale**: Es la forma nativa y accesible de guiar la captura sin añadir valores al registro; una sola propiedad por campo mantiene el patrón de configuración y permite probar cada pista por canal (FR-062, FR-067).
+- **Alternativas consideradas**: Texto de ayuda permanente bajo el campo (ocupa espacio y no desaparece al escribir); precargar el ejemplo como valor (contaminaría el guardado y la validación); componentes específicos por canal (duplican lógica).
+
+### Decisión: Etiquetas capitalizadas con valores estables en «Canal de Contacto»
+
+- **Decisión**: Las opciones `select` aceptan cadenas (compatibilidad) u objetos `{ value, label }`. El perfil CRM declara valores `llamada`, `correo`, `reunion`, `whatsapp` con etiquetas «Llamada», «Correo», «Reunión» y «WhatsApp». Las condiciones `when.equals` y los datos guardados siguen usando los valores originales.
+- **Rationale**: Cumple la mayúscula inicial solicitada sin migrar registros ni romper las reglas condicionales ya aprobadas (FR-063, FR-060, FR-061).
+- **Alternativas consideradas**: Cambiar los valores almacenados a «Llamada», etc. (obliga a migrar datos y `when`); usar CSS `text-transform: capitalize` (no cambia el texto real y falla en pruebas de etiqueta).
+
+### Decisión: Orden declarativo del formulario
+
+- **Decisión**: Añadir `order` numérico opcional por campo, resuelto junto a `fieldRules` con orden estable; los campos base tienen valores por defecto (`name` 1, `targetDate` 3) y el perfil CRM asigna `rut` 2, `canal_contacto` 4, los campos `contactDetail` 4, `rubro` 5 y `ejecutivo_asignado` 6. Sin `order`, se conserva el orden actual de declaración.
+- **Rationale**: El orden exacto pedido intercala campos base y personalizados; un mecanismo genérico evita ramas específicas por perfil y mantiene intactos los módulos que no declaran orden (FR-065).
+- **Alternativas consideradas**: Reordenar solo el arreglo `customFields` (no permite colocar `rut` antes de `targetDate`); codificar un arreglo fijo en `entity-form.js` (rompe la extensibilidad).
+
+### Decisión: «Rubro» se convierte en «Tipo de actividad» desplegable
+
+- **Decisión**: Conservar la clave `rubro`, cambiar la etiqueta a «Tipo de actividad» y el tipo a `select` con las diez opciones indicadas, incluidas «Dueño/a de casa» y «Jubilado - FFAA» tal como se escribieron.
+- **Rationale**: El usuario pidió renombrar la casilla y restringirla a un catálogo; mantener la clave evita migración y preserva los valores históricos en `localStorage` (FR-066).
+- **Alternativas consideradas**: Crear una clave nueva `tipo_actividad` (migración innecesaria); dejar texto libre (no cumple la petición de desplegable).
+
+### Decisión: Título «Nuevo Cliente» sin género codificado
+
+- **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
+- **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
+- **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).

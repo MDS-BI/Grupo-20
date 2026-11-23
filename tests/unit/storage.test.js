@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
 import { localTodayISO } from '../../src/utils/entity-date.js';
 import {
@@ -248,6 +248,128 @@ describe('Resumen de Gestión Comercial (H6)', () => {
       statusLifecycle: { states: lifecycle.states },
     });
     expect(fallback.totalPending).toBe(1);
+  });
+});
+
+const CLIENT_PROFILE = {
+  moduleName: 'CRM Comercial',
+  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true },
+  customFields: {
+    entity: [
+      { key: 'rubro', label: 'Rubro', type: 'text' },
+      { key: 'canal_contacto', label: 'Canal de Contacto', type: 'select', options: ['llamada', 'correo', 'reunion', 'whatsapp'] },
+      { key: 'rut', label: 'RUT', type: 'text' },
+      { key: 'contacto_telefono', label: 'Teléfono', type: 'text' },
+      { key: 'contacto_correo', label: 'Correo electrónico', type: 'text' },
+    ],
+    document: [],
+  },
+  fieldRules: {
+    entity: {
+      code: { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false },
+      category: { hidden: true, searchable: false },
+      description: { hidden: true, searchable: false },
+      rut: { label: 'RUT', required: true, format: 'cl-rut', unique: true, normalize: 'cl-rut' },
+      canal_contacto: { label: 'Canal de Contacto', required: true },
+      contacto_telefono: {
+        label: 'Teléfono',
+        when: { key: 'canal_contacto', equals: 'llamada' },
+        required: true,
+        format: 'phone',
+        group: 'contactDetail',
+      },
+      contacto_correo: {
+        label: 'Correo electrónico',
+        when: { key: 'canal_contacto', equals: 'correo' },
+        required: true,
+        format: 'email',
+        group: 'contactDetail',
+      },
+    },
+    document: {},
+  },
+  detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
+};
+
+describe('Reglas de campo del perfil de clientes (T032)', () => {
+  beforeEach(() => {
+    setActiveConfig(CLIENT_PROFILE);
+  });
+
+  afterEach(() => {
+    setActiveConfig(DEFAULT_CONFIG);
+  });
+
+  function validClient(overrides = {}) {
+    return {
+      name: 'Cliente Uno',
+      targetDate: '1980-05-05',
+      rut: '12.345.678-5',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56 9 1234 5678',
+      ...overrides,
+    };
+  }
+
+  it('genera un código único oculto y no buscable', () => {
+    const first = addEntity(validClient());
+    const second = addEntity(validClient({ name: 'Cliente Dos', rut: '12.345.679-3' }));
+    expect(first.code).toMatch(/^CLI-\d{3,}$/);
+    expect(second.code).not.toBe(first.code);
+    expect(searchEntities(first.code.toLowerCase(), { customFieldKeys: ['rubro', 'rut', 'contacto_telefono'] })).toHaveLength(0);
+  });
+
+  it('rechaza RUT inválido, RUT duplicado y fecha de nacimiento ausente', () => {
+    expect(() => addEntity(validClient({ rut: '12.345.678-6' }))).toThrow(ValidationError);
+    addEntity(validClient());
+    expect(() => addEntity(validClient({ name: 'Otro', rut: ' 12345678-5 ' }))).toThrow(ValidationError);
+    expect(() => addEntity(validClient({ rut: '12.345.679-3', targetDate: '' }))).toThrow(ValidationError);
+  });
+
+  it('rechaza el mismo RUT escrito con puntos y sin puntos (T057)', () => {
+    addEntity(validClient());
+    expect(() => addEntity(validClient({ name: 'Otro', rut: '12345678-5' }))).toThrow(ValidationError);
+  });
+
+  it('valida solo el campo del canal activo y descarta los demás al guardar', () => {
+    const created = addEntity(validClient({ contacto_correo: 'ana@example.com' }));
+    expect(created.contacto_telefono).toBe('+56 9 1234 5678');
+    expect(created.contacto_correo).toBeUndefined();
+
+    expect(() => addEntity(validClient({ rut: '12.345.679-3', contacto_telefono: 'abc' }))).toThrow(ValidationError);
+    expect(() =>
+      addEntity(validClient({ rut: '12.345.679-3', canal_contacto: 'correo', contacto_telefono: '+56 9 1234 5678' })),
+    ).toThrow(ValidationError);
+
+    const byEmail = addEntity({
+      name: 'Cliente Correo',
+      targetDate: '1990-01-01',
+      rut: '12.345.679-3',
+      canal_contacto: 'correo',
+      contacto_correo: 'ana@example.com',
+      contacto_telefono: '+56 9 1234 5678',
+    });
+    expect(byEmail.contacto_correo).toBe('ana@example.com');
+    expect(byEmail.contacto_telefono).toBeUndefined();
+
+    const switched = updateEntity(created.id, { canal_contacto: 'correo', contacto_correo: 'ana@example.com' });
+    expect(switched.canal_contacto).toBe('correo');
+    expect(switched.contacto_correo).toBe('ana@example.com');
+    expect(switched.contacto_telefono).toBeUndefined();
+  });
+
+  it('excluye categoría y descripción de la búsqueda sin borrarlas', () => {
+    const entity = addEntity(
+      validClient({
+        category: 'CategoriaSecreta',
+        description: 'DescripcionSecreta',
+      }),
+    );
+    expect(entity.category).toBe('CategoriaSecreta');
+    const options = { customFieldKeys: ['rubro', 'rut', 'canal_contacto', 'contacto_telefono'] };
+    expect(searchEntities('CategoriaSecreta', options)).toHaveLength(0);
+    expect(searchEntities('DescripcionSecreta', options)).toHaveLength(0);
+    expect(searchEntities('Cliente Uno', options)).toHaveLength(1);
   });
 });
 

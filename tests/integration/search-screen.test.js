@@ -26,4 +26,15 @@ describe('Pantalla de búsqueda dedicada (H12)', () => {
     document.querySelector('[data-action="navigate"][data-view="dashboard"]').click();
     expect(document.querySelector('.dashboard')).toBeTruthy();
   });
+
+  it('muestra en el placeholder solo campos buscables del perfil cliente', () => {
+    document.querySelector('[data-action="navigate"][data-view="search"]').click();
+    const placeholder = document.getElementById('search-input').placeholder.toLowerCase();
+
+    expect(placeholder).toContain('fecha de nacimiento');
+    expect(placeholder).toContain('rut');
+    expect(placeholder).not.toContain('código');
+    expect(placeholder).not.toContain('categoría');
+    expect(placeholder).not.toContain('descripción');
+  });
 });

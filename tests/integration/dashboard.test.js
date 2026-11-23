@@ -33,7 +33,11 @@ describe('Panel de inicio con acciones rápidas y estadísticas (H15)', () => {
 
     document.querySelector('[data-action="quick-new-entity"]').click();
     document.getElementById('field-name').value = 'Acme';
-    document.getElementById('field-code').value = 'AC-1';
+    document.getElementById('field-targetDate').value = '1980-05-05';
+    document.getElementById('field-rut').value = '11.111.111-1';
+    document.getElementById('field-canal_contacto').value = 'llamada';
+    document.getElementById('field-canal_contacto').dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('field-contacto_telefono').value = '+56912345678';
     document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="dashboard"]').click();

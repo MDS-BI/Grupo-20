@@ -81,7 +81,7 @@ export function renderDashboardHtml(config, stats) {
     <section class="dashboard">
       <h1>${escapeHtml(config.moduleName)}</h1>
       <div class="quick-actions">
-        <button type="button" data-action="quick-new-entity">Nuevo ${escapeHtml(entityLabel.toLowerCase())}</button>
+        <button type="button" data-action="quick-new-entity">Nuevo ${escapeHtml(entityLabel)}</button>
         <button type="button" data-action="quick-new-document">Nueva ${escapeHtml(documentLabel.toLowerCase())}</button>
         <button type="button" data-action="quick-manage">Abrir gestión de ${escapeHtml(entityPlural.toLowerCase())}</button>
         <button type="button" data-action="quick-search">Buscar registros</button>

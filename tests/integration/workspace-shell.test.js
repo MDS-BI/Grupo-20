@@ -27,6 +27,7 @@ describe('Marco de espacio de trabajo ERP con marca (H14)', () => {
   });
 
   it('conserva las entidades y documentos almacenados al navegar entre módulos', () => {
+    mount({});
     document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';

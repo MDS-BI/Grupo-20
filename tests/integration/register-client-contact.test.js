@@ -1,46 +1,73 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
+import { loadEntities } from '../../src/storage.js';
 
-function mount() {
-  document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'));
+function qs(id) {
+  return document.getElementById(id);
 }
 
-function createEntity(name, code) {
-  document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
-  document.getElementById('field-name').value = name;
-  document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+function navigate(view) {
+  document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
 }
 
-describe('Registrar clientes y contactos comerciales (H2)', () => {
+function openForm() {
+  navigate('manage-entity');
+}
+
+function fillBase({ channel, name = 'Cliente Uno', rut = '11.111.111-1' } = {}) {
+  qs('field-name').value = name;
+  qs('field-targetDate').value = '1980-05-05';
+  qs('field-rut').value = rut;
+  qs('field-canal_contacto').value = channel;
+  qs('field-canal_contacto').dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function submit() {
+  qs('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+}
+
+const CHANNELS = [
+  { channel: 'llamada', field: 'contacto_telefono', valid: '+56912345678', invalid: '123', placeholder: 'Ej: +56 9 1234 5678' },
+  { channel: 'correo', field: 'contacto_correo', valid: 'ana@example.com', invalid: 'no-correo', placeholder: 'Ej: nombre@ejemplo.cl' },
+  { channel: 'reunion', field: 'contacto_lugar', valid: 'Sala A', invalid: '', placeholder: 'Ej: Sala 2 o enlace' },
+  { channel: 'whatsapp', field: 'contacto_whatsapp', valid: '+56987654321', invalid: 'abc', placeholder: 'Ej: +56 9 1234 5678' },
+];
+
+const CONTACT_FIELDS = CHANNELS.map(({ field }) => field);
+
+describe('Campos condicionales por canal (T041)', () => {
   beforeEach(() => {
-    mount();
+    document.body.innerHTML = '<div id="app"></div>';
+    initApp(document.getElementById('app'));
   });
 
-  it('registra un cliente y una interacción asociada; ambos quedan visibles', () => {
-    createEntity('Cliente Uno', 'CL-1');
+  it('muestra solo la casilla del canal elegido', () => {
+    openForm();
+    fillBase({ channel: 'correo' });
 
-    document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
-    const select = document.getElementById('document-entity-select');
-    select.value = select.querySelector('option:not([value=""])').value;
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-
-    document.getElementById('field-notes').value = 'Llamada de bienvenida';
-    document.getElementById('field-startDate').value = '2026-11-01';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-
-    expect(document.querySelector('.document-list .list-item').textContent).toContain('Llamada de bienvenida');
-
-    document.querySelector('[data-action="navigate"][data-view="search"]').click();
-    expect(document.querySelector('#search-results').textContent).toContain('Cliente Uno');
+    expect(qs('field-contacto_correo')).toBeTruthy();
+    for (const field of CONTACT_FIELDS.filter((key) => key !== 'contacto_correo')) {
+      expect(qs(`field-${field}`)).toBeNull();
+    }
   });
 
-  it('rechaza el registro cuando faltan datos obligatorios del cliente', () => {
-    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
-    document.getElementById('field-name').value = '';
-    document.getElementById('field-code').value = '';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(document.querySelectorAll('.field-error').length).toBeGreaterThan(0);
+  it.each(CHANNELS)('valida y guarda solo el contacto de $channel', ({ channel, field, valid, invalid, placeholder }) => {
+    openForm();
+    fillBase({ channel });
+    expect(qs(`field-${field}`)).toBeTruthy();
+    expect(qs(`field-${field}`).getAttribute('placeholder')).toBe(placeholder);
+
+    qs(`field-${field}`).value = invalid;
+    submit();
+    expect(qs(`error-${field}`).textContent).toBeTruthy();
+
+    qs(`field-${field}`).value = valid;
+    submit();
+
+    const entity = loadEntities()[0];
+    expect(entity[field]).toBe(valid);
+    for (const key of CONTACT_FIELDS.filter((item) => item !== field)) {
+      expect(entity[key]).toBeUndefined();
+    }
   });
 });

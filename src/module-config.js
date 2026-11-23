@@ -5,6 +5,7 @@
 // tocar ningún otro archivo del código central. Dejar MODULE_CONFIG en
 // `null` ejecuta el módulo base sin adaptación (FR-024).
 import { LOCAL_TODAY, isValidISODate } from './utils/entity-date.js';
+import { hasFormat } from './utils/field-formats.js';
 
 //
 // PERFIL ACTIVO: CRM Comercial (sesión 2026-11-16)
@@ -26,7 +27,10 @@ export const MODULE_CONFIG = {
       { key: 'ejecutivo_asignado', type: 'text', label: 'Ejecutivo Asignado' },
       { key: 'canal_contacto', type: 'select', label: 'Canal de Contacto', options: ['llamada', 'correo', 'reunion', 'whatsapp'] },
       { key: 'rut', type: 'text', label: 'RUT' },
-      { key: 'pedidos', type: 'number', label: 'Nº de pedidos' },
+      { key: 'contacto_telefono', type: 'text', label: 'Teléfono' },
+      { key: 'contacto_correo', type: 'text', label: 'Correo electrónico' },
+      { key: 'contacto_lugar', type: 'text', label: 'Lugar/Enlace de reunión' },
+      { key: 'contacto_whatsapp', type: 'text', label: 'WhatsApp' },
     ],
     document: [{ key: 'importe', type: 'number', label: 'Importe (USD)' }],
   },
@@ -41,6 +45,95 @@ export const MODULE_CONFIG = {
     label: 'Fecha de nacimiento',
     min: '1910-01-01',
     max: LOCAL_TODAY,
+    required: true,
+  },
+  fieldRules: {
+    entity: {
+      name: { order: 1 },
+      code: { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false },
+      category: { hidden: true, searchable: false },
+      description: { hidden: true, searchable: false },
+      rut: {
+        label: 'RUT',
+        required: true,
+        format: 'cl-rut',
+        unique: true,
+        normalize: 'cl-rut',
+        order: 2,
+        placeholder: 'Ej: 11.111.111-1',
+      },
+      targetDate: { order: 3 },
+      canal_contacto: {
+        label: 'Canal de Contacto',
+        required: true,
+        order: 4,
+        options: [
+          { value: 'llamada', label: 'Llamada' },
+          { value: 'correo', label: 'Correo' },
+          { value: 'reunion', label: 'Reunión' },
+          { value: 'whatsapp', label: 'WhatsApp' },
+        ],
+      },
+      contacto_telefono: {
+        label: 'Teléfono',
+        when: { key: 'canal_contacto', equals: 'llamada' },
+        required: true,
+        format: 'phone',
+        group: 'contactDetail',
+        order: 4,
+        placeholder: 'Ej: +56 9 1234 5678',
+      },
+      contacto_correo: {
+        label: 'Correo electrónico',
+        when: { key: 'canal_contacto', equals: 'correo' },
+        required: true,
+        format: 'email',
+        group: 'contactDetail',
+        order: 4,
+        placeholder: 'Ej: nombre@ejemplo.cl',
+      },
+      contacto_lugar: {
+        label: 'Lugar/Enlace de reunión',
+        when: { key: 'canal_contacto', equals: 'reunion' },
+        required: true,
+        format: 'nonEmpty',
+        group: 'contactDetail',
+        order: 4,
+        placeholder: 'Ej: Sala 2 o enlace',
+      },
+      contacto_whatsapp: {
+        label: 'WhatsApp',
+        when: { key: 'canal_contacto', equals: 'whatsapp' },
+        required: true,
+        format: 'phone',
+        group: 'contactDetail',
+        order: 4,
+        placeholder: 'Ej: +56 9 1234 5678',
+      },
+      rubro: {
+        label: 'Tipo de actividad',
+        type: 'select',
+        order: 5,
+        options: [
+          'Dependiente',
+          'Independiente Formal',
+          'Independiente Informal',
+          'Jubilado',
+          'Dueño/a de casa',
+          'Estudiante',
+          'FFAA',
+          'Rentista',
+          'Jubilado - FFAA',
+          'Cesante',
+        ],
+      },
+      ejecutivo_asignado: { order: 6 },
+    },
+    document: {},
+  },
+  detailPolicy: {
+    entity: { blockWhenInvalid: true, offerEditAction: true },
+    document: {},
   },
 };
 
@@ -76,10 +169,33 @@ export const DEFAULT_CONFIG = {
   statusLifecycle: null,
   theme: { accentColor: null },
   entityDate: null,
+  fieldRules: { entity: {}, document: {} },
+  detailPolicy: { entity: {}, document: {} },
 };
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isValidRuleOption(option) {
+  if (typeof option === 'string') return option.length > 0;
+  return (
+    isPlainObject(option) &&
+    typeof option.value === 'string' &&
+    option.value.length > 0 &&
+    typeof option.label === 'string' &&
+    option.label.length > 0
+  );
+}
+
+function normalizeRule(rule) {
+  const normalized = { ...rule };
+  if (isPlainObject(rule.when)) normalized.when = { ...rule.when };
+  if (isPlainObject(rule.generated)) normalized.generated = { ...rule.generated };
+  if (Array.isArray(rule.options)) {
+    normalized.options = rule.options.map((option) => (isPlainObject(option) ? { ...option } : option));
+  }
+  return normalized;
 }
 
 function isValidEntityDateRule(rule) {
@@ -87,11 +203,119 @@ function isValidEntityDateRule(rule) {
   if (rule.label !== undefined && (typeof rule.label !== 'string' || !rule.label.trim())) return false;
   if (rule.min !== undefined && !isValidISODate(rule.min)) return false;
   if (rule.max !== undefined && rule.max !== LOCAL_TODAY && !isValidISODate(rule.max)) return false;
+  if (rule.required !== undefined && typeof rule.required !== 'boolean') return false;
   return true;
 }
 
 function normalizeEntityDateRule(rule) {
   return isPlainObject(rule) ? { ...rule } : null;
+}
+
+function normalizeRuleMap(map) {
+  if (!isPlainObject(map)) return {};
+  const normalized = {};
+  for (const [key, rule] of Object.entries(map)) {
+    if (!isPlainObject(rule)) continue;
+    normalized[key] = normalizeRule(rule);
+  }
+  return normalized;
+}
+
+function normalizeFieldRules(raw) {
+  if (!isPlainObject(raw)) return { entity: {}, document: {} };
+  const global = {};
+  for (const [key, rule] of Object.entries(raw)) {
+    if (key === 'entity' || key === 'document') continue;
+    if (isPlainObject(rule)) global[key] = normalizeRule(rule);
+  }
+  return {
+    ...global,
+    entity: normalizeRuleMap(raw.entity),
+    document: normalizeRuleMap(raw.document),
+  };
+}
+
+function normalizeDetailPolicy(raw) {
+  if (!isPlainObject(raw)) return { entity: {}, document: {} };
+  return {
+    entity: isPlainObject(raw.entity) ? { ...raw.entity } : {},
+    document: isPlainObject(raw.document) ? { ...raw.document } : {},
+  };
+}
+
+function validateFieldRules(raw, errors) {
+  if (!isPlainObject(raw)) {
+    errors.push('fieldRules debe ser un objeto.');
+    return;
+  }
+  const maps = [];
+  for (const [key, value] of Object.entries(raw)) {
+    if (key !== 'entity' && key !== 'document' && isPlainObject(value)) maps.push([key, value]);
+  }
+  maps.push(['entity', raw.entity], ['document', raw.document]);
+  for (const [scope, map] of maps) {
+    if (map === undefined) continue;
+    if (!isPlainObject(map)) {
+      errors.push(`fieldRules.${scope} debe ser un objeto.`);
+      continue;
+    }
+    for (const [key, rule] of Object.entries(map)) {
+      const path = scope === 'entity' || scope === 'document' ? `fieldRules.${scope}.${key}` : `fieldRules.${key}`;
+      if (!isPlainObject(rule)) {
+        errors.push(`${path} debe ser un objeto.`);
+        continue;
+      }
+      if (rule.format !== undefined && !hasFormat(rule.format)) {
+        errors.push(`${path} declara un formato desconocido: "${rule.format}".`);
+      }
+      if (rule.when !== undefined && (!isPlainObject(rule.when) || !rule.when.key || rule.when.equals === undefined)) {
+        errors.push(`${path}.when debe declarar "key" y "equals".`);
+      }
+      if (rule.generated !== undefined && !isPlainObject(rule.generated)) {
+        errors.push(`${path}.generated debe ser un objeto.`);
+      }
+      if (rule.group !== undefined && typeof rule.group !== 'string') {
+        errors.push(`${path}.group debe ser una cadena.`);
+      }
+      if (rule.label !== undefined && typeof rule.label !== 'string') {
+        errors.push(`${path}.label debe ser una cadena.`);
+      }
+      if (rule.placeholder !== undefined && typeof rule.placeholder !== 'string') {
+        errors.push(`${path}.placeholder debe ser una cadena.`);
+      }
+      if (rule.order !== undefined && (typeof rule.order !== 'number' || !Number.isFinite(rule.order))) {
+        errors.push(`${path}.order debe ser un número finito.`);
+      }
+      if (rule.options !== undefined && (!Array.isArray(rule.options) || !rule.options.every(isValidRuleOption))) {
+        errors.push(`${path}.options debe ser una lista de cadenas o de objetos con "value" y "label".`);
+      }
+      for (const flag of ['required', 'hidden', 'searchable', 'unique']) {
+        if (rule[flag] !== undefined && typeof rule[flag] !== 'boolean') {
+          errors.push(`${path}.${flag} debe ser booleano.`);
+        }
+      }
+    }
+  }
+}
+
+function validateDetailPolicy(raw, errors) {
+  if (!isPlainObject(raw)) {
+    errors.push('detailPolicy debe ser un objeto.');
+    return;
+  }
+  for (const kind of ['entity', 'document']) {
+    const policy = raw[kind];
+    if (policy === undefined) continue;
+    if (!isPlainObject(policy)) {
+      errors.push(`detailPolicy.${kind} debe ser un objeto.`);
+      continue;
+    }
+    for (const flag of ['blockWhenInvalid', 'offerEditAction']) {
+      if (policy[flag] !== undefined && typeof policy[flag] !== 'boolean') {
+        errors.push(`detailPolicy.${kind}.${flag} debe ser booleano.`);
+      }
+    }
+  }
 }
 
 /**
@@ -141,6 +365,9 @@ export function validateConfig(raw) {
   if (raw.entityDate !== undefined && raw.entityDate !== null && !isValidEntityDateRule(raw.entityDate)) {
     errors.push('entityDate debe declarar una etiqueta, min ISO y max ISO o "localToday" válidos.');
   }
+
+  if (raw.fieldRules !== undefined) validateFieldRules(raw.fieldRules, errors);
+  if (raw.detailPolicy !== undefined) validateDetailPolicy(raw.detailPolicy, errors);
 
   if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
     const lifecycle = raw.statusLifecycle;
@@ -209,6 +436,8 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
       accentColor: sanitizeAccentColor(rawConfig.theme?.accentColor),
     },
     entityDate: normalizeEntityDateRule(rawConfig.entityDate),
+    fieldRules: normalizeFieldRules(rawConfig.fieldRules),
+    detailPolicy: normalizeDetailPolicy(rawConfig.detailPolicy),
   };
   return { config, warning: null };
 }
@@ -255,6 +484,8 @@ export function normalizeConfig(rawConfig) {
     statusLifecycle: rawConfig.statusLifecycle ?? null,
     theme: isPlainObject(rawConfig.theme) ? rawConfig.theme : rawConfig.theme === undefined ? {} : rawConfig.theme,
     entityDate: rawConfig.entityDate ?? null,
+    fieldRules: rawConfig.fieldRules ?? {},
+    detailPolicy: rawConfig.detailPolicy ?? {},
   };
   const errors = validateConfig(candidate);
   if (errors.length) {
@@ -273,6 +504,8 @@ export function normalizeConfig(rawConfig) {
         accentColor: sanitizeAccentColor(candidate.theme.accentColor),
       },
       entityDate: normalizeEntityDateRule(candidate.entityDate),
+      fieldRules: normalizeFieldRules(candidate.fieldRules),
+      detailPolicy: normalizeDetailPolicy(candidate.detailPolicy),
     },
     errors: [],
   };

@@ -24,6 +24,7 @@ export function resolveEntityDateRule(config, now = new Date()) {
     label: rule.label || 'Fecha objetivo',
     min: rule.min || '',
     max: rule.max === LOCAL_TODAY ? localTodayISO(now) : rule.max || '',
+    required: rule.required === true,
   };
 }
 

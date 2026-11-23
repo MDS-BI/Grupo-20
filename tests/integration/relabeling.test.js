@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect } from 'vitest';
 import { initApp } from '../../src/app.js';
-import { setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
+import { setActiveConfig, DEFAULT_CONFIG, MODULE_CONFIG } from '../../src/module-config.js';
 import { renderEntityFormHtml } from '../../src/components/entity-form.js';
 import { renderEntityListHtml } from '../../src/components/entity-list.js';
 import { renderEntityDetailHtml } from '../../src/components/entity-detail.js';
@@ -77,5 +77,40 @@ describe('Reetiquetar pantallas desde la configuración (H7)', () => {
     expect(renderEntityListHtml([entity], CLIENT_CONFIG)).toContain('Fecha de nacimiento: 1985-07-14');
     expect(renderEntityDetailHtml(CLIENT_CONFIG, entity, [])).toContain('Fecha de nacimiento: 1985-07-14');
     expect(renderSearchBarHtml(CLIENT_CONFIG)).toContain('Fecha de nacimiento');
+  });
+
+  it('oculta los campos retirados en formulario, lista y ficha del perfil cliente', () => {
+    const legacy = {
+      id: 'e1',
+      entity_id: 'ent-1',
+      name: 'Ana',
+      code: 'CLI-001',
+      category: 'Antigua',
+      description: 'Texto heredado',
+      pedidos: 99,
+      targetDate: '1985-07-14',
+      rut: '11.111.111-1',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56912345678',
+    };
+    const views = [
+      renderEntityFormHtml(MODULE_CONFIG, legacy),
+      renderEntityListHtml([legacy], MODULE_CONFIG),
+      renderEntityDetailHtml(MODULE_CONFIG, legacy, []),
+    ];
+    for (const html of views) {
+      expect(html).not.toContain('Código');
+      expect(html).not.toContain('Categoría');
+      expect(html).not.toContain('Descripción');
+      expect(html).not.toContain('Nº de pedidos');
+      expect(html).not.toContain('CLI-001');
+      expect(html).not.toContain('Antigua');
+      expect(html).not.toContain('Texto heredado');
+      expect(html).not.toContain('99');
+    }
+
+    mount(MODULE_CONFIG);
+    document.querySelector('[data-action="navigate"][data-view="manage-entity"]').click();
+    expect(document.getElementById('field-code')).toBeNull();
   });
 });

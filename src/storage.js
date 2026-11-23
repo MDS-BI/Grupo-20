@@ -1,6 +1,13 @@
 import { sanitizeText } from './utils/sanitize.js';
 import { normalizeText } from './utils/search.js';
 import { isValidISODate, resolveEntityDateRule } from './utils/entity-date.js';
+import { isValidFormat, normalizeFieldValue } from './utils/field-formats.js';
+import {
+  isConditionActive,
+  isFieldSearchable,
+  pruneInactiveGroupValues,
+  resolveFieldRules,
+} from './utils/field-rules.js';
 import { getConfig } from './module-config.js';
 
 const ENTITIES_KEY = 'erp_entities';
@@ -61,6 +68,52 @@ function generateRecordId() {
 
 function normalizeCode(code) {
   return String(code || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function isEmptyValue(value) {
+  return value === undefined || value === null || value === '';
+}
+
+function generateBusinessCode(entities, generated) {
+  const prefix = generated.prefix || 'CLI-';
+  const pad = Number(generated.pad) || 3;
+  let sequence = Number(generated.start) || 1;
+  let code = `${prefix}${String(sequence).padStart(pad, '0')}`;
+  while (entities.some((entity) => normalizeCode(entity.code) === normalizeCode(code))) {
+    sequence += 1;
+    code = `${prefix}${String(sequence).padStart(pad, '0')}`;
+  }
+  return code;
+}
+
+function normalizeForUniqueness(value, rule, key) {
+  if (key === 'code') return normalizeCode(value);
+  return normalizeFieldValue(value, rule.normalize);
+}
+
+function validateFieldRules(rules, data, { entities, editingId, customFieldDefs }, errors) {
+  const labels = new Map((customFieldDefs || []).map((def) => [def.key, def.label || def.key]));
+  for (const [key, rule] of Object.entries(rules || {})) {
+    if (!isConditionActive(rule, data)) continue;
+    const value = data[key];
+    const label = rule.label || labels.get(key) || key;
+    if (rule.required && isEmptyValue(value)) {
+      errors[key] = `${label} es obligatorio.`;
+      continue;
+    }
+    if (isEmptyValue(value)) continue;
+    if (rule.format && !isValidFormat(rule.format, value)) {
+      errors[key] = `${label} no tiene un formato válido.`;
+      continue;
+    }
+    if (rule.unique) {
+      const normalized = normalizeForUniqueness(value, rule, key);
+      const duplicate = entities.some(
+        (entity) => entity.id !== editingId && normalizeForUniqueness(entity[key], rule, key) === normalized,
+      );
+      if (duplicate) errors[key] = `Ya existe un registro con ese ${label.toLowerCase()}.`;
+    }
+  }
 }
 
 export function isValidDate(value) {
@@ -141,6 +194,9 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
     if (duplicate) errors.code = 'Ya existe una entidad con ese código.';
   }
   const entityDateRule = resolveEntityDateRule(getConfig());
+  if (entityDateRule?.required && !data.targetDate) {
+    errors.targetDate = `${entityDateRule.label} es obligatoria.`;
+  }
   if (data.targetDate) {
     if (!isValidDate(data.targetDate)) {
       errors.targetDate = `${entityDateRule?.label || 'La fecha objetivo'} no es una fecha de calendario válida.`;
@@ -154,6 +210,11 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
     }
   }
   validateCustomFields(customFieldDefinitions, data, errors);
+  validateFieldRules(resolveFieldRules(getConfig(), 'entity'), data, {
+    entities,
+    editingId,
+    customFieldDefs: customFieldDefinitions,
+  }, errors);
   return errors;
 }
 
@@ -169,20 +230,26 @@ export function validateEntity(entity, { entities = loadEntities(), customFieldD
 export function addEntity(data, { customFieldDefs = null } = {}) {
   const entities = loadEntities();
   const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
-  const errors = validateEntityData(data, { entities, customFieldDefs: customFieldDefinitions });
+  const rules = resolveFieldRules(getConfig(), 'entity');
+  const prepared = { ...data };
+  if (rules.code?.generated && isEmptyValue(prepared.code)) {
+    prepared.code = generateBusinessCode(entities, rules.code.generated);
+  }
+  const pruned = pruneInactiveGroupValues(prepared, rules);
+  const errors = validateEntityData(pruned, { entities, customFieldDefs: customFieldDefinitions });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
   const entity = {
     id: generateRecordId(),
     entity_id: generateEntityId(),
-    name: sanitizeText(data.name),
-    code: sanitizeText(data.code),
-    category: sanitizeText(data.category || ''),
-    description: sanitizeText(data.description || ''),
-    targetDate: data.targetDate || '',
+    name: sanitizeText(pruned.name),
+    code: sanitizeText(pruned.code),
+    category: sanitizeText(pruned.category || ''),
+    description: sanitizeText(pruned.description || ''),
+    targetDate: pruned.targetDate || '',
     createdAt: now,
     updatedAt: now,
-    ...pickCustomFieldValues(customFieldDefinitions, data),
+    ...pickCustomFieldValues(customFieldDefinitions, pruned),
   };
   entities.push(entity);
   saveEntities(entities);
@@ -194,7 +261,9 @@ export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   const existing = entities.find((e) => e.id === id);
   if (!existing) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
   const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
-  const merged = { ...existing, ...updates };
+  const rules = resolveFieldRules(getConfig(), 'entity');
+  const merged = pruneInactiveGroupValues({ ...existing, ...updates }, rules);
+  const prunedUpdates = pruneInactiveGroupValues(updates, rules);
   const errors = validateEntityData(merged, {
     entities,
     editingId: id,
@@ -203,9 +272,8 @@ export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
   const updated = {
-    ...existing,
-    ...updates,
-    ...pickCustomFieldValues(customFieldDefinitions, updates),
+    ...merged,
+    ...pickCustomFieldValues(customFieldDefinitions, prunedUpdates),
     name: sanitizeText(merged.name),
     code: sanitizeText(merged.code),
     category: sanitizeText(merged.category || ''),
@@ -400,19 +468,31 @@ export function getEntityDocuments(entityId, documents = loadDocuments()) {
 // Search
 // ---------------------------------------------------------------------------
 
-function matchesQuery(entity, needle, documents, customFieldKeys) {
-  const haystacks = [entity.name, entity.code, entity.category, entity.description, entity.targetDate];
-  for (const key of customFieldKeys) {
-    if (entity[key] !== undefined) haystacks.push(String(entity[key]));
+function searchableValues(record, keys, rules) {
+  const haystacks = [];
+  for (const key of keys) {
+    if (!isFieldSearchable(rules, key, record)) continue;
+    const value = record[key];
+    if (value !== undefined && value !== null) haystacks.push(String(value));
   }
-  if (haystacks.some((v) => v && String(v).toLowerCase().includes(needle))) return true;
+  return haystacks;
+}
+
+function matchesQuery(entity, needle, documents, customFieldKeys) {
+  const entityRules = resolveFieldRules(getConfig(), 'entity');
+  const documentRules = resolveFieldRules(getConfig(), 'document');
+  const entityKeys = new Set([
+    'name', 'code', 'category', 'description', 'targetDate',
+    ...Object.keys(entity),
+    ...customFieldKeys,
+  ]);
+  const haystacks = searchableValues(entity, entityKeys, entityRules);
+  if (haystacks.some((v) => v && v.toLowerCase().includes(needle))) return true;
   const docs = documents.filter((d) => d.entity_id === entity.entity_id);
   return docs.some((d) => {
-    const docHaystacks = [d.notes, d.status];
-    for (const key of customFieldKeys) {
-      if (d[key] !== undefined) docHaystacks.push(String(d[key]));
-    }
-    return docHaystacks.some((v) => v && String(v).toLowerCase().includes(needle));
+    const documentKeys = new Set(['notes', 'status', ...Object.keys(d), ...customFieldKeys]);
+    const docHaystacks = searchableValues(d, documentKeys, documentRules);
+    return docHaystacks.some((v) => v && v.toLowerCase().includes(needle));
   });
 }
 

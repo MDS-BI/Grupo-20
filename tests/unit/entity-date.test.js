@@ -26,6 +26,7 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
       label: 'Fecha de nacimiento',
       min: '1910-01-01',
       max: '2026-11-23',
+      required: false,
     });
   });
 
@@ -34,7 +35,13 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
       label: 'Fecha',
       min: '',
       max: '',
+      required: false,
     });
+  });
+
+  it('expone required cuando la regla lo declara (T042)', () => {
+    const config = { entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true } };
+    expect(resolveEntityDateRule(config, new Date(2026, 10, 23)).required).toBe(true);
   });
 
   it('respeta un max ISO fijo y usa Fecha objetivo como etiqueta por defecto', () => {
@@ -43,6 +50,7 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
       label: 'Fecha objetivo',
       min: '2000-01-01',
       max: '2020-12-31',
+      required: false,
     });
   });
 

@@ -1,0 +1,86 @@
+import { resolveEntityDateRule } from './entity-date.js';
+import { isValidFormat } from './field-formats.js';
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function resolveFieldRules(config, entityType = 'entity') {
+  const declared = config?.fieldRules;
+  if (!isPlainObject(declared)) return {};
+  const inherited = {};
+  for (const [key, rule] of Object.entries(declared)) {
+    if (key === 'entity' || key === 'document') continue;
+    if (isPlainObject(rule)) inherited[key] = rule;
+  }
+  const scoped = isPlainObject(declared[entityType]) ? declared[entityType] : {};
+  return { ...inherited, ...scoped };
+}
+
+export function isConditionActive(rule, values = {}) {
+  const condition = rule?.when;
+  if (!isPlainObject(condition) || !condition.key) return true;
+  const actual = values?.[condition.key];
+  if (Array.isArray(condition.equals)) return condition.equals.includes(actual);
+  return actual === condition.equals;
+}
+
+export function isFieldVisible(rules, key, values = {}) {
+  const rule = rules?.[key] || {};
+  return !rule.hidden && isConditionActive(rule, values);
+}
+
+export function isFieldSearchable(rules, key, values = {}) {
+  const rule = rules?.[key] || {};
+  return isFieldVisible(rules, key, values) && rule.searchable !== false;
+}
+
+export function isFieldPotentiallySearchable(rules, key) {
+  const rule = rules?.[key] || {};
+  if (rule.hidden || rule.searchable === false) return false;
+  const condition = rule.when;
+  if (!isPlainObject(condition) || !condition.key) return true;
+  const values = Array.isArray(condition.equals) ? condition.equals : [condition.equals];
+  return values.some((value) => isFieldSearchable(rules, key, { [condition.key]: value }));
+}
+
+export function groupKeysByActiveField(rules, values = {}) {
+  const groups = new Map();
+  for (const [key, rule] of Object.entries(rules || {})) {
+    if (!rule.group || !isConditionActive(rule, values)) continue;
+    if (!groups.has(rule.group)) groups.set(rule.group, new Set());
+    groups.get(rule.group).add(key);
+  }
+  return groups;
+}
+
+export function pruneInactiveGroupValues(values = {}, rules = {}) {
+  const result = { ...values };
+  const groups = groupKeysByActiveField(rules, values);
+  for (const [key, rule] of Object.entries(rules)) {
+    if (!rule.group) continue;
+    const activeKeys = groups.get(rule.group);
+    if (!activeKeys || !activeKeys.has(key)) delete result[key];
+  }
+  return result;
+}
+
+export function getReadinessErrors(entity = {}, config, entityType = 'entity') {
+  const rules = resolveFieldRules(config, entityType);
+  const errors = {};
+  for (const [key, rule] of Object.entries(rules)) {
+    if (!isConditionActive(rule, entity)) continue;
+    const label = rule.label || key;
+    const value = entity[key];
+    const isEmpty = value === undefined || value === null || value === '';
+    if (rule.required && isEmpty) errors[key] = `${label} es obligatorio.`;
+    if (!isEmpty && rule.format && !isValidFormat(rule.format, value)) {
+      errors[key] = `${label} no tiene un formato válido.`;
+    }
+  }
+  const dateRule = resolveEntityDateRule(config);
+  if (dateRule?.required && !entity.targetDate) {
+    errors.targetDate = `${dateRule.label} es obligatoria.`;
+  }
+  return errors;
+}

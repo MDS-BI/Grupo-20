@@ -47,6 +47,11 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Debe el campo «Canal de Contacto» tener una opción preseleccionada o el usuario debe elegirla explícitamente? → A: Sin preselección; el usuario debe elegir explícitamente una opción y el guardado falla si queda vacío.
 - Q: ¿Cómo debe organizarse la casilla adicional que aparece según el canal de contacto elegido? → A: Campos separados por canal: «Teléfono» para llamada, «Correo electrónico» para correo, «Lugar/Enlace de reunión» para reunión y «WhatsApp» para WhatsApp; se guarda solo el del canal elegido.
 - Q: ¿Debe ser obligatoria la casilla adicional de contacto y validarse según el canal elegido? → A: Obligatoria y validada según el canal: formato telefónico para llamada y WhatsApp, formato de correo para correo y valor no vacío para reunión.
+- Q: ¿Qué formato exacto debe aceptarse en el campo «RUT» del perfil de clientes al guardar un registro? → A: Ambos formatos (`12345678-9` y `12.345.678-9`), normalizados antes de validar.
+- Q: ¿Debe compararse el RUT normalizado al verificar que no esté repetido entre clientes? → A: Sí: comparar siempre el RUT normalizado (sin puntos).
+- Q: ¿Qué texto de ejemplo en color gris debe mostrarse como pista en la casilla «RUT» del formulario de clientes? → A: `Ej: 11.111.111-1`, en letra gris como pista.
+- Q: ¿Qué etiquetas exactas deben mostrarse en la lista desplegable de «Canal de Contacto»? → A: «Llamada», «Correo», «Reunión» y «WhatsApp» (mayúscula inicial).
+- Q: ¿En qué lugares del perfil de clientes debe reemplazarse el título «Nueva cliente» por «Nuevo Cliente»? → A: El título del formulario y el botón o acción rápida de creación de clientes.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -87,6 +92,12 @@ Como ejecutivo de ventas, quiero registrar clientes y sus interacciones para org
  9. **Dado** el formulario de registro de un cliente, **cuando** se abre, **entonces** «Canal de Contacto» aparece sin opción preseleccionada y el guardado se rechaza hasta que el usuario elija una (FR-059).
  10. **Dado** un cliente con un canal de contacto elegido, **cuando** se muestra el formulario, **entonces** aparece solo la casilla adicional correspondiente a ese canal y, al guardar, no se conservan los valores de los otros canales (FR-060).
  11. **Dado** el perfil de clientes, **cuando** se deja vacía la casilla adicional de contacto o se introduce un valor con formato inválido para el canal elegido, **entonces** el sistema rechaza el guardado y explica el formato esperado (FR-061).
+ 12. **Dado** el formulario de registro de un cliente, **cuando** se muestra la casilla «RUT», **entonces** aparece en color gris la pista `Ej: 11.111.111-1` sin contarse como valor capturado (FR-062).
+ 13. **Dado** el formulario de registro de un cliente, **cuando** se despliega «Canal de Contacto», **entonces** se muestran las opciones «Llamada», «Correo», «Reunión» y «WhatsApp» con la primera letra en mayúscula (FR-063).
+ 14. **Dado** el perfil de clientes, **cuando** se abre el formulario de registro o la acción rápida de creación, **entonces** el título y la acción muestran «Nuevo Cliente» (FR-064).
+ 15. **Dado** el formulario de registro o edición de un cliente, **cuando** se muestran las casillas, **entonces** aparecen en el orden «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado» (FR-065).
+ 16. **Dado** el perfil de clientes, **cuando** se despliega «Tipo de actividad», **entonces** se muestran únicamente las opciones «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante» (FR-066).
+ 17. **Dado** un canal de contacto elegido en el formulario de un cliente, **cuando** se muestra su casilla adicional, **entonces** aparece en color gris la pista «Ej: +56 9 1234 5678» para «Llamada» y «WhatsApp», «Ej: nombre@ejemplo.cl» para «Correo» o «Ej: Sala 2 o enlace» para «Reunión», sin contarse como valor capturado (FR-067).
 ---
 
 ### Historia de Usuario 3 - Consultar antecedentes del cliente (Prioridad: P1)
@@ -341,6 +352,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Qué ocurre con clientes ya guardados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con RUT inválido? → Su ficha queda bloqueada y solo se puede editar para completar los datos; al guardarlos válidamente se desbloquea (FR-058).
 - ¿Qué ocurre si el usuario cambia de canal de contacto después de haber introducido un dato en la casilla adicional? → Solo se guarda el valor del canal final; los valores de los demás canales se descartan (FR-060).
 - ¿Qué ocurre si la casilla adicional de contacto está vacía o tiene un formato que no corresponde al canal? → El guardado se rechaza con una explicación del formato esperado (FR-061).
+- ¿Qué ocurre si el mismo RUT se captura una vez con puntos y otra sin puntos? → El sistema compara el valor normalizado sin puntos y rechaza el segundo registro como RUT repetido (FR-057).
 - ¿Permanecen intactas las entidades y los documentos al navegar entre el panel, la gestión y la búsqueda?
 - ¿Qué ocurre cuando el panel se abre con cero entidades o cero documentos (valores estadísticos)?
 - ¿Qué ocurre cuando el color de acento configurado no es un valor de color válido?
@@ -410,11 +422,17 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-054**: Los valores ya almacenados de «Categoría», «Descripción» y «Nº de pedidos» en clientes DEBEN conservarse sin borrarlos y permanecer ocultos en todas las vistas del perfil de clientes, conforme a FR-040.
 - **FR-055**: En el perfil de clientes, la búsqueda DEBE basarse únicamente en el nombre, la «Fecha de nacimiento» y los campos personalizados visibles; NO DEBE devolver registros por coincidencias con categoría, descripción ni código.
 - **FR-056**: En el perfil de clientes, los campos «Fecha de nacimiento», «Canal de Contacto» y «RUT» DEBEN ser obligatorios: el sistema NO DEBE guardar un cliente si cualquiera de ellos está vacío.
-- **FR-057**: En el perfil de clientes, el «RUT» DEBE aceptarse solo con formato chileno y dígito verificador válidos, y DEBE ser único entre todos los clientes registrados; un RUT inválido o repetido DEBE rechazarse con una explicación clara.
+- **FR-057**: En el perfil de clientes, el «RUT» DEBE aceptarse en los formatos `12345678-9` y `12.345.678-9`; ambos DEBEN normalizarse eliminando los puntos antes de validar el dígito verificador chileno y antes de comprobar que el RUT es único entre todos los clientes registrados; un RUT inválido o repetido DEBE rechazarse con una explicación clara.
 - **FR-058**: Los clientes almacenados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con un RUT inválido o repetido, NO DEBEN poder consultarse en su ficha hasta completarlos; el sistema DEBE explicar el bloqueo y permitir la edición normal únicamente para completar esos datos, desbloqueando la consulta cuando se guarden válidamente.
 - **FR-059**: El campo «Canal de Contacto» NO DEBE tener una opción preseleccionada; el usuario DEBE elegir explícitamente una de las opciones configuradas y el guardado DEBE fallar si el campo queda vacío.
 - **FR-060**: En el perfil de clientes, el formulario DEBE mostrar un campo adicional según el «Canal de Contacto» elegido: «Teléfono» para llamada, «Correo electrónico» para correo, «Lugar/Enlace de reunión» para reunión y «WhatsApp» para WhatsApp. El sistema DEBE guardar únicamente el valor del canal seleccionado y NO DEBE conservar los valores de los demás canales.
 - **FR-061**: La casilla adicional de contacto DEBE ser obligatoria y validarse según el canal elegido: formato telefónico para «Teléfono» y «WhatsApp», formato de correo electrónico para «Correo electrónico» y valor no vacío para «Lugar/Enlace de reunión». El guardado DEBE fallar con una explicación clara si el valor falta o no cumple el formato correspondiente.
+- **FR-062**: En el perfil de clientes, la casilla «RUT» DEBE mostrar en color gris la pista `Ej: 11.111.111-1`; dicha pista NO DEBE considerarse un valor capturado ni usarse en la validación o el guardado.
+- **FR-063**: En el perfil de clientes, la lista desplegable de «Canal de Contacto» DEBE mostrar las opciones «Llamada», «Correo», «Reunión» y «WhatsApp», cada una con la primera letra en mayúscula, sin opción preseleccionada (FR-059).
+- **FR-064**: En el perfil de clientes, el título del formulario de registro y el botón o acción rápida de creación DEBEN mostrar «Nuevo Cliente» en lugar de «Nueva cliente».
+- **FR-065**: En el perfil de clientes, el formulario de registro y edición DEBE mostrar las casillas en este orden: 1) «Nombre de Cliente», 2) «RUT», 3) «Fecha de nacimiento», 4) «Canal de Contacto» seguido inmediatamente de su casilla adicional correspondiente según el canal (FR-060), 5) «Tipo de actividad» y 6) «Ejecutivo Asignado».
+- **FR-066**: En el perfil de clientes, la casilla antes denominada «Rubro» DEBE mostrarse con la etiqueta «Tipo de actividad» y como lista desplegable con exactamente estas opciones: «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante». La clave de almacenamiento `rubro` se conserva sin cambios.
+- **FR-067**: En el perfil de clientes, la casilla adicional que aparece según el «Canal de Contacto» DEBE mostrar en color gris una pista acorde al formato del canal: «Ej: +56 9 1234 5678» para «Llamada» y «WhatsApp», «Ej: nombre@ejemplo.cl» para «Correo» y «Ej: Sala 2 o enlace» para «Reunión». La pista NO DEBE considerarse un valor capturado ni usarse en la validación o el guardado (FR-061).
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -450,6 +468,9 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-012**: En el perfil de clientes, el campo "Fecha de nacimiento" rechaza el 100% de las fechas anteriores al 1 de enero de 1910, posteriores a la fecha actual o inválidas según el calendario en las pruebas automatizadas, y actualiza su límite máximo al cambiar de día sin recarga.
 - **SC-013**: En el perfil de clientes, el 100% de las verificaciones confirman que «Código», «Categoría», «Descripción» y «Nº de pedidos» no aparecen en formulario, lista, ficha ni búsqueda, que cada cliente conserva un código interno único no visible, y que las búsquedas por categoría o descripción no devuelven registros.
 - **SC-014**: En el perfil de clientes, el 100% de las pruebas de guardado rechazan registros sin «Fecha de nacimiento», «Canal de Contacto», «RUT» o dato de contacto adicional, sin RUT válido y único, o con un formato de contacto incorrecto para el canal elegido.
+- **SC-015**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris `Ej: 11.111.111-1` en «RUT», las opciones «Llamada», «Correo», «Reunión» y «WhatsApp» con mayúscula inicial y el texto «Nuevo Cliente» en el formulario y la acción de creación.
+- **SC-016**: En el perfil de clientes, el 100% de las verificaciones de interfaz confirman el orden de casillas «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado», y que «Tipo de actividad» ofrece solo las diez opciones definidas en FR-066.
+- **SC-017**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris correcta en la casilla adicional de contacto para cada uno de los cuatro canales, conforme a FR-067.
 
 ## Suposiciones
 

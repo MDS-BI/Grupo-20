@@ -3,7 +3,7 @@ import { initApp } from '../../src/app.js';
 
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'));
+  return initApp(document.getElementById('app'), { rawConfig: {} });
 }
 
 describe('Crear entidad y rechazar código duplicado (H1)', () => {

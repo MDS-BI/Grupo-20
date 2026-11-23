@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
+import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
+import { addEntity, loadEntities } from '../../src/storage.js';
 
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'));
+  return initApp(document.getElementById('app'), { rawConfig: {} });
 }
 
 function createEntity(name, code) {
@@ -54,5 +56,35 @@ describe('Ficha de entidad con historial ordenado (H3)', () => {
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="view-entity"]').click();
     expect(document.querySelector('.entity-detail-header h2').textContent).toBe('Cliente Uno Renombrado');
+  });
+
+  it('no muestra campos retirados en la ficha del perfil cliente', () => {
+    setActiveConfig(MODULE_CONFIG);
+    const entity = addEntity({
+      name: 'Cliente Retirados',
+      code: 'RET-1',
+      category: 'Vieja',
+      description: 'Descripción vieja',
+      targetDate: '1975-01-01',
+      rut: '11.111.111-1',
+      canal_contacto: 'correo',
+      contacto_correo: 'retirados@example.com',
+      pedidos: 777,
+    });
+
+    document.body.innerHTML = '<div id="app"></div>';
+    const app = initApp(document.getElementById('app'));
+    app.navigate('search');
+    document.getElementById('search-input').value = 'retirados';
+    document.getElementById('search-input').dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('[data-action="view-entity"]').click();
+
+    const info = document.querySelector('#entity-detail-info').textContent;
+    expect(info).not.toContain('RET-1');
+    expect(info).not.toContain('Vieja');
+    expect(info).not.toContain('Descripción vieja');
+    expect(info).not.toContain('777');
+    expect(info).toContain('retirados@example.com');
+    expect(loadEntities().find((item) => item.id === entity.id).code).toBe('RET-1');
   });
 });

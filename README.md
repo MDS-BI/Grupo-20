@@ -34,7 +34,7 @@ The app presents itself as a coherent ERP workspace:
 - **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Entidades, Documentos, Buscar and Resumen. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
 - **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers quick-action buttons for key ERP tasks (new entity, new document, open management area, find records) and live statistic cards showing record counts.
 - **Management screen** (`src/app.js`, `manage-entity` / `manage-document`) — a dedicated screen with an Entidades/Documentos tab to create, edit and delete records; it does not show the full entity list (that lives in Search), per the base module's navigation model.
-- **Search screen** — finds entities by name, code, category, description, the configured entity date or custom field values, updating results as you type; selecting a result opens its **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
+- **Search screen** — finds entities by the fields declared as searchable in `fieldRules`; the base profile searches name, code, category, description, the configured entity date and custom fields, while the CRM profile excludes the hidden `code`, `category` and `description`. Results open the **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
 - **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents in the states marked as `pendingStates` (or `pendiente` when no lifecycle is configured), grouped by entity.
 - **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding (including `theme.accentColor`) applies globally.
 
@@ -69,7 +69,7 @@ The base module handles identity generation, timestamps, referential integrity b
 
 ## Tailoring via Configuration
 
-All tailoring lives in one place: the `MODULE_CONFIG` export at the top of `src/module-config.js` (`null` by default, meaning "use the base module as-is"). A custom module replaces it with an object such as:
+All tailoring lives in one place: the `MODULE_CONFIG` export at the top of `src/module-config.js`, active by default as the **CRM Comercial** profile. Replacing it with `null` runs the base module as-is (Entidad / Documento). A custom module replaces it with an object such as:
 
 ```js
 export const MODULE_CONFIG = {
@@ -85,16 +85,18 @@ export const MODULE_CONFIG = {
     transitions: { cotizacion: ['pedido'], pedido: ['facturado'] },
   },
   theme: { accentColor: '#1a73e8' },
-  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' },
+  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true },
 };
 ```
 
 - `moduleName` — display name shown in the top bar, dashboard, and document title; also derives the logo monogram.
 - `labels` — rename Entity/Document terms (`entity`, `entityPlural`, `document`, `documentPlural`, `dashboard`, `manage`, `search`, `summary`) across every screen.
-- `customFields.entity` / `customFields.document` — extra fields per record type: `key`, `label`, `type` (`text`, `number`, `date`, `select`, or `boolean`), optional `required`, and `options` for `select`. Keys must not collide with base field names.
+- `customFields.entity` / `customFields.document` — extra fields per record type: `key`, `label`, `type` (`text`, `number`, `date`, `select`, or `boolean`), optional `required`, and `options` for `select`. Custom fields and `fieldRules` also accept `placeholder`, `order`, and `options` as strings or `{ value, label }` objects. Keys must not collide with base field names.
 - `statusLifecycle` — restrict document `status` to a declared list of `states` with permitted `transitions` between them. Without it, status stays a free-form field. `pendingStates` marks which declared states feed the Resumen de Gestión Comercial's pending count; without it, the normalized text `pendiente` is used.
 - `theme.accentColor` — a hex color (e.g., `"#0f62fe"`) applied across the shell. An invalid value falls back to the default silently, without affecting the rest of the configuration.
-- `entityDate` — optional label and inclusive ISO range for the base entity date field; `max: "localToday"` follows the user's local date and updates when the local day changes while the app is open. Existing out-of-range values are preserved until the record is edited.
+- `entityDate` — optional label and inclusive ISO range for the base entity date field; `max: "localToday"` follows the user's local date and updates when the local day changes while the app is open. Existing out-of-range values are preserved until the record is edited. `required: true` makes the date mandatory.
+- `fieldRules` — declarative per-entity/document rules: `required`, `hidden`, `searchable`, `generated`, `unique`, `format`, `normalize`, `when` and `group`. The active CRM profile generates an internal `CLI-###` code, hides `code`/`category`/`description`, requires a valid unique Chilean RUT, and shows the contact field only for the selected channel (`llamada`, `correo`, `reunión`, `whatsapp`). Inactive channel values are discarded on save; hidden historical values stay in storage.
+- `detailPolicy` — controls the ficha for inherited incomplete records. With `entity.blockWhenInvalid: true`, the detail view shows the pending fields and an edit action instead of the normal query.
 
 If the rest of the configuration is invalid (unknown field types, custom field keys colliding with base fields, status transitions referencing undeclared states), the app shows the problem in a banner and falls back to the full base defaults instead of breaking.
 
@@ -104,4 +106,10 @@ If the rest of the configuration is invalid (unknown field types, custom field k
 - Deleting an entity also deletes its documents (cascade), after a confirmation that states how many documents will be removed.
 - Navigating away from a modified form asks for confirmation before discarding unsaved changes.
 - User-entered text is escaped before being rendered (`src/utils/sanitize.js`) to prevent XSS via localStorage-sourced content.
+- In the CRM profile, `code`, `category`, `description` and `pedidos` are no longer rendered, but previously stored values are preserved; the code for new clients is generated internally as `CLI-001`, `CLI-002`, and so on.
+- Conditional contacts are stored only for the chosen channel and are validated by format (`cl-rut`, `phone`, `email`, `nonEmpty`) and uniqueness rules from `fieldRules`.
+- Incomplete inherited clients show a blocked ficha with the missing fields and an edit action; editing and saving valid data unlocks it.
+- The CRM form shows gray placeholders: `Ej: 11.111.111-1` for `rut` and a format hint for the active contact field; placeholders are never stored or validated as values.
+- CRM fields render in this order: `name`, `rut`, `targetDate`, `canal_contacto` plus its active contact field, `rubro`, `ejecutivo_asignado`. `rubro` is a select labeled «Tipo de actividad» and keeps its storage key.
+- Both `12.345.678-9` and `12345678-9` are accepted for RUT and compared normalized for uniqueness. The creation heading and dashboard quick action read «Nuevo Cliente».
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.

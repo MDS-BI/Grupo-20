@@ -1,4 +1,6 @@
 import { MODULE_CONFIG, getConfig } from './module-config.js';
+import { formatRut, isValidRut, rutDigit } from './utils/field-formats.js';
+import { localTodayISO } from './utils/entity-date.js';
 import {
   addEntity,
   addDocument,
@@ -8,19 +10,13 @@ import {
   saveDocuments,
 } from './storage.js';
 
+export { formatRut, isValidRut, rutDigit };
+
 export const SEED_MARKER = '[SIMULACIÓN CRM]';
 export const SEED_CODE_PREFIX = 'CLI-';
 export const SEED_COUNT = 57;
 
 export const SEED_CATEGORIES = ['Activo', 'Prospecto', 'Corporativo', 'PyME', 'VIP'];
-
-const PEDIDOS_RANGES = {
-  Prospecto: [0, 2],
-  PyME: [2, 10],
-  Activo: [6, 18],
-  Corporativo: [12, 28],
-  VIP: [20, 35],
-};
 
 const NAMES = [
   'Andes', 'Mapocho', 'Biobío', 'Cordillera', 'Arauco', 'Maipo',
@@ -29,10 +25,17 @@ const NAMES = [
 const SUFFIXES = ['Servicios', 'Comercial', 'Industrial', 'Tecnología', 'Logística', 'Consultores'];
 const LEGAL_FORMS = ['SpA', 'S.A.', 'Ltda.'];
 const RUBROS = [
-  'Retail y comercio', 'Servicios profesionales', 'Manufactura', 'Logística y transporte',
-  'Tecnología', 'Agroindustria', 'Salud', 'Construcción', 'Turismo', 'Energía',
+  'Dependiente', 'Independiente Formal', 'Independiente Informal', 'Jubilado',
+  'Dueño/a de casa', 'Estudiante', 'FFAA', 'Rentista', 'Jubilado - FFAA', 'Cesante',
 ];
 const EJECUTIVOS = ['María González', 'Carlos Rojas', 'Paula Muñoz', 'Javier Silva', 'Fernanda López'];
+
+const CONTACT_VALUES = {
+  llamada: (index) => ({ key: 'contacto_telefono', value: `+56 9 ${String(10000000 + index * 7919).slice(-8)}` }),
+  correo: (index) => ({ key: 'contacto_correo', value: `cliente${index + 1}@ejemplo.cl` }),
+  reunion: (index) => ({ key: 'contacto_lugar', value: `Sala de reuniones ${index + 1}` }),
+  whatsapp: (index) => ({ key: 'contacto_whatsapp', value: `+56 9 ${String(20000000 + index * 7919).slice(-8)}` }),
+};
 
 function resolveConfig() {
   const active = getConfig();
@@ -44,51 +47,25 @@ function normalizeCode(code) {
 }
 
 function isoDate(offsetDays) {
-  return new Date(Date.now() + offsetDays * 86400000).toISOString().slice(0, 10);
-}
-
-export function rutDigit(body) {
-  const digits = String(body).replace(/\D/g, '').split('').reverse();
-  let sum = 0;
-  let factor = 2;
-  for (const digit of digits) {
-    sum += Number(digit) * factor;
-    factor = factor === 7 ? 2 : factor + 1;
-  }
-  const result = 11 - (sum % 11);
-  if (result === 11) return '0';
-  if (result === 10) return 'K';
-  return String(result);
-}
-
-export function formatRut(body) {
-  const clean = String(body).replace(/\D/g, '');
-  const formatted = clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${formatted}-${rutDigit(clean)}`;
-}
-
-export function isValidRut(rut) {
-  const match = /^(?:\d{1,3}(?:\.\d{3}){1,2}|\d{7,8})-([\dkK])$/.exec(String(rut || '').trim());
-  if (!match) return false;
-  return rutDigit(match.input.split('-')[0]) === match[1].toUpperCase();
+  const today = localTodayISO().split('-').map(Number);
+  const date = new Date(today[0], today[1] - 1, today[2] + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function buildRutBody(index) {
   return 10000000 + index * 7919 + index * index * 13;
 }
 
-function buildPedidos(category, index) {
-  const [min, max] = PEDIDOS_RANGES[category];
-  const span = max - min + 1;
-  return min + ((index * 7 + (index % 4) * 3) % span);
-}
-
 function customValues(defs, index, ctx) {
   const values = {};
   for (const def of defs || []) {
     const key = def.key;
-    if (key === 'rut') values[key] = ctx.rut;
-    else if (key === 'pedidos') values[key] = ctx.pedidos;
+    if (key.startsWith('contacto_')) {
+      if (key === ctx.contact.key) values[key] = ctx.contact.value;
+    } else if (key === 'rut') values[key] = ctx.rut;
     else if (key === 'rubro') values[key] = ctx.rubro;
     else if (key === 'ejecutivo_asignado') values[key] = ctx.ejecutivo;
     else if (key === 'canal_contacto') values[key] = def.options?.[index % def.options.length] || 'llamada';
@@ -109,26 +86,23 @@ function buildInteractions(index, client, config) {
   const states = config.statusLifecycle?.states?.length
     ? config.statusLifecycle.states
     : ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'pendiente'];
-  const count = client.pedidos === 0 ? 1 : Math.min(4, 1 + Math.floor(client.pedidos / 9));
+  const count = 1 + (index % 4);
   const interactions = [];
 
   for (let step = 0; step < count; step += 1) {
     const isLast = step === count - 1;
-    const desired = isLast ? (client.pedidos > 0 ? 'cerrado ganado' : 'prospecto') : ['contactado', 'en negociacion', 'pendiente'][step % 3];
+    const desired = isLast ? 'cerrado ganado' : ['contactado', 'en negociacion', 'pendiente'][step % 3];
     const status = stateOrFallback(desired, states);
     const daysAgo = (count - step) * 45 + (index % 7);
     const startDate = isoDate(-daysAgo);
     const endDate = isLast && client.targetDate > startDate ? client.targetDate : isoDate(-daysAgo + 2);
     const marker = `${SEED_MARKER}|${client.code}|${String(step + 1).padStart(2, '0')}`;
-    const from = step === 0 ? 1 : Math.floor((client.pedidos * step) / count) + 1;
-    const to = Math.floor((client.pedidos * (step + 1)) / count);
-    const pedidosDetalle = client.pedidos ? `Pedidos ${from}-${to} de ${client.pedidos}.` : 'Sin pedidos aún, contacto inicial.';
     interactions.push({
       marker,
       status,
       startDate,
       endDate,
-      notes: `${marker} ${status}. ${pedidosDetalle} Canal: ${client.canal_contacto}.`,
+      notes: `${marker} ${status}. Cliente ${client.category.toLowerCase()}; contacto preferido por ${client.canal_contacto}.`,
       ...customValues(config.customFields.document, index + step, config),
     });
   }
@@ -139,26 +113,26 @@ export function buildSeedClients(count = SEED_COUNT, config = resolveConfig()) {
   const clients = [];
   for (let index = 0; index < count; index += 1) {
     const category = SEED_CATEGORIES[index % SEED_CATEGORIES.length];
-    const pedidos = buildPedidos(category, index);
     const rubro = RUBROS[index % RUBROS.length];
     const canal = config.customFields.entity.find((def) => def.key === 'canal_contacto')?.options?.[index % 4] || 'llamada';
+    const contact = CONTACT_VALUES[canal](index);
+    const rut = formatRut(buildRutBody(index));
     const client = {
       name: `${NAMES[index % NAMES.length]} ${SUFFIXES[Math.floor(index / NAMES.length) % SUFFIXES.length]} ${LEGAL_FORMS[index % LEGAL_FORMS.length]}`,
       code: `${SEED_CODE_PREFIX}${String(index + 1).padStart(3, '0')}`,
       category,
-      description: `${SEED_MARKER} ${rubro}. Cliente ${category.toLowerCase()} con ${pedidos} pedidos; contacto preferido por ${canal}.`,
+      description: `${SEED_MARKER} ${rubro}. Cliente ${category.toLowerCase()}; contacto preferido por ${canal}.`,
       targetDate: isoDate(-(365 * (25 + (index % 45)) + (index % 365))),
-      rut: formatRut(buildRutBody(index)),
-      pedidos,
-      ejecutivo: EJECUTIVOS[index % EJECUTIVOS.length],
+      rut,
+      ejecutivo_asignado: EJECUTIVOS[index % EJECUTIVOS.length],
       canal_contacto: canal,
       rubro,
       ...customValues(config.customFields.entity, index, {
-        rut: formatRut(buildRutBody(index)),
-        pedidos,
+        rut,
         rubro,
         ejecutivo: EJECUTIVOS[index % EJECUTIVOS.length],
         canal,
+        contact,
       }),
     };
     client._interactions = buildInteractions(index, client, config);
@@ -198,7 +172,8 @@ export function seedClients({ count = SEED_COUNT, config = resolveConfig() } = {
     }
     let created;
     try {
-      created = addEntity(client, { customFieldDefs: config.customFields.entity });
+      const { code: _code, _interactions, ...entityData } = client;
+      created = addEntity(entityData, { customFieldDefs: config.customFields.entity });
       existingCodes.add(codeKey);
       stats.clientsCreated += 1;
     } catch (error) {

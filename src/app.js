@@ -36,6 +36,7 @@ import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
 import { resolveEntityDateRule, watchLocalDayChange } from './utils/entity-date.js';
+import { isFieldPotentiallySearchable, resolveFieldRules } from './utils/field-rules.js';
 
 export function initApp(rootEl = null, options = {}) {
   let root = rootEl;
@@ -101,7 +102,10 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function customFieldKeys(kind) {
-    return (state.config.customFields?.[kind] || []).map((f) => f.key);
+    const rules = resolveFieldRules(state.config, kind);
+    return (state.config.customFields?.[kind] || [])
+      .map((def) => def.key)
+      .filter((key) => isFieldPotentiallySearchable(rules, key));
   }
 
   // -- View renderers --------------------------------------------------
@@ -135,7 +139,7 @@ export function initApp(rootEl = null, options = {}) {
       const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
       const values = state.entityFormDraft || editing || {};
       content = `
-        <h2>${editing ? 'Editar' : 'Nueva'} ${escapeHtml(entityLabel.toLowerCase())}</h2>
+        <h2>${editing ? 'Editar' : 'Nuevo'} ${escapeHtml(editing ? entityLabel.toLowerCase() : entityLabel)}</h2>
         ${renderEntityFormHtml(state.config, values, state.entityFormErrors)}
         ${
           editing
@@ -275,7 +279,9 @@ export function initApp(rootEl = null, options = {}) {
   function hasUnsavedChanges() {
     if (state.view !== 'manage') return false;
     if (state.manageTab === 'entity') {
-      return isEntityFormDirty(rootEl.querySelector('#entity-form'), state.config, state.entityFormBaseline);
+      const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
+      const values = state.entityFormDraft || editing || {};
+      return isEntityFormDirty(rootEl.querySelector('#entity-form'), state.config, state.entityFormBaseline, values);
     }
     return isDocumentFormDirty(rootEl.querySelector('#document-form'), state.config, state.documentFormBaseline);
   }
@@ -309,7 +315,9 @@ export function initApp(rootEl = null, options = {}) {
   // -- Actions ---------------------------------------------------------
 
   function onEntityFormSubmit(formEl) {
-    const data = collectEntityFormData(formEl, state.config);
+    const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
+    const values = state.entityFormDraft || editing || {};
+    const data = collectEntityFormData(formEl, state.config, values);
     try {
       if (state.editingEntityId) {
         updateEntity(state.editingEntityId, data, { customFieldDefs: state.config.customFields.entity });
@@ -475,6 +483,20 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function handleChange(event) {
+    const entityForm = event.target.closest?.('#entity-form');
+    if (entityForm && event.target.name) {
+      const rules = resolveFieldRules(state.config, 'entity');
+      const drivesCondition = Object.values(rules).some((rule) => rule.when?.key === event.target.name);
+      if (drivesCondition) {
+        const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
+        const previous = state.entityFormDraft || editing || {};
+        const collected = collectEntityFormData(entityForm, state.config, previous);
+        state.entityFormDraft = { ...previous, ...collected, [event.target.name]: event.target.value };
+        state.entityFormErrors = {};
+        render();
+        return;
+      }
+    }
     if (event.target.id === 'document-entity-select') {
       if (hasUnsavedChanges() && !confirmDiscardChanges()) {
         event.target.value = state.documentEntityId || '';

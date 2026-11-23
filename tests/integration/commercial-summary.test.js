@@ -16,9 +16,9 @@ const SUMMARY_CONFIG = {
   },
 };
 
-function mount() {
+function mount(rawConfig = {}) {
   document.body.innerHTML = '<div id="app"></div>';
-  return initApp(document.getElementById('app'));
+  return initApp(document.getElementById('app'), { rawConfig });
 }
 
 function createEntity(name, code) {

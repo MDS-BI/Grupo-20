@@ -46,18 +46,33 @@ describe('utilidad de simulación CRM', () => {
     for (const client of clients) {
       expect(isValidRut(client.rut)).toBe(true);
       expect(['Activo', 'Prospecto', 'Corporativo', 'PyME', 'VIP']).toContain(client.category);
-      expect(client.pedidos).toBeGreaterThanOrEqual(0);
-      expect(client.pedidos).toBeLessThanOrEqual(35);
+      expect(client.pedidos).toBeUndefined();
       expect(client.targetDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(client.targetDate >= '1910-01-01').toBe(true);
       expect(client.targetDate <= localTodayISO()).toBe(true);
-      expect(client.rubro).toBeTruthy();
+      expect([
+        'Dependiente',
+        'Independiente Formal',
+        'Independiente Informal',
+        'Jubilado',
+        'Dueño/a de casa',
+        'Estudiante',
+        'FFAA',
+        'Rentista',
+        'Jubilado - FFAA',
+        'Cesante',
+      ]).toContain(client.rubro);
       expect(client.ejecutivo_asignado).toBeTruthy();
       expect(['llamada', 'correo', 'reunion', 'whatsapp']).toContain(client.canal_contacto);
+      const contactFields = {
+        llamada: 'contacto_telefono',
+        correo: 'contacto_correo',
+        reunion: 'contacto_lugar',
+        whatsapp: 'contacto_whatsapp',
+      };
+      expect(client[contactFields[client.canal_contacto]]).toBeTruthy();
       expect(client._interactions.length).toBeGreaterThan(0);
     }
-    expect(clients.filter((c) => c.category === 'Prospecto').every((c) => c.pedidos <= 2)).toBe(true);
-    expect(clients.filter((c) => c.category === 'VIP').every((c) => c.pedidos >= 20)).toBe(true);
   });
 
   it('siembra clientes e interacciones vinculados y es idempotente', () => {
@@ -73,7 +88,7 @@ describe('utilidad de simulación CRM', () => {
     for (const entity of entities) {
       expect(entity.description).toContain(SEED_MARKER);
       expect(isValidRut(entity.rut)).toBe(true);
-      expect(typeof entity.pedidos).toBe('number');
+      expect(entity.pedidos).toBeUndefined();
     }
     for (const doc of documents) {
       expect(entities.some((e) => e.entity_id === doc.entity_id)).toBe(true);
@@ -91,7 +106,14 @@ describe('utilidad de simulación CRM', () => {
   });
 
   it('respeta la unicidad de code aunque exista una variación en mayúsculas o espacios', () => {
-    addEntity({ name: 'Cliente real', code: ' cli-001 ' });
+    addEntity({
+      name: 'Cliente real',
+      code: ' cli-001 ',
+      targetDate: '1980-01-01',
+      rut: '12.345.678-5',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56 9 1234 5678',
+    });
     const result = seedClients();
     expect(result.clientsSkipped).toBe(1);
     expect(result.clientsCreated).toBe(SEED_COUNT - 1);
@@ -100,7 +122,14 @@ describe('utilidad de simulación CRM', () => {
   });
 
   it('limpia solo los datos simulados y conserva registros ajenos', () => {
-    const real = addEntity({ name: 'Cliente real', code: 'REAL-1' });
+    const real = addEntity({
+      name: 'Cliente real',
+      code: 'REAL-1',
+      targetDate: '1980-01-01',
+      rut: '12.345.678-5',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56 9 1234 5678',
+    });
     seedClients();
     const cleanup = clearSeedData();
     expect(cleanup.entitiesRemoved).toBe(SEED_COUNT);

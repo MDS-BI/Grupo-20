@@ -1,11 +1,13 @@
 import { escapeHtml } from '../utils/sanitize.js';
 import { getLabel } from '../module-config.js';
 import { resolveEntityDateRule } from '../utils/entity-date.js';
+import { isFieldVisible, resolveFieldRules } from '../utils/field-rules.js';
 
 export function renderEntityListHtml(entities, config) {
   if (!entities.length) {
     return `<p class="empty-state">No hay ${getLabel(config, 'entityPlural').toLowerCase()} registradas todavía. Crea la primera usando el formulario.</p>`;
   }
+  const rules = resolveFieldRules(config, 'entity');
   const customFieldDefs = config?.customFields?.entity || [];
   const dateLabel = resolveEntityDateRule(config)?.label || 'Fecha objetivo';
   const items = entities
@@ -14,10 +16,10 @@ export function renderEntityListHtml(entities, config) {
       <li class="list-item entity-item" data-entity-id="${escapeHtml(e.entity_id)}">
         <div class="list-item-main">
           <span class="list-item-title">${escapeHtml(e.name)}</span>
-          <span class="list-item-code">${escapeHtml(e.code)}</span>
+          ${isFieldVisible(rules, 'code', e) ? `<span class="list-item-code">${escapeHtml(e.code)}</span>` : ''}
           ${e.targetDate ? `<span class="list-item-date">${escapeHtml(dateLabel)}: ${escapeHtml(e.targetDate)}</span>` : ''}
           ${customFieldDefs
-            .filter((def) => e[def.key] !== undefined && e[def.key] !== null && e[def.key] !== '')
+            .filter((def) => isFieldVisible(rules, def.key, e) && e[def.key] !== undefined && e[def.key] !== null && e[def.key] !== '')
             .map(
               (def) =>
                 `<span class="list-item-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(e[def.key])}</span>`,

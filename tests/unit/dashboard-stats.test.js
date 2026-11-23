@@ -61,7 +61,14 @@ describe('panel de CRM Comercial', () => {
     const { boot } = await import('../../src/app.js');
     const app = boot(document.getElementById('app'));
 
-    const client = addEntity({ name: 'Acme', code: 'AC-1' });
+    const client = addEntity({
+      name: 'Acme',
+      code: 'AC-1',
+      targetDate: '1980-05-05',
+      rut: '11.111.111-1',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56912345678',
+    });
     addDocument({ entity_id: client.entity_id, status: 'cerrado ganado', startDate: '2026-10-01' });
     addDocument({ entity_id: client.entity_id, status: 'en negociacion', startDate: '2026-10-02', importe: 250 });
     app.navigate('dashboard');

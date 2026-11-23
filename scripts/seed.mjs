@@ -44,8 +44,8 @@ if (args.includes('--clear')) {
   );
 } else if (args.includes('--preview')) {
   console.table(
-    buildSeedClients().map(({ name, code, category, rut, pedidos, targetDate }) => ({
-      name, code, category, rut, pedidos, targetDate,
+    buildSeedClients().map(({ name, code, rut, targetDate, canal_contacto }) => ({
+      name, code, rut, targetDate, canal_contacto,
     })),
   );
 } else {
