@@ -6,5 +6,6 @@ coverage/
 .env
 .env*
 *.log
+.crm-seed-storage.json
 .DS_Store
 Thumbs.db

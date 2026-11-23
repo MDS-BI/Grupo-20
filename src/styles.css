@@ -137,11 +137,63 @@ body {
 .stat-value {
   font-size: 1.6rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.demo-note {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-color);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.commercial-funnel,
+.recent-interactions {
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.commercial-funnel h2,
+.recent-interactions h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 1rem;
+}
+
+.funnel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.funnel-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 3rem minmax(80px, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.funnel-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.funnel-bar {
+  height: 8px;
+  background: var(--accent-color);
+  border-radius: 999px;
 }
 
 .tabs {

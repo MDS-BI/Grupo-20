@@ -9,9 +9,9 @@
 export const MODULE_CONFIG = {
   moduleName: 'CRM Comercial',
   labels: {
-    entity: 'cliente',
-    entityPlural: 'clientes',
-    document: 'Interaccion',
+    entity: 'Cliente',
+    entityPlural: 'Clientes',
+    document: 'Interacción',
     documentPlural: 'Interacciones',
     dashboard: 'Panel',
     manage: 'Gestión',
@@ -23,8 +23,10 @@ export const MODULE_CONFIG = {
       { key: 'rubro', type: 'text', label: 'Rubro' },
       { key: 'ejecutivo_asignado', type: 'text', label: 'Ejecutivo Asignado' },
       { key: 'canal_contacto', type: 'select', label: 'Canal de Contacto', options: ['llamada', 'correo', 'reunion', 'whatsapp'] },
+      { key: 'rut', type: 'text', label: 'RUT' },
+      { key: 'pedidos', type: 'number', label: 'Nº de pedidos' },
     ],
-    document: [],
+    document: [{ key: 'importe', type: 'number', label: 'Importe (USD)' }],
   },
   statusLifecycle: {
     states: ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'cerrado perdido', 'pendiente'],
