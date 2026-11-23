@@ -4,7 +4,36 @@
 // propio moduleName, labels, customFields, statusLifecycle y theme, sin
 // tocar ningún otro archivo del código central. Dejar MODULE_CONFIG en
 // `null` ejecuta el módulo base sin adaptación (FR-024).
-export const MODULE_CONFIG = null;
+//
+// PERFIL ACTIVO: CRM Comercial (sesión 2026-11-16)
+export const MODULE_CONFIG = {
+  moduleName: 'CRM Comercial',
+  labels: {
+    entity: 'cliente',
+    entityPlural: 'clientes',
+    document: 'Interaccion',
+    documentPlural: 'Interacciones',
+    dashboard: 'Panel',
+    manage: 'Gestión',
+    search: 'Buscar',
+    summary: 'Resumen',
+  },
+  customFields: {
+    entity: [
+      { key: 'rubro', type: 'text', label: 'Rubro' },
+      { key: 'ejecutivo_asignado', type: 'text', label: 'Ejecutivo Asignado' },
+      { key: 'canal_contacto', type: 'select', label: 'Canal de Contacto', options: ['llamada', 'correo', 'reunion', 'whatsapp'] },
+    ],
+    document: [],
+  },
+  statusLifecycle: {
+    states: ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'cerrado perdido', 'pendiente'],
+    transitions: {},
+  },
+  theme: {
+    accentColor: '#0f766e',
+  },
+};
 
 export const RESERVED_ENTITY_KEYS = [
   'id', 'entity_id', 'name', 'code', 'category', 'description', 'targetDate', 'createdAt', 'updatedAt',

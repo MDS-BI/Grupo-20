@@ -18,7 +18,9 @@ function addDocumentWithStatus(status) {
   const select = document.getElementById('document-entity-select');
   select.value = select.querySelector('option:not([value=""])').value;
   select.dispatchEvent(new Event('change', { bubbles: true }));
-  document.getElementById('field-status').value = status;
+  const statusSelect = document.getElementById('field-status');
+  statusSelect.value = status || 'pendiente';
+  statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
   document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
@@ -34,9 +36,9 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     expect(document.querySelector('.empty-state')).toBeTruthy();
   });
 
-  it('los indicadores coinciden con los registros y se actualizan al completar un pendiente', () => {
+  it('los indicadores coinciden con los registros y se actualiza al completar un estado', () => {
     createEntity('Cliente Uno', 'CL-1');
-    addDocumentWithStatus('pendiente');
+    addDocumentWithStatus();
 
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
     let values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
@@ -56,9 +58,9 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     expect(values).toEqual(['1', '1', '0']);
   });
 
-  it('permite seleccionar una entidad pendiente desde el resumen para abrir su ficha', () => {
+  it('permite seleccionar una entidad desde el resumen para abrir su ficha', () => {
     createEntity('Cliente Uno', 'CL-1');
-    addDocumentWithStatus('pendiente');
+    addDocumentWithStatus();
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
     document.querySelector('.pending-list [data-action="view-entity"]').click();
     expect(document.querySelector('.entity-detail-header h2').textContent).toBe('Cliente Uno');

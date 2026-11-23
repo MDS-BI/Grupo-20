@@ -24,6 +24,11 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Cómo se identifica un documento "pendiente" en el resumen cuando no hay ciclo de vida configurado (estado de texto libre)? → A: Se compara el estado normalizado (minúsculas y recortado) con "pendiente"; si no hay coincidencias, el indicador es cero. Con ciclo de vida configurado, se usan los estados de ese ciclo que representen "pendiente".
 - Q: ¿Qué campos base tiene un Documento frente a los campos personalizados del módulo? → A: Los campos base son `id`, `entity_id`, `startDate`/`endDate` opcionales, `notes` opcional, `status` y marcas de tiempo; serie/folio, importes, moneda, condiciones y tipo de interacción son campos personalizados declarados por la configuración.
 
+### Session 2026-11-16
+
+- Q: ¿Cómo debe identificar el sistema qué documentos cuentan como "pendientes" en el resumen de indicadores? (FR-044) → A: Si hay ciclo de vida, la configuración marca explícitamente uno o más estados como "pendientes"; si no hay ciclo de vida (texto libre), se cuentan los documentos cuyo estado normalizado coincide con `pendiente`.
+- Q: ¿Qué debe hacer el sistema si el usuario intenta cambiar de pantalla o módulo mientras hay cambios sin guardar en un formulario? (FR-022) → A: Mostrar confirmación para salir y descartar cambios o quedarse; solo navegar si el usuario confirma descartar.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
@@ -298,13 +303,13 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Qué ocurre cuando los registros almacenados contienen valores de campos personalizados que ya no están declarados en la configuración?
 - ¿Qué ocurre cuando un usuario abre la aplicación directamente en la pantalla de gestión o búsqueda (p. ej., vía enlace profundo o recarga del navegador) sin pasar por el panel de inicio?
 - ¿Qué ocurre cuando un usuario pulsa el botón atrás del navegador estando en la pantalla de gestión o búsqueda?
-- ¿Qué ocurre si un usuario navega fuera de la pantalla de gestión mientras un formulario aún tiene cambios sin guardar?
+- Navegación con cambios sin guardar en un formulario: el sistema solicita confirmación y solo sale si el usuario confirma descartar (resuelto en aclaración 2026-11-16).
 - ¿Permanecen intactas las entidades y los documentos al navegar entre el panel, la gestión y la búsqueda?
 - ¿Qué ocurre cuando el panel se abre con cero entidades o cero documentos (valores estadísticos)?
 - ¿Qué ocurre cuando el color de acento configurado no es un valor de color válido?
 - ¿Cómo mantiene la barra lateral contraída las etiquetas de módulo accesibles en ventanas gráficas estrechas?
 - ¿Qué ocurre cuando una entidad no tiene ningún documento asociado al abrir su ficha de detalle?
-- ¿Cómo identifica el resumen de indicadores los documentos "pendientes" cuando el módulo no tiene un ciclo de vida de estados configurado (estado de texto libre)? → Se comparan los estados normalizados con "pendiente" (resuelto en la aclaración 2026-11-12).
+- ¿Cómo identifica el resumen de indicadores los documentos "pendientes"? → Con ciclo de vida, los estados marcados explícitamente como pendientes en la configuración; sin ciclo de vida, coincidencia del estado normalizado con "pendiente" (resuelto en aclaraciones 2026-11-12 y 2026-11-16).
 - ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
 
 ## Requisitos *(obligatorio)*
@@ -332,7 +337,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-019**: El sistema DEBE navegar a una pantalla de búsqueda dedicada cuando se selecciona el botón Buscar en la barra lateral.
 - **FR-020**: La pantalla de búsqueda DEBE permitir buscar entidades por nombre, código, categoría, descripción o fecha objetivo.
 - **FR-021**: La pantalla de búsqueda DEBE ser accesible tanto desde la barra lateral como desde la acción rápida de buscar registros del panel.
-- **FR-022**: El sistema DEBE mantener los datos de entidades y documentos intactos y consistentes durante la navegación entre pantallas.
+- **FR-022**: El sistema DEBE mantener los datos de entidades y documentos intactos y consistentes durante la navegación entre pantallas. Si el usuario intenta navegar con cambios sin guardar en un formulario, el sistema DEBE mostrar una confirmación para salir y descartar los cambios o quedarse en el formulario, y solo DEBE navegar si el usuario confirma descartar.
 - **FR-023**: El sistema DEBE cargar la configuración del módulo al arrancar y aplicarla en todas las pantallas.
 - **FR-024**: El sistema DEBE retroceder a los valores predeterminados integrados (terminología Entidad/Documento, sin campos personalizados, sin ciclo de vida) cuando no se proporciona configuración.
 - **FR-025**: Ante una configuración inválida o conflictiva, el sistema DEBE arrancar con los valores predeterminados integrados y mostrar una advertencia visible que informe claramente del problema, en lugar de fallar silenciosamente o bloquear la aplicación.
@@ -354,7 +359,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-041**: El sistema DEBE ofrecer una vista de detalle de entidad ("ficha"), accesible al seleccionar una entidad desde los resultados de búsqueda, que muestre los datos de la entidad junto con sus documentos asociados.
 - **FR-042**: La vista de detalle de entidad DEBE ordenar los documentos asociados por fecha para presentar el historial de forma cronológica.
 - **FR-043**: La vista de detalle de entidad DEBE reflejar las actualizaciones realizadas desde la pantalla de gestión (creación, edición o eliminación de la entidad o de sus documentos) la próxima vez que se consulte.
-- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos cuyo estado corresponda a "pendiente". La determinación de "pendiente" sigue esta precedencia: (1) si hay `statusLifecycle` configurado, se usan los estados de ese ciclo que representen pendiente según la configuración del módulo; (2) si no hay ciclo de vida, se considera pendiente cuando el estado de texto libre, tras normalizar (minúsculas y recorte), coincide con `"pendiente"` (comportamiento base por defecto). Si no hay coincidencias, el indicador es cero. Los documentos pendientes se identifican por entidad.
+- **FR-044**: El sistema DEBE ofrecer un resumen de indicadores que muestre el total de entidades, el total de documentos y el número de documentos cuyo estado corresponda a "pendiente". La determinación de "pendiente" sigue esta precedencia: (1) si hay `statusLifecycle` configurado, se cuentan únicamente los estados que la configuración del módulo marque explícitamente como pendientes; (2) si no hay ciclo de vida, se considera pendiente cuando el estado de texto libre, tras normalizar (minúsculas y recorte), coincide con `"pendiente"` (comportamiento base por defecto). Si no hay coincidencias, el indicador es cero. Los documentos pendientes se identifican por entidad.
 - **FR-045**: El resumen de indicadores DEBE actualizarse cada vez que se crea, edita o elimina una entidad o un documento, y DEBE permitir seleccionar una entidad listada para abrir su ficha de detalle (FR-041).
 - **FR-046**: Cuando no existan entidades, documentos ni documentos pendientes, el resumen de indicadores DEBE mostrar un estado vacío con los valores en cero e indicar cómo comenzar a registrar información.
 
