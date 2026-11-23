@@ -15,12 +15,14 @@ Registro de datos maestros gestionado por el módulo (FR-001 a FR-007). Persisti
 | `id` | string | Sí | Identificador interno único, autogenerado. |
 | `entity_id` | string | Sí | Identificador público único, autogenerado; usado para vincular Documentos. |
 | `name` | string | Sí | Nombre de la entidad. |
-| `code` | string | Sí | Código de negocio único (comparación sin distinguir mayúsculas ni espacios, FR-001). |
-| `category` | string | No | Categoría de clasificación, usada en búsqueda (FR-004). |
-| `description` | string | No | Detalle descriptivo. |
-| `targetDate` | string (ISO date) | No | Fecha objetivo opcional (Historia de Usuario 10). En el perfil de clientes se etiqueta "Fecha de nacimiento" y se restringe según FR-047 a FR-050; la clave de almacenamiento no cambia. |
+| `code` | string | Sí | Código de negocio único (comparación sin distinguir mayúsculas ni espacios, FR-001). En el perfil de clientes se genera automáticamente, se guarda en el registro y queda oculto y no buscable (FR-052, FR-055). |
+| `category` | string | No | Categoría de clasificación, usada en búsqueda en el perfil base (FR-004). En el perfil de clientes se conserva, pero se oculta y excluye de la búsqueda (FR-051, FR-054, FR-055). |
+| `description` | string | No | Detalle descriptivo. En el perfil de clientes se conserva, pero se oculta y excluye de la búsqueda (FR-051, FR-054, FR-055). |
+| `targetDate` | string (ISO date) | No (Sí en clientes) | Fecha objetivo opcional (Historia de Usuario 10). En el perfil de clientes se etiqueta "Fecha de nacimiento", es obligatoria (FR-056) y se restringe según FR-047 a FR-050; la clave de almacenamiento no cambia. |
 | `createdAt` / `updatedAt` | string (ISO timestamp) | Sí | Marcas de tiempo de auditoría. |
 | *(campos personalizados)* | según configuración | según configuración | Declarados en `module-config.js`; se persisten junto a los campos base sin cambio de esquema (XR-001, Historia de Usuario 8). |
+
+En el perfil de clientes, los campos personalizados activos son `rubro`, `ejecutivo_asignado`, `canal_contacto`, `rut` y los cuatro campos condicionales de contacto (`contacto_telefono`, `contacto_correo`, `contacto_lugar`, `contacto_whatsapp`). `pedidos` deja de declararse (FR-053); sus valores antiguos, al igual que los de `category` y `description`, permanecen en el registro sin mostrarse (FR-054).
 
 ### 1.2 `Documento`
 
@@ -49,7 +51,9 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `labels` | object | Mapeo de términos (p. ej. `entity → "Cliente"`, `document → "Interacción"`) (FR-029, Historia de Usuario 7). |
 | `customFields.entity` / `customFields.document` | array | Definiciones de campos personalizados por tipo de registro (FR-026 a FR-028, FR-040, Historia de Usuario 8). |
 | `statusLifecycle` | object \| null | Estados permitidos y transiciones válidas para `Documento.status` (FR-030, FR-031, Historia de Usuario 13). |
-| `entityDate` | object \| null | Regla opcional para el campo base `targetDate`: `{ label, min, max }`. `max: "localToday"` se resuelve en tiempo de ejecución a la fecha local del dispositivo. Ausente en perfiles no-clientes. (FR-047 a FR-050). |
+| `entityDate` | object \| null | Regla opcional para el campo base `targetDate`: `{ label, min, max, required }`. `max: "localToday"` se resuelve en tiempo de ejecución a la fecha local del dispositivo; `required: true` solo en el perfil de clientes. Ausente en perfiles no-clientes. (FR-047 a FR-050, FR-056). |
+| `fieldRules.entity` / `fieldRules.document` | object | Reglas declarativas por clave de campo: `hidden`, `searchable`, `required`, `generated`, `unique`, `format`, `normalize`, `when`, `group`. Aplica a campos base y personalizados; ausente = comportamiento base (FR-051 a FR-055, FR-057, FR-059 a FR-061). |
+| `detailPolicy.entity` | object | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058). |
 | `theme.accentColor` | string | Color de acento opcional (FR-038). |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
@@ -65,7 +69,13 @@ El perfil CRM ilustrado en la especificación **no introduce entidades nuevas**:
 | Estado de un seguimiento | `Documento.status` | `statusLifecycle` con estados p. ej. `pendiente → en_progreso → completado`, más `atrasado` |
 | Ficha de cliente (Historia de Usuario 3) | Vista de detalle de `Entidad` + sus `Documento` asociados, ordenados por fecha (FR-041, FR-042, FR-043) | N/A (comportamiento base, no requiere configuración) |
 | Resumen de Gestión Comercial (Historia de Usuario 6) | Agregación en memoria sobre `Entidad`/`Documento` almacenados: total de entidades, total de documentos, documentos pendientes agrupados por `entity_id` (FR-044 a FR-046) | Usa el `statusLifecycle` configurado para determinar el estado "pendiente"; sin ciclo de vida, compara el estado normalizado (minúsculas y recorte) con "pendiente" |
-| Fecha de nacimiento del cliente (sesión 2026-11-23) | `Entidad.targetDate` con validación de rango | `entityDate: { label: "Fecha de nacimiento", min: "1910-01-01", max: "localToday" }` |
+| Fecha de nacimiento del cliente (sesión 2026-11-23) | `Entidad.targetDate` con validación de rango y obligatoria | `entityDate: { label: "Fecha de nacimiento", min: "1910-01-01", max: "localToday", required: true }` |
+| Código del cliente | `Entidad.code` generado, guardado y oculto | `fieldRules.entity.code = { generated: { strategy: "prefixSequence", prefix: "CLI-", pad: 3 }, unique: true, hidden: true, searchable: false }` |
+| Campos retirados del cliente | `Entidad.category`, `Entidad.description` y el valor heredado de `pedidos`; se conservan sin mostrar | `fieldRules.entity.category/description = { hidden: true, searchable: false }`; `pedidos` se elimina de `customFields.entity` |
+| RUT del cliente | `Entidad.rut` (campo personalizado) | `required: true`, `format: "cl-rut"`, `unique: true`, `normalize: "cl-rut"` |
+| Canal de Contacto | `Entidad.canal_contacto` (campo personalizado de selección) | `required: true`, sin valor preseleccionado, opciones `llamada`, `correo`, `reunion`, `whatsapp` |
+| Dato de contacto adicional | Uno de `contacto_telefono`, `contacto_correo`, `contacto_lugar`, `contacto_whatsapp` | `when: { key: "canal_contacto", equals: <opción> }`, `required: true`, `group: "contactDetail"`, `format` según el canal |
+| Cliente heredado incompleto | Misma `Entidad`, con comprobación de preparación antes de abrir la ficha | `detailPolicy.entity = { blockWhenInvalid: true, offerEditAction: true }` |
 
 ### 2.1 Regla de fecha de entidad
 
@@ -73,5 +83,19 @@ El perfil CRM ilustrado en la especificación **no introduce entidades nuevas**:
 - **Con `entityDate`**: la etiqueta configurada sustituye a "Fecha objetivo" en formulario, lista, ficha, búsqueda y filtros; el valor debe ser una fecha de calendario válida y cumplir `min <= targetDate <= max`.
 - `max: "localToday"` se resuelve cada vez que se calcula la regla usando la fecha local del dispositivo, y se recalcula al cambiar de día sin recargar (FR-048, FR-049).
 - Los valores almacenados antes de aplicar la regla que queden fuera del rango no se migran: se muestran igual y `updateEntity()` exige corregirlos antes de guardar cualquier edición (FR-050).
+
+### 2.2 Reglas de campo del perfil de clientes
+
+| Campo | Regla de configuración | Efecto en datos e interfaz |
+|---|---|---|
+| `code` | `generated`, `unique`, `hidden`, `searchable: false` | Se genera en `addEntity()`, se conserva en el registro, no se captura ni se muestra en formulario, lista, ficha, selector ni búsqueda. |
+| `category`, `description`, `pedidos` | `hidden`, `searchable: false` / campo no declarado | Los valores ya guardados permanecen en `localStorage`; no se renderizan ni influyen en la búsqueda. |
+| `targetDate` | `entityDate.required: true` | Debe existir y cumplir el rango; el guardado falla si está vacío. |
+| `rut` | `required`, `format: "cl-rut"`, `unique`, `normalize: "cl-rut"` | Debe tener dígito verificador válido y no repetirse entre clientes; la comparación ignora puntos, guion, espacios y distingue la `K` de forma consistente. |
+| `canal_contacto` | `required`, sin preselección | El formulario muestra la opción vacía y el guardado falla hasta elegir una. |
+| `contacto_*` | `when`, `required`, `group: "contactDetail"`, `format` | Solo se muestra y valida el campo del canal activo; al guardar se descartan los valores de los otros canales. |
+| Registro completo | `detailPolicy.entity.blockWhenInvalid` | Si faltan datos obligatorios o el RUT es inválido, la ficha no se abre y se ofrece editar; al guardar válidamente se desbloquea. |
+
+La búsqueda del perfil de clientes deriva sus campos de estas reglas: solo `name`, `targetDate` y campos personalizados visibles y buscables. La utilidad `src/utils/field-formats.js` expone los formatos `cl-rut`, `phone`, `email` y `nonEmpty` sin dependencias externas.
 
 **Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad.

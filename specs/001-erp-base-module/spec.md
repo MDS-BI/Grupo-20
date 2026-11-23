@@ -37,6 +37,16 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Qué zona horaria debe usarse para determinar la "fecha actual" cuando cambia el día? → A: Hora local del dispositivo del usuario.
 - Q: ¿Qué debe hacer el sistema con las fechas de nacimiento ya guardadas en clientes que queden fuera del nuevo rango o sean inválidas? → A: Conservarlas y mostrarlas sin borrarlas, pero exigir su corrección al editar el cliente antes de guardar.
 - Q: ¿La etiqueta "Fecha de nacimiento" debe reemplazar a "Fecha objetivo" solo en el formulario de clientes o en todos los lugares visibles del perfil de clientes, como listas, ficha, búsqueda y filtros? → A: En todos los lugares visibles del perfil de clientes.
+- Q: ¿En qué lugares visibles del perfil de clientes deben dejar de aparecer los campos «Código», «Categoría», «Descripción» y «Nº de pedidos»? → A: En todos los lugares visibles del perfil de clientes: formulario de registro/edición, lista de resultados, ficha y búsqueda/filtros.
+- Q: ¿Qué identificador y regla de unicidad debe usar el sistema para los clientes ahora que el campo «Código» dejará de mostrarse? → A: El sistema genera un código oculto y único por cliente; se mantiene la validación de unicidad sin que el usuario lo capture ni lo vea.
+- Q: ¿Qué debe hacerse con el campo «Nº de pedidos» en el perfil de clientes: eliminarlo o reemplazarlo por un indicador calculado? → A: Eliminarlo de la configuración del perfil de clientes; el sistema deja de registrarlo y de mostrarlo.
+- Q: ¿Qué debe hacer el sistema con los valores de «Categoría», «Descripción» y «Nº de pedidos» ya guardados en clientes existentes? → A: Conservar los valores en el almacenamiento sin borrarlos y ocultarlos de todas las vistas del cliente.
+- Q: ¿Debe la búsqueda de clientes seguir encontrando registros por los valores ocultos de código, categoría o descripción? → A: No se busca por categoría ni descripción; el código único generado queda guardado en cada registro, sin mostrarse en la interfaz ni usarse en la búsqueda.
+- Q: ¿Qué validación debe aplicarse al campo «RUT» de los clientes además de exigir que no esté vacío? → A: Formato chileno con dígito verificador válido y único entre todos los clientes.
+- Q: ¿Qué debe hacer el sistema con los clientes ya guardados que no tienen «Fecha de nacimiento», «Canal de Contacto» o «RUT», o que tienen un RUT inválido? → A: Bloquear la consulta de su ficha; permitir la edición normal solo para completar los campos faltantes y desbloquearlos al guardarlos válidamente.
+- Q: ¿Debe el campo «Canal de Contacto» tener una opción preseleccionada o el usuario debe elegirla explícitamente? → A: Sin preselección; el usuario debe elegir explícitamente una opción y el guardado falla si queda vacío.
+- Q: ¿Cómo debe organizarse la casilla adicional que aparece según el canal de contacto elegido? → A: Campos separados por canal: «Teléfono» para llamada, «Correo electrónico» para correo, «Lugar/Enlace de reunión» para reunión y «WhatsApp» para WhatsApp; se guarda solo el del canal elegido.
+- Q: ¿Debe ser obligatoria la casilla adicional de contacto y validarse según el canal elegido? → A: Obligatoria y validada según el canal: formato telefónico para llamada y WhatsApp, formato de correo para correo y valor no vacío para reunión.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -45,12 +55,12 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 
 **Por qué esta prioridad**: Se registra en esta prioridad dado que establece cómo se organizarán y relacionarán los clientes, las interacciones y los seguimientos. Las demás funciones necesitan esa base para guardar y consultar la información correctamente.
 
-**Prueba Independiente**: un analista registra un cliente de prueba y le asocia una interacción; el sistema guarda la relación y rechaza un identificador de cliente repetido con un mensaje claro.
+**Prueba Independiente**: un analista registra un cliente de prueba y le asocia una interacción; el sistema guarda la relación y asigna un código interno único a cada cliente sin solicitarlo al usuario.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** que el cliente tiene los datos obligatorios, **cuando** se registra, **entonces** se guarda con un identificador único.
-2. **Dado** que existe un cliente registrado, **cuando** se intenta registrar otro con el mismo identificador, **entonces** se rechaza y se explica el motivo.
+ 2. **Dado** que existe un cliente registrado, **cuando** se registra otro cliente, **entonces** el sistema le asigna un código interno único y distinto sin pedirlo al usuario (FR-052).
 3. **Dado** que existe un cliente, **cuando** se registra una interacción o un seguimiento asociado a él, **entonces** queda vinculado al cliente correcto.
 4. **Dado** que un identificador no corresponde a ningún cliente, **cuando** se intenta asociarle una interacción o un seguimiento, **entonces** se rechaza con un mensaje claro.
 5. **Dado** que están documentados los campos comunes del ERP, **cuando** el analista revisa el modelo del CRM, **entonces** los nombres, tipos de datos e identificadores coinciden con lo acordado.
@@ -68,7 +78,15 @@ Como ejecutivo de ventas, quiero registrar clientes y sus interacciones para org
 
 1. **Dado** que el ejecutivo completa los datos obligatorios del cliente, **cuando** los guarda, **entonces** el registro se guarda y queda disponible para búsqueda, selección y consulta en su ficha (la pantalla de gestión no muestra una lista de entidades, FR-016). 
 2. **Dado** que existe un cliente, **cuando** registra una llamada con fecha y descripción, **entonces** queda guardada en la ficha de ese cliente.
-3. **Dado**  que faltan datos obligatorios o el codigo del cliente está repetido, **cuando** se intenta guardar, **entonces** el sistema rechaza el registro y explica qué se debe corregir. 
+ 3. **Dado** que faltan datos obligatorios del cliente, **cuando** se intenta guardar, **entonces** el sistema rechaza el registro y explica qué se debe corregir.
+ 4. **Dado** el perfil de clientes, **cuando** se muestra el formulario de registro, **entonces** no se muestran los campos «Código», «Categoría», «Descripción» ni «Nº de pedidos» (FR-051).
+ 5. **Dado** el perfil de clientes, **cuando** se guarda un cliente, **entonces** el sistema genera automáticamente su código interno único sin solicitarlo ni mostrarlo (FR-052).
+ 6. **Dado** el perfil de clientes, **cuando** se carga la configuración, **entonces** no incluye el campo personalizado «Nº de pedidos» y el sistema no lo registra (FR-053).
+ 7. **Dado** el perfil de clientes, **cuando** se intenta guardar un cliente sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», **entonces** el sistema rechaza el guardado y explica qué campo falta (FR-056).
+ 8. **Dado** el perfil de clientes, **cuando** se introduce un RUT con dígito verificador inválido o ya usado por otro cliente, **entonces** el sistema rechaza el guardado y explica el motivo (FR-057).
+ 9. **Dado** el formulario de registro de un cliente, **cuando** se abre, **entonces** «Canal de Contacto» aparece sin opción preseleccionada y el guardado se rechaza hasta que el usuario elija una (FR-059).
+ 10. **Dado** un cliente con un canal de contacto elegido, **cuando** se muestra el formulario, **entonces** aparece solo la casilla adicional correspondiente a ese canal y, al guardar, no se conservan los valores de los otros canales (FR-060).
+ 11. **Dado** el perfil de clientes, **cuando** se deja vacía la casilla adicional de contacto o se introduce un valor con formato inválido para el canal elegido, **entonces** el sistema rechaza el guardado y explica el formato esperado (FR-061).
 ---
 
 ### Historia de Usuario 3 - Consultar antecedentes del cliente (Prioridad: P1)
@@ -81,12 +99,13 @@ Como ejecutivo de atención al cliente, quiero buscar clientes y consultar su fi
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que existen clientes registrados conforme a la Historia de Usuario 2, **cuando** el ejecutivo de atención al cliente busca por nombre, código o palabra clave, **entonces** el sistema muestra únicamente los clientes coincidentes.
+ 1. **Dado** que existen clientes registrados conforme a la Historia de Usuario 2, **cuando** el ejecutivo de atención al cliente busca por nombre o palabra clave visible, **entonces** el sistema muestra únicamente los clientes coincidentes, sin usar categoría, descripción ni código (FR-055).
 2. **Dado** que el ejecutivo selecciona un cliente de los resultados de búsqueda, **cuando** accede a su ficha, **entonces** se muestra la información del cliente junto a su historial de interacciones y documentos asociados.
 3. **Dado** que esta vista consulta los registros de la Historia de Usuario 2, **cuando** se carga la ficha o el historial, **entonces** el sistema debe obtener la información desde dichos registros, manteniendo la consistencia con lo ingresado por el ejecutivo de ventas.
 4. **Dado** que se han realizado actualizaciones a la ficha del cliente o a sus documentos desde la pantalla de gestión (Historia de Usuario 4), **cuando** el ejecutivo de atención al cliente consulta nuevamente dicha ficha e historial, **entonces** la vista refleja dichas actualizaciones.
 5. **Dada** una búsqueda sin coincidencias, **cuando** el ejecutivo envía la búsqueda, **entonces** el sistema muestra un estado vacío claro y permite volver a intentarlo.
-6. **Dado** que el ejecutivo necesita dar una atención informada y continua, **cuando** consulta la ficha del cliente, **entonces** el historial se presenta de forma ordenada (por fecha) para facilitar la revisión de los antecedentes del cliente.
+ 6. **Dado** que el ejecutivo necesita dar una atención informada y continua, **cuando** consulta la ficha del cliente, **entonces** el historial se presenta de forma ordenada (por fecha) para facilitar la revisión de los antecedentes del cliente.
+ 7. **Dado** un cliente guardado sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con RUT inválido, **cuando** se intenta abrir su ficha, **entonces** la consulta se bloquea con una explicación de los campos pendientes y se ofrece editarlo para completarlos (FR-058).
 
 ---
 
@@ -210,7 +229,7 @@ Como usuario de negocio, quiero adjuntar una fecha objetivo opcional a una entid
 
 1. **Dado** que un usuario está creando o editando una entidad, **cuando** introduce una fecha objetivo, **entonces** la fecha se guarda y se muestra en la lista.
 2. **Dada** una entidad con fecha fijada, **cuando** el usuario ve la lista, **entonces** las entidades con fechas pueden identificarse de un vistazo.
-3. **Dado** que un usuario deja la fecha en blanco, **cuando** guarda la entidad, **entonces** la entidad igualmente se guarda sin fecha (campo opcional).
+ 3. **Dado** que un usuario deja la fecha en blanco, **cuando** guarda la entidad, **entonces** la entidad igualmente se guarda sin fecha (campo opcional). En el perfil de clientes, la «Fecha de nacimiento» es obligatoria y el guardado se rechaza si está vacía (FR-056).
 4. **Dado** el perfil de clientes, **cuando** se muestra el formulario de creación o edición, **entonces** el campo de fecha se denomina "Fecha de nacimiento" y admite fechas válidas desde el 1 de enero de 1910 hasta la fecha actual, inclusive.
 5. **Dado** el perfil de clientes, **cuando** se introduce una fecha con un día inexistente para su mes, anterior al 1 de enero de 1910 o posterior a la fecha actual, **entonces** el sistema rechaza el valor con una explicación clara.
 6. **Dado** el formulario de cliente abierto antes de cambiar de día según la hora local del dispositivo, **cuando** llega el siguiente día local, **entonces** el límite máximo de "Fecha de nacimiento" pasa a ser la nueva fecha actual sin recargar la página.
@@ -247,7 +266,8 @@ Como usuario de negocio, quiero una pantalla de búsqueda dedicada para encontra
 1. **Dado** que el usuario está en la pantalla de búsqueda, **cuando** introduce un término coincidente, **entonces** solo se muestran las entidades coincidentes.
 2. **Dada** una búsqueda sin coincidencias, **cuando** el usuario envía la búsqueda, **entonces** se muestra un estado vacío claro y puede volver a intentarlo.
 3. **Dadas** cientos de entidades almacenadas, **cuando** el usuario busca desde la pantalla de búsqueda, **entonces** los resultados aparecen con prontitud sin retraso perceptible.
-4. **Dado** que el usuario está en la pantalla de búsqueda, **cuando** activa el botón Panel en la barra lateral, **entonces** vuelve al panel de inicio.
+ 4. **Dado** que el usuario está en la pantalla de búsqueda, **cuando** activa el botón Panel en la barra lateral, **entonces** vuelve al panel de inicio.
+ 5. **Dado** el perfil de clientes, **cuando** se busca un término que solo coincide con la categoría o la descripción ocultas, **entonces** no se devuelve ningún cliente (FR-055).
 
 ---
 
@@ -306,7 +326,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 
 ### Casos Límite
 
-- ¿Qué ocurre cuando un usuario intenta guardar una entidad sin nombre o código obligatorio?
+- ¿Qué ocurre cuando un usuario intenta guardar una entidad sin nombre o código obligatorio? En el perfil de clientes, el código se genera automáticamente y no se captura (FR-052).
 - ¿Cómo gestiona el sistema una búsqueda que no devuelve coincidencias?
 - ¿Qué ocurre si un usuario intenta editar o eliminar una entidad que ya no existe?
 - ¿Qué ocurre cuando un usuario introduce una fecha objetivo que no es una fecha de calendario válida? En el perfil de clientes, además se rechazan las fechas anteriores al 1 de enero de 1910 o posteriores a la fecha actual (FR-047). Si el valor ya estaba guardado, se conserva y se exige corrección al editar (FR-050).
@@ -314,10 +334,13 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - ¿Qué ocurre cuando un usuario introduce una fecha final anterior a la fecha inicial en un documento?
 - ¿Qué ocurre cuando la configuración declara un campo personalizado cuya clave choca con un nombre de campo base?
 - ¿Qué ocurre cuando la configuración referencia un tipo de campo desconocido o una definición de transición de ciclo de vida inválida?
-- ¿Qué ocurre cuando los registros almacenados contienen valores de campos personalizados que ya no están declarados en la configuración?
+- ¿Qué ocurre cuando los registros almacenados contienen valores de campos personalizados que ya no están declarados en la configuración? En el perfil de clientes, los valores de «Categoría», «Descripción» y «Nº de pedidos» se conservan sin borrar y permanecen ocultos (FR-054).
 - ¿Qué ocurre cuando un usuario abre la aplicación directamente en la pantalla de gestión o búsqueda (p. ej., vía enlace profundo o recarga del navegador) sin pasar por el panel de inicio?
 - ¿Qué ocurre cuando un usuario pulsa el botón atrás del navegador estando en la pantalla de gestión o búsqueda?
 - Navegación con cambios sin guardar en un formulario: el sistema solicita confirmación y solo sale si el usuario confirma descartar (resuelto en aclaración 2026-11-16).
+- ¿Qué ocurre con clientes ya guardados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con RUT inválido? → Su ficha queda bloqueada y solo se puede editar para completar los datos; al guardarlos válidamente se desbloquea (FR-058).
+- ¿Qué ocurre si el usuario cambia de canal de contacto después de haber introducido un dato en la casilla adicional? → Solo se guarda el valor del canal final; los valores de los demás canales se descartan (FR-060).
+- ¿Qué ocurre si la casilla adicional de contacto está vacía o tiene un formato que no corresponde al canal? → El guardado se rechaza con una explicación del formato esperado (FR-061).
 - ¿Permanecen intactas las entidades y los documentos al navegar entre el panel, la gestión y la búsqueda?
 - ¿Qué ocurre cuando el panel se abre con cero entidades o cero documentos (valores estadísticos)?
 - ¿Qué ocurre cuando el color de acento configurado no es un valor de color válido?
@@ -331,10 +354,10 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 
 ### Requisitos Funcionales
 
-- **FR-001**: El sistema DEBE permitir a los usuarios crear un registro de entidad con al menos un nombre y un código; el código DEBE ser único entre todas las entidades (comparación sin distinguir mayúsculas ni espacios).
+- **FR-001**: El sistema DEBE permitir a los usuarios crear un registro de entidad con al menos un nombre y un código; el código DEBE ser único entre todas las entidades (comparación sin distinguir mayúsculas ni espacios). En el perfil de clientes, el código se genera automáticamente y no se captura ni se muestra (FR-052).
 - **FR-002**: El sistema DEBE permitir a los usuarios editar los detalles de un registro de entidad existente.
 - **FR-003**: El sistema DEBE permitir a los usuarios eliminar un registro de entidad existente tras una confirmación explícita que indique cuántos documentos asociados se eliminarán.
-- **FR-004**: El sistema DEBE permitir a los usuarios buscar registros de entidad por nombre, código, categoría u otras palabras clave descriptivas.
+- **FR-004**: El sistema DEBE permitir a los usuarios buscar registros de entidad por nombre, código, categoría u otras palabras clave descriptivas. En el perfil de clientes, la búsqueda NO DEBE usar código, categoría ni descripción (FR-055).
 - **FR-005**: El sistema DEBE mostrar una lista clara de entidades e indicar cuándo ningún resultado coincide con una búsqueda.
 - **FR-006**: El sistema DEBE presentar retroalimentación clara cuando falta información obligatoria o no se puede completar una acción.
 - **FR-007**: El sistema DEBE mantener los datos de entidad consistentes tras operaciones de creación, edición y eliminación.
@@ -350,7 +373,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-017**: La pantalla de gestión DEBE proporcionar la funcionalidad de crear, editar y eliminar entidades.
 - **FR-018**: La pantalla de gestión DEBE proporcionar la funcionalidad de crear, editar y eliminar documentos.
 - **FR-019**: El sistema DEBE navegar a una pantalla de búsqueda dedicada cuando se selecciona el botón Buscar en la barra lateral.
-- **FR-020**: La pantalla de búsqueda DEBE permitir buscar entidades por nombre, código, categoría, descripción o fecha objetivo.
+- **FR-020**: La pantalla de búsqueda DEBE permitir buscar entidades por nombre, código, categoría, descripción o fecha objetivo. En el perfil de clientes, la búsqueda NO DEBE permitir buscar por código, categoría ni descripción (FR-055).
 - **FR-021**: La pantalla de búsqueda DEBE ser accesible tanto desde la barra lateral como desde la acción rápida de buscar registros del panel.
 - **FR-022**: El sistema DEBE mantener los datos de entidades y documentos intactos y consistentes durante la navegación entre pantallas. Si el usuario intenta navegar con cambios sin guardar en un formulario, el sistema DEBE mostrar una confirmación para salir y descartar los cambios o quedarse en el formulario, y solo DEBE navegar si el usuario confirma descartar.
 - **FR-023**: El sistema DEBE cargar la configuración del módulo al arrancar y aplicarla en todas las pantallas.
@@ -381,6 +404,17 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 - **FR-048**: En el perfil de clientes, el límite máximo de "Fecha de nacimiento" DEBE recalcularse automáticamente cuando cambie el día mientras la aplicación permanece abierta, sin requerir recarga.
 - **FR-049**: En el perfil de clientes, la fecha actual usada como límite DEBE corresponder a la fecha local del dispositivo del usuario.
 - **FR-050**: En el perfil de clientes, las fechas de nacimiento almacenadas que queden fuera del rango o sean inválidas DEBEN conservarse y mostrarse sin borrarlas, y el sistema DEBE exigir su corrección antes de guardar cuando el cliente se edite.
+- **FR-051**: En el perfil de clientes, los campos «Código», «Categoría», «Descripción» y «Nº de pedidos» NO DEBEN mostrarse en ningún lugar visible: formulario de registro/edición, lista de resultados, ficha y búsqueda/filtros.
+- **FR-052**: En el perfil de clientes, el sistema DEBE generar automáticamente un código interno único para cada cliente, conservarlo en su registro, usarlo para la validación de unicidad y NO DEBE solicitarlo, mostrarlo ni usarlo como criterio de búsqueda.
+- **FR-053**: En el perfil de clientes, el campo personalizado «Nº de pedidos» (`pedidos`) DEBE eliminarse de la configuración del módulo; el sistema NO DEBE registrarlo ni validarlo como campo del cliente.
+- **FR-054**: Los valores ya almacenados de «Categoría», «Descripción» y «Nº de pedidos» en clientes DEBEN conservarse sin borrarlos y permanecer ocultos en todas las vistas del perfil de clientes, conforme a FR-040.
+- **FR-055**: En el perfil de clientes, la búsqueda DEBE basarse únicamente en el nombre, la «Fecha de nacimiento» y los campos personalizados visibles; NO DEBE devolver registros por coincidencias con categoría, descripción ni código.
+- **FR-056**: En el perfil de clientes, los campos «Fecha de nacimiento», «Canal de Contacto» y «RUT» DEBEN ser obligatorios: el sistema NO DEBE guardar un cliente si cualquiera de ellos está vacío.
+- **FR-057**: En el perfil de clientes, el «RUT» DEBE aceptarse solo con formato chileno y dígito verificador válidos, y DEBE ser único entre todos los clientes registrados; un RUT inválido o repetido DEBE rechazarse con una explicación clara.
+- **FR-058**: Los clientes almacenados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con un RUT inválido o repetido, NO DEBEN poder consultarse en su ficha hasta completarlos; el sistema DEBE explicar el bloqueo y permitir la edición normal únicamente para completar esos datos, desbloqueando la consulta cuando se guarden válidamente.
+- **FR-059**: El campo «Canal de Contacto» NO DEBE tener una opción preseleccionada; el usuario DEBE elegir explícitamente una de las opciones configuradas y el guardado DEBE fallar si el campo queda vacío.
+- **FR-060**: En el perfil de clientes, el formulario DEBE mostrar un campo adicional según el «Canal de Contacto» elegido: «Teléfono» para llamada, «Correo electrónico» para correo, «Lugar/Enlace de reunión» para reunión y «WhatsApp» para WhatsApp. El sistema DEBE guardar únicamente el valor del canal seleccionado y NO DEBE conservar los valores de los demás canales.
+- **FR-061**: La casilla adicional de contacto DEBE ser obligatoria y validarse según el canal elegido: formato telefónico para «Teléfono» y «WhatsApp», formato de correo electrónico para «Correo electrónico» y valor no vacío para «Lugar/Enlace de reunión». El guardado DEBE fallar con una explicación clara si el valor falta o no cumple el formato correspondiente.
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -394,7 +428,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 ### Entidades Clave *(incluir si la funcionalidad implica datos)*
 
-- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047. Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
+- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
 - **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
 - **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
 
@@ -414,6 +448,8 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-010**: Las estadísticas de registros mostradas en el panel siempre coinciden con el número de entidades y documentos almacenados.
 - **SC-011**: Los indicadores del resumen de Gestión Comercial (total de entidades, total de documentos y documentos pendientes por entidad) siempre coinciden con los registros de entidades y documentos almacenados.
 - **SC-012**: En el perfil de clientes, el campo "Fecha de nacimiento" rechaza el 100% de las fechas anteriores al 1 de enero de 1910, posteriores a la fecha actual o inválidas según el calendario en las pruebas automatizadas, y actualiza su límite máximo al cambiar de día sin recarga.
+- **SC-013**: En el perfil de clientes, el 100% de las verificaciones confirman que «Código», «Categoría», «Descripción» y «Nº de pedidos» no aparecen en formulario, lista, ficha ni búsqueda, que cada cliente conserva un código interno único no visible, y que las búsquedas por categoría o descripción no devuelven registros.
+- **SC-014**: En el perfil de clientes, el 100% de las pruebas de guardado rechazan registros sin «Fecha de nacimiento», «Canal de Contacto», «RUT» o dato de contacto adicional, sin RUT válido y único, o con un formato de contacto incorrecto para el canal elegido.
 
 ## Suposiciones
 

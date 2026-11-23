@@ -5,7 +5,7 @@
 
 ## Resumen
 
-Construir una aplicación web ligera con Vite que sirva como módulo base de software de planificación de recursos empresariales (ERP). El módulo proporciona la base común que todo módulo ERP personalizado necesita: gestión de datos maestros (Entidades), documentos transaccionales vinculados (Documentos), flujos de crear/editar/eliminar/buscar, validación y persistencia local — construida principalmente con HTML, CSS y JavaScript vanilla. La aplicación se presenta como un espacio de trabajo ERP coherente: una barra superior con marca (logotipo derivado + nombre del módulo) y una barra lateral persistente de botones de módulo envuelven cada pantalla, y la pantalla de entrada es un panel estilo ERP que ofrece botones de acción rápida para las tareas clave (nueva entidad, nuevo documento, abrir áreas de gestión, buscar registros) además de estadísticas de registros en vivo. La adaptación a un módulo específico (p. ej., Ventas) se realiza mediante un único archivo de configuración (`src/module-config.js`) que cubre terminología, campos personalizados, ciclo de vida de documentos y color de acento, de modo que el código central permanece intacto. En el perfil de clientes, la fecha objetivo pasa a denominarse "Fecha de nacimiento" y se limita al rango comprendido entre el 1 de enero de 1910 y la fecha local actual, con actualización automática del límite al cambiar de día y conservación de los valores históricos que queden fuera de rango.
+Construir una aplicación web ligera con Vite que sirva como módulo base de software de planificación de recursos empresariales (ERP). El módulo proporciona la base común que todo módulo ERP personalizado necesita: gestión de datos maestros (Entidades), documentos transaccionales vinculados (Documentos), flujos de crear/editar/eliminar/buscar, validación y persistencia local — construida principalmente con HTML, CSS y JavaScript vanilla. La aplicación se presenta como un espacio de trabajo ERP coherente: una barra superior con marca (logotipo derivado + nombre del módulo) y una barra lateral persistente de botones de módulo envuelven cada pantalla, y la pantalla de entrada es un panel estilo ERP que ofrece botones de acción rápida para las tareas clave (nueva entidad, nuevo documento, abrir áreas de gestión, buscar registros) además de estadísticas de registros en vivo. La adaptación a un módulo específico (p. ej., Ventas) se realiza mediante un único archivo de configuración (`src/module-config.js`) que cubre terminología, campos personalizados, ciclo de vida de documentos y color de acento, de modo que el código central permanece intacto. En el perfil de clientes, la fecha objetivo pasa a denominarse "Fecha de nacimiento" y se limita al rango comprendido entre el 1 de enero de 1910 y la fecha local actual, con actualización automática del límite al cambiar de día y conservación de los valores históricos que queden fuera de rango. En una segunda tanda de cambios del mismo perfil, el formulario de clientes deja de mostrar «Código», «Categoría», «Descripción» y «Nº de pedidos» (generando y guardando un código interno único sin exposición), exige «Fecha de nacimiento», «Canal de Contacto» y «RUT» con formato chileno válido y único, y despliega una casilla de contacto condicionada al canal elegido con validación propia; la ficha de los clientes heredados incompletos queda bloqueada hasta completarla mediante edición.
 
 ## Contexto Técnico
 
@@ -18,7 +18,10 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 **Tipo de Proyecto**: Aplicación web  
 **Objetivos de Rendimiento**: Interacciones responsivas para listas de hasta 500 registros; la búsqueda y las actualizaciones de la interfaz deben sentirse instantáneas  
 **Restricciones**: Huella mínima de librerías, despliegue simple, sin backend requerido; la estructura debe mantenerse extensible para módulos personalizados  
-**Escala/Alcance**: Módulo base con CRUD de datos maestros (Entidad) y documentos transaccionales (Documento), búsqueda y capacidades de navegación
+**Escala/Alcance**: Módulo base con CRUD de datos maestros (Entidad) y documentos transaccionales (Documento), búsqueda y capacidades de navegación  
+**Reglas de Campo**: Capa declarativa opcional en `module-config.js` (`fieldRules`, `detailPolicy`) para ocultar, generar, exigir, hacer único, condicionar y excluir de búsqueda campos base o personalizados; la configuración ausente conserva el comportamiento base  
+**Formatos de Validación**: Registro local de formatos (`src/utils/field-formats.js`) con `cl-rut`, `phone`, `email` y `nonEmpty`; sin dependencias nuevas  
+**Preparación de Ficha**: Comprobación pura reutilizada del mismo validador declarativo para bloquear la consulta de registros incompletos y ofrecer su edición
 
 ### Aclaraciones integradas (sesión 2026-11-01)
 
@@ -41,6 +44,17 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - El límite superior se recalcula automáticamente al cambiar de día mientras la aplicación permanece abierta, sin recarga.
 - Las fechas históricas fuera de rango se conservan y muestran, pero se exige corregirlas antes de guardar cualquier edición del cliente.
 
+### Aclaraciones integradas (sesión 2026-11-23, segunda tanda)
+
+- «Código», «Categoría», «Descripción» y «Nº de pedidos» dejan de mostrarse en formulario, lista, ficha y búsqueda del perfil de clientes; sus valores se conservan en almacenamiento.
+- El sistema genera un código único interno por cliente, lo guarda en el registro y no lo captura, muestra ni busca.
+- «Nº de pedidos» se elimina de la configuración del perfil y deja de registrarse.
+- En el perfil de clientes la búsqueda ignora código, categoría y descripción; usa nombre, fecha de nacimiento y campos personalizados visibles.
+- «Fecha de nacimiento», «Canal de Contacto» y «RUT» son obligatorios al guardar; el RUT debe tener dígito verificador válido y ser único.
+- Los clientes heredados sin esos datos o con RUT inválido tienen bloqueada su ficha; se permiten editar solo para completarlos y se desbloquean al guardar válidamente.
+- «Canal de Contacto» no tiene opción preseleccionada: el usuario debe elegirla explícitamente.
+- Según el canal se muestra una casilla adicional («Teléfono», «Correo electrónico», «Lugar/Enlace de reunión» o «WhatsApp»); solo se guarda el valor del canal elegido y esa casilla también es obligatoria, con formato validado.
+
 ## Verificación de la Constitución
 
 *COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar tras el diseño de la Fase 1.*
@@ -50,7 +64,7 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - Experiencia de Usuario: La interfaz proporcionará mensajes de validación claros, estados vacíos y comportamiento de formulario consistente, presentados dentro de un marco de espacio de trabajo ERP con marca (barra superior + barra lateral) que se ve y se comporta idénticamente en todas las pantallas.
 - Rendimiento: La búsqueda y el renderizado de listas se optimizarán para colecciones de hasta 500 registros usando actualizaciones ligeras del DOM.
 
-**Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. La nueva regla de fecha se declara en `module-config.js`, no en el código central; no añade dependencias, conserva los borradores del formulario al cambiar de día y mantiene pruebas unitarias/de integración para los flujos visibles. No se introducen violaciones de la constitución.
+**Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. No se introducen violaciones de la constitución.
 
 ## Estructura del Proyecto
 
@@ -76,7 +90,8 @@ src/
 ├── app.js
 ├── module-config.js
 ├── utils/
-│   └── entity-date.js   (regla `entityDate`, fecha local y temporizador de medianoche)
+│   ├── entity-date.js   (regla `entityDate`, fecha local y temporizador de medianoche)
+│   └── field-formats.js (formatos declarativos: `cl-rut`, `phone`, `email`, `nonEmpty`)
 └── components/
     ├── shell.js        (marco del espacio de trabajo: barra superior, logotipo SVG, barra lateral, estado de módulo activo)
     ├── dashboard.js    (vista de inicio: cuadrícula de acciones rápidas + tarjetas de estadísticas en vivo)
@@ -93,6 +108,8 @@ tests/
 
 **Decisión de Estructura**: Una aplicación Vite simple con un único punto de entrada HTML, un pequeño conjunto de módulos JavaScript y CSS en un archivo separado. Se usará localStorage para la persistencia de modo que la aplicación permanezca ligera y autónoma. Los componentes se dividen en pares de entidad (datos maestros) y documento (transaccional) que reflejan los dos conceptos centrales del módulo base, de modo que un módulo personalizado pueda renombrar o extender cada par de forma independiente. `shell.js` posee el marco del espacio de trabajo ERP — un logotipo monograma SVG en línea derivado del nombre del módulo, la barra superior y la barra lateral de módulos — envolviendo todas las vistas para que la marca y la navegación permanezcan consistentes sin duplicar marcado. `dashboard.js` renderiza los botones de acción rápida y las tarjetas de estadísticas de la pantalla de entrada, leyendo los recuentos del almacenamiento cada vez que se vuelve visible. `entity-detail.js` renderiza la ficha de una entidad seleccionada (desde búsqueda o resumen) junto con su historial de documentos ordenado por fecha, reflejando los cambios hechos en la pantalla de gestión. `commercial-summary.js` agrega en memoria los recuentos de entidades, documentos y documentos pendientes (según el `statusLifecycle` configurado) y permite seleccionar una entidad para abrir su ficha de detalle; ambos son comportamiento genérico del módulo base, no exclusivo de un perfil CRM. `module-config.js` centraliza todos los puntos de adaptación — nombre del módulo, etiquetas de términos, definiciones de campos personalizados, ciclo de vida de estados, regla opcional `entityDate` y color de acento — manteniendo la personalización del dominio fuera del código central; el estilo se controla mediante propiedades personalizadas de CSS (tokens de diseño) en `styles.css` para que el color de acento configurado se aplique globalmente. `utils/entity-date.js` resuelve la regla activa a `{ label, min, max }`, calcula `localToday` con getters locales y programa el siguiente cambio de día; los componentes solo consumen ese resultado y `storage.js` aplica el mismo rango al validar escrituras, de modo que la interfaz y la persistencia no puedan divergir.
 
+**Decisión adicional (sesión 2026-11-23, segunda tanda)**: Las reglas del perfil de clientes se expresan con mecanismos genéricos del módulo base, no con código específico de cliente. `fieldRules` gana visibilidad, generación, unicidad, obligatoriedad, formato, condición (`when`) y pertenencia a grupo (`group`); `detailPolicy.entity.blockWhenInvalid` bloquea la ficha de registros no completos; `entityDate.required` hace obligatoria la fecha sin afectar otros perfiles. Los componentes de formulario, lista, ficha, buscador y selectores consultan esas reglas, y `src/utils/field-formats.js` centraliza los formatos sin dependencias nuevas. El perfil CRM deja de declarar `pedidos` y añade los campos de contacto por canal.
+
 ## Seguimiento de Complejidad
 
-Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente y el mismo patrón de pruebas Vitest/jsdom. La única contrapartida registrada es un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado sin recargar ni sondear periódicamente.
+Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente, la lógica de RUT ya presente en la semilla y el mismo patrón de pruebas Vitest/jsdom. Las contrapartidas registradas son un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado, y una capa declarativa adicional (`fieldRules`/`detailPolicy`) que se resuelve en un único punto y no modifica el comportamiento de los módulos que no la declaran. El bloqueo de ficha reutiliza el validador de guardado, por lo que no añade una segunda fuente de verdad.

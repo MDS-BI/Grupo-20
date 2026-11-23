@@ -11,14 +11,14 @@ Cada registro de entidad **base** (sin ningún módulo personalizado configurado
 - `id`: cadena única
 - `entity_id`: cadena única, generada automáticamente, usada para vincular documentos
 - `name`: cadena no vacía
-- `code`: cadena no vacía y única entre todas las entidades (comparación sin distinguir mayúsculas ni espacios)
-- `category`: cadena opcional
-- `description`: cadena opcional
-- `targetDate`: cadena de fecha opcional (YYYY-MM-DD) válida cuando está presente; en el perfil de clientes debe además cumplir la regla `entityDate` descrita abajo
+- `code`: cadena no vacía y única entre todas las entidades (comparación sin distinguir mayúsculas ni espacios); cuando `fieldRules.entity.code.generated` está activo, `addEntity()` lo genera antes de validar
+- `category`: cadena opcional; en el perfil de clientes se conserva pero no se muestra ni se busca
+- `description`: cadena opcional; en el perfil de clientes se conserva pero no se muestra ni se busca
+- `targetDate`: cadena de fecha opcional (YYYY-MM-DD) válida cuando está presente; en el perfil de clientes es obligatoria y debe cumplir la regla `entityDate` descrita abajo
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8) — por ejemplo `taxId`, `email` (validado con formato de correo cuando está presente), `phone`, `address`, `creditLimit` (número no negativo) o `paymentTerms`. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001).
+Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8). El perfil de clientes declara `rubro`, `ejecutivo_asignado`, `canal_contacto` (selección obligatoria), `rut` (obligatorio, `format: "cl-rut"`, `unique: true`) y los campos condicionales `contacto_telefono`, `contacto_correo`, `contacto_lugar` y `contacto_whatsapp` (obligatorios según el canal, con `group: "contactDetail"`). Otros módulos pueden declarar `taxId`, `email`, `phone`, `address`, `creditLimit` o `paymentTerms`. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001). `pedidos` ya no se declara en el perfil de clientes; sus valores anteriores se conservan sin mostrarse.
 
 ## Operaciones
 
@@ -62,6 +62,12 @@ Operaciones:
 - Si la configuración activa declara `entityDate`, un `targetDate` presente debe cumplir `min <= targetDate <= max`. En el perfil de clientes, `min = "1910-01-01"` y `max` es la fecha local actual resuelta en el momento de la validación.
 - La validación de rango se aplica al objeto fusionado en `updateEntity()`; por eso un registro histórico con fecha fuera de rango puede consultarse pero no guardarse sin corregir la fecha.
 - Los campos personalizados obligatorios (declarados en `module-config.js`) deben validarse con la misma experiencia de retroalimentación que los campos base (p. ej. `email` con formato válido, `creditLimit` no negativo cuando el módulo los declara).
+- Cuando `entityDate.required` está activo, un `targetDate` ausente debe rechazarse antes de la persistencia.
+- Cuando un campo declara `format`, su valor debe cumplir el formato registrado en `src/utils/field-formats.js`: `cl-rut` (dígito verificador válido), `phone`, `email` o `nonEmpty`.
+- Cuando un campo declara `unique: true`, su valor normalizado debe ser distinto al de todos los demás registros del mismo tipo; `normalize: "cl-rut"` elimina puntos, guion y espacios y uniformiza la `K`.
+- Los campos con `when: { key, equals }` solo se validan y persisten cuando la condición se cumple. Dentro de un mismo `group`, solo se conserva el valor del campo activo; los valores de los demás se descartan al guardar.
+- Los campos con `hidden: true` o `searchable: false` no se renderizan ni se incluyen en la búsqueda, pero sus valores almacenados se conservan en `updateEntity()`.
+- Con `detailPolicy.entity.blockWhenInvalid`, la apertura de la ficha debe comprobar los campos obligatorios y formatos; si hay errores, se muestra la explicación y la acción de editar, sin impedir la edición correctora.
 - Un `endDate` presente debe ser igual o posterior a `startDate` cuando ambos están presentes.
 - Un entity_id debe generarse automáticamente y debe ser único.
 - Un documento sin un `entity_id` que coincida con una entidad existente debe rechazarse.
@@ -77,15 +83,42 @@ entityDate: {
   label: 'Fecha de nacimiento',
   min: '1910-01-01',
   max: 'localToday',
+  required: true,
 }
 ```
 
 - `label`: cadena no vacía usada en todas las etiquetas visibles del campo `targetDate`. Si se omite, se usa "Fecha objetivo".
 - `min`: fecha ISO `YYYY-MM-DD` válida. Si se omite, no hay límite inferior.
 - `max`: fecha ISO `YYYY-MM-DD` válida o el centinela `localToday`, que se resuelve a la fecha local del dispositivo en cada cálculo.
-- Si el bloque `entityDate` está ausente, el campo conserva el comportamiento base sin rango.
+- `required`: booleano opcional. Con `true`, `targetDate` debe estar presente y válida; con `false` o ausente, el campo sigue siendo opcional.
+- Si el bloque `entityDate` está ausente, el campo conserva el comportamiento base sin rango y sin obligatoriedad.
 - El centinela `localToday` debe calcularse con componentes locales (`getFullYear`/`getMonth`/`getDate`), nunca con `toISOString()`.
 - La UI debe reflejar `min`, `max` y `label` en el formulario y actualizar `max` sin recargar cuando cambia el día local.
+
+## Contrato de `fieldRules` y `detailPolicy`
+
+Cuando un módulo necesita reglas por campo, declara un mapa opcional por tipo de registro. Las claves pueden ser campos base o personalizados y no requieren volver a declararlos en `customFields`:
+
+```js
+fieldRules: {
+  entity: {
+    code: { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false },
+    rut: { required: true, format: 'cl-rut', unique: true, normalize: 'cl-rut' },
+    canal_contacto: { required: true },
+    contacto_correo: { when: { key: 'canal_contacto', equals: 'correo' }, required: true, format: 'email', group: 'contactDetail' },
+  },
+},
+detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
+```
+
+- `hidden`: excluye el campo de formulario, lista, ficha y selectores; el valor almacenado se conserva.
+- `searchable: false`: excluye el campo de la búsqueda sin borrar su valor.
+- `generated`: `addEntity()` asigna el valor antes de validar, usando una secuencia con prefijo y relleno; el usuario nunca lo captura.
+- `required`, `unique`, `format`, `normalize`: se resuelven en la validación compartida, con los formatos registrados en `src/utils/field-formats.js`.
+- `when`: el campo solo existe para la vista y la validación cuando `{ key, equals }` coincide con el valor actual del registro.
+- `group`: dentro de un grupo, collectar y persistir solo el campo activo; los demás valores se descartan.
+- `detailPolicy.entity.blockWhenInvalid`: la ficha usa la misma validación que el guardado; si falla, muestra los errores y ofrece editar en lugar de los datos.
+- Sin `fieldRules` ni `detailPolicy`, el módulo base mantiene su comportamiento actual: todos los campos visibles y buscables, sin generación ni bloqueo de ficha.
 
 ## Expectativas de Extensibilidad
 

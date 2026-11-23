@@ -87,3 +87,53 @@
 **Justificación**: El generador actual produce `targetDate` en el futuro (3 a 60 días), incompatible con el nuevo perfil CRM. Se generarán fechas deterministas dentro del rango permitido para que las pruebas manuales no empiecen con registros inválidos.
 
 **Alternativas consideradas**: Mantener fechas futuras y dejar que la validación falle (mala experiencia inicial); eliminar `targetDate` del seed (pierde cobertura visual).
+
+## Decisiones de aclaración (sesión 2026-11-23, segunda tanda: perfil de clientes)
+
+### Decisión: Capa genérica `fieldRules` en la configuración del módulo
+
+- **Decisión**: Añadir un mapa `fieldRules: { entity, document }` claveado por nombre de campo, con banderas opcionales `hidden`, `searchable`, `required`, `generated`, `unique`, `format`, `when` y `group`. Las reglas se aplican tanto a campos base como personalizados y se resuelven en un único módulo compartido.
+- **Rationale**: Las reglas nuevas no son exclusivas de "Cliente": son mecanismos reutilizables (ocultar, generar, exigir, condicionar). Un mapa declarativo evita comparar etiquetas como `"Cliente"` en el código central, mantiene el principio de adaptación por configuración (FR-023, XR-001, XR-002) y da un único punto de verdad para formulario, lista, ficha, búsqueda y validación.
+- **Alternativas consideradas**: Condicionar por `labels.entity === "Cliente"` (frágil ante renombrados); escribir `if` específicos en cada componente (duplicación y alto riesgo de olvidar una vista); añadir una clave nueva por cada regla en lo más alto de la configuración (loaders distintos y más superficie de validación).
+
+### Decisión: Código generado, oculto, único y no buscable en el perfil de clientes
+
+- **Decisión**: `fieldRules.entity.code = { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false }`. La generación ocurre en `addEntity()` antes de validar; la unicidad reutiliza la normalización actual (recortar, minúsculas, sin espacios). La semilla deja de capturar `code` manualmente y usa el generador.
+- **Rationale**: Conserva la integridad de la clave de negocio (FR-001, FR-052) sin pedir al usuario un dato que ya no debe ver, y evita filtrarlo en listas, ficha, selector de entidades ni búsqueda (FR-051, FR-055).
+- **Alternativas consideradas**: Usar solo `entity_id` como identidad de negocio (cambia el contrato de almacenamiento y rompe la validación de unicidad existente); dejar el código visible (contradice FR-051); generarlo en la interfaz (dos fuentes de verdad y posible duplicado).
+
+### Decisión: Retirar `pedidos` y conservar ocultos los valores de los campos suprimidos
+
+- **Decisión**: Eliminar la declaración `pedidos` de `customFields.entity`; `category`, `description` y `code` pasan a `hidden: true` / `searchable: false` mediante `fieldRules`. Los valores ya persistidos no se migran ni se borran: `updateEntity()` sigue fusionando el registro existente primero (FR-054).
+- **Rationale**: Extiende a campos base el patrón ya aprobado para campos personalizados huérfanos (FR-040) y evita pérdida de información histórica sin exponer campos que el perfil ya no usa.
+- **Alternativas consideradas**: Borrar los valores al cargar (pérdida irreversible); migrar a un esquema nuevo (contradice XR-001); ocultar solo en el formulario (contradice FR-051).
+
+### Decisión: Validador `cl-rut` reutilizable y unicidad normalizada
+
+- **Decisión**: Extraer las funciones de cálculo de dígito verificador y formato que hoy viven en `src/seed.js` a un registro de formatos `src/utils/field-formats.js` (`cl-rut`, `phone`, `email`, `nonEmpty`). La configuración declara `format: 'cl-rut'`, `unique: true` y `normalize: 'cl-rut'`; la comparación elimina puntos, guion y espacios y normaliza la `K`.
+- **Rationale**: El proyecto ya contiene la lógica del dígito verificador en la semilla; centralizarla evita duplicarla y mantiene la validación determinista y sin dependencias. La normalización evita duplicados por formato de escritura (FR-057).
+- **Alternativas consideradas**: Importar desde `seed.js` en storage (acoplamiento hacia datos de ejemplo); añadir una librería de RUT (huella innecesaria); validar solo que no esté vacío (no cumple FR-057).
+
+### Decisión: Fecha de nacimiento obligatoria sin romper perfiles existentes
+
+- **Decisión**: Ampliar la regla `entityDate` con `required: true` en el perfil de clientes y exponerla en la resolución de `{ label, min, max, required }`. La validación en `validateEntityData()` exige `targetDate` cuando la regla esté activa y marca el campo como obligatorio; el campo del formulario hereda `required` de la misma resolución.
+- **Rationale**: Mantiene la compatibilidad con perfiles sin `entityDate` (campo opcional, HU10) y concentra la obligatoriedad en la misma regla que ya controla etiqueta y rango (FR-047, FR-056).
+- **Alternativas consideradas**: Hacer obligatoria `targetDate` en la capa base (rompe otros módulos); duplicar la regla en `fieldRules` y en `entityDate` (dos fuentes de verdad).
+
+### Decisión: Canal de Contacto sin preselección y campo condicional por grupo exclusivo
+
+- **Decisión**: `canal_contacto` declara `required: true` y mantiene la opción vacía «Seleccionar» sin valor por defecto (FR-059). Cuatro campos personalizados (`contacto_telefono`, `contacto_correo`, `contacto_lugar`, `contacto_whatsapp`) declaran `when: { key: 'canal_contacto', equals: <opción> }`, `required: true`, `format` (`phone`, `email`, `nonEmpty`) y `group: 'contactDetail'`. Solo se renderiza, valida, collecta y persiste el miembro activo del grupo; al cambiar de canal se descartan los valores de los demás (FR-060, FR-061).
+- **Rationale**: La condición y el formato son metadata genérica reutilizable; el grupo exclusivo evita guardar datos de canales no elegidos y resuelve el problema de valores huérfanos al cambiar de selección.
+- **Alternativas consideradas**: Un único campo con etiqueta dinámica (mezcla formatos incompatibles y dificulta la validación); preseleccionar la primera opción (registra canales no decididos, contrario a FR-059); conservar los cuatro valores (contradice FR-060).
+
+### Decisión: Bloqueo de ficha para registros heredados incompletos
+
+- **Decisión**: `detailPolicy.entity = { blockWhenInvalid: true, offerEditAction: true }`. Una función pura de "preparación" reutiliza el mismo validador declarativo para decidir si la ficha puede abrirse; si faltan campos obligatorios o el RUT es inválido, la vista muestra los campos pendientes y ofrece la acción de editar. `updateEntity()` ya valida el objeto fusionado, por lo que el guardado sigue exigiendo la corrección completa (FR-058).
+- **Rationale**: Cumple la elección del usuario de bloquear la consulta sin dejar los registros inaccesibles: la edición normal es la vía de corrección y el desbloqueo ocurre al guardar válidamente. No se aplica a fechas históricas fuera de rango, que se rigen por FR-050.
+- **Alternativas consideradas**: Bloquear también la edición (imposibilita corregir, descartado en la desambiguación); limpieza automática de registros (pérdida de datos); permitir la ficha con aviso (no cumple FR-058).
+
+### Decisión: La búsqueda deriva sus campos de las reglas visibles
+
+- **Decisión**: `matchesQuery()` construye el "haystack" solo con campos base y personalizados cuyo `searchable` no sea `false`; `renderSearchBarHtml()` toma el texto de ayuda de la configuración en lugar de texto fijo que menciona código/categoría.
+- **Rationale**: Evita que un dato oculto influya en resultados que el usuario no puede explicar (FR-055) y mantiene el comportamiento base intacto cuando no hay reglas (todos los campos siguen siendo buscables).
+- **Alternativas consideradas**: Mantener todos los campos en la búsqueda (contradice FR-055); quitar código/categoría del buscador global (rompería otros módulos).
