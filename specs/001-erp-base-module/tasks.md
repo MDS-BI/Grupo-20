@@ -1,726 +1,622 @@
 ---
-description: "Task list for feature implementation"
+description: "Lista de tareas para la implementación del módulo base ERP"
 ---
 
 # Tasks: Módulo Base de Software de Planificación de Recursos Empresariales (ERP)
 
-**Input**: Design documents from `/specs/001-erp-base-module/`
+**Entrada**: Documentos de diseño de `/specs/001-erp-base-module/`
 
-**Prerequisites**: `plan.md` (required), `spec.md` (required for user stories), `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
+**Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`, `contracts/entity-storage.md`, `contracts/marketing.md`, `quickstart.md`
 
-**Tests**: Incluidas por el Principio II de la Constitución: toda lógica de negocio y comportamiento visible debe tener cobertura automatizada. Las tareas Ampliar/Crear pruebas deben escribirse primero y fallar antes de la implementación correspondiente.
+**Pruebas**: Se incluyen pruebas automatizadas por `plan.md` y `quickstart.md` con Vitest/jsdom (`npm test`, `npm run lint`); cada suite de prueba se escribe antes de la implementación correspondiente y debe fallar primero.
 
-**Organization**: Las tareas se agrupan por historia de usuario. Las historias ya completadas en el baseline (US1, US3, US5, US8, US9, US11, US12, US14, US15 y US6) no se duplican; solo se enumeran las tareas pendientes y las nuevas de las sesiones 2026-11-16 y 2026-11-23. Las fases 1�?"7 y 7b cubren la primera tanda y están completadas; las fases 8�?"13 cubren los FR-051..FR-061 del perfil de clientes y están completadas; las fases 14�?"17 cubren los FR-062..FR-067 y están completadas; las fases 18�?"23 cubren el apartado de Marketing (FR-068..FR-075 y HU16) y el ajuste de navegación (HU14/HU4), y la fase 24 cierra la regresión final.
+**Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15), P2 (US2, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21) y P6 (US6). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable.
 
-## Format: `[ID] [P?] [Story] Description`
+## Formato: `[ID] [P?] [Historia] Descripción`
 
-- **[P]**: Puede ejecutarse en paralelo (archivos distintos, sin dependencias pendientes)
-- **[Story]**: Historia de usuario a la que pertenece la tarea (US1, US2, ...)
-- Cada tarea incluye la ruta de archivo exacta
+- El checkbox es siempre `- [ ]`; los ID son secuenciales T001, T002, ...
+- **[P]**: la tarea toca archivos distintos y no depende de tareas incompletas.
+- **[Historia]**: obligatorio solo en las fases de historia de usuario (`[US1]` ... `[US21]`); ausente en Setup, Foundational y Polish.
+- La descripción nombra siempre la ruta de archivo concreta y el resultado esperado.
 
-## Path Conventions
+## Convenciones de rutas
 
-- Proyecto único: `index.html`, `src/`, `tests/` en la raíz del repositorio
-- Utilidades compartidas en `src/utils/`; componentes en `src/components/`
-- Pruebas unitarias en `tests/unit/`; integración en `tests/integration/`
-
----
-
-## Phase 1: Setup (Shared Infrastructure)
-
-**Purpose**: Confirmar que el entorno existente sigue siendo suficiente para la nueva incrementación; no se añaden dependencias.
-
-- [X] T001 [P] Verificar los scripts `test`, `lint` y `build` y el entorno jsdom existentes en `package.json` y `vitest.config.mjs`, añadiendo solo lo que falte para ejecutar las nuevas pruebas
-
-**Checkpoint**: Entorno listo; se pueden escribir pruebas que fallan.
+- Proyecto único: `index.html`, `package.json`, `vitest.config.mjs`, `src/` y `tests/` en la raíz del repositorio.
+- Utilidades puras en `src/utils/`; componentes de interfaz en `src/components/`; pruebas unitarias en `tests/unit/` y de integración en `tests/integration/`.
+- Sin backend y sin dependencias nuevas: persistencia en `localStorage` bajo `erp_entities`, `erp_documents` y `erp_marketing_config` para las definiciones editables de Marketing; los indicadores derivados no se persisten.
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Phase 1: Setup (infraestructura compartida)
 
-**Purpose**: Contrato `entityDate`, utilidad de fecha local y validación de almacenamiento. BLOCKS las fases US7, US10 y US2.
+**Propósito**: Confirmar el entorno Vite + JavaScript vanilla existente; no se añaden librerías.
 
-**�s�️ CRITICAL**: Ninguna tarea de historia de usuario puede comenzar hasta completar esta fase.
+- [X] T001 [P] Verificar en `package.json` que `npm test` ejecuta `vitest run`, `npm run lint` ejecuta `eslint .` y no aparecen dependencias nuevas.
+- [X] T002 [P] Verificar en `vitest.config.mjs` que `environment: 'jsdom'`, `setupFiles` y `fileParallelism: false` soportan las suites de DOM planeadas.
+- [X] T003 [P] Verificar en `index.html` que el único punto de entrada monta `#app` y carga `src/main.js`, sin backend ni scripts externos.
+- [X] T004 [P] Verificar en `tests/setup/test-setup.js` que `localStorage` y el DOM se reinician entre pruebas y que `window.confirm` puede simularse.
 
-- [X] T002 [P] Crear `tests/unit/entity-date.test.js` con casos para `localTodayISO()` con fecha local fija (no UTC), `resolveEntityDateRule()` sin `entityDate`, con `min: "1910-01-01"` y con `max: "localToday"`, incluyendo `1910-01-01`, `1909-12-31`, hoy y mañana
-- [X] T003 [P] Ampliar `tests/unit/module-config.test.js` para exigir que `entityDate` acepte `{ label, min, max }`, rechace `label` vacío, `min` inválido y `max` distinto de una fecha ISO válida o `"localToday"`, y haga fallback a `DEFAULT_CONFIG` con aviso
-- [X] T004 [P] Implementar `src/utils/entity-date.js` exportando `LOCAL_TODAY`, `localTodayISO(now)`, `resolveEntityDateRule(config, now)` y `watchLocalDayChange(onChange, options)` con programación hasta la siguiente medianoche local y retorno de función de cancelación
-- [X] T005 [P] Ampliar `src/module-config.js` con `entityDate: null` en `DEFAULT_CONFIG` y validación/normalización de `entityDate` en `validateConfig`, `loadModuleConfig` y `normalizeConfig` según el contrato de `contracts/entity-storage.md`
-- [X] T006 [P] Ampliar `tests/unit/storage.test.js` con casos de `targetDate`: acepta `1910-01-01` y la fecha local de hoy; rechaza `1909-12-31`, mañana, `1910-02-29` y `2026-02-30`; verifica que `updateEntity()` exige corregir un valor histórico fuera de rango antes de guardar
-- [X] T007 Integrar la regla resuelta en `src/storage.js`: `validateEntityData()` debe usar `resolveEntityDateRule(getConfig())`, validar calendario con `isValidDate()`, comparar `min <= targetDate <= max` sobre cadenas ISO y mostrar mensajes con la etiqueta configurada; `updateEntity()` debe validar el objeto fusionado
-
-**Checkpoint**: La regla existe, se valida y fallan las pruebas hasta que la implementación esté lista; las historias pueden comenzar.
+**Punto de control**: Entorno listo para escribir pruebas que fallan antes de la implementación.
 
 ---
 
-## Phase 3: User Story 7 - Reetiquetar pantallas desde la configuración (Priority: P1)
+## Phase 2: Foundational (prerrequisitos bloqueantes)
 
-**Goal**: "Fecha de nacimiento" sustituye a "Fecha objetivo" en todos los lugares visibles del perfil de clientes, sin afectar a otros perfiles.
+**Propósito**: Contratos compartidos de almacenamiento, configuración, formatos, reglas de campo y sanitización. **CRÍTICO**: ninguna historia de usuario puede comenzar hasta completar esta fase.
 
-**Independent Test**: Con `entityDate.label = "Fecha de nacimiento"`, el formulario, la lista, la ficha, la búsqueda y los mensajes de error muestran ese texto; al quitar `entityDate`, vuelve "Fecha objetivo".
+- [X] T005 [P] Ampliar `tests/unit/storage.test.js` con casos de `loadEntities()`, `saveEntities()`, `addEntity()`, `updateEntity()`, `deleteEntity()`, `loadDocuments()` y `addDocument()` que exijan persistencia en `erp_entities`/`erp_documents` y marcas de tiempo ISO.
+- [X] T006 Implementar en `src/storage.js` las operaciones base de lectura/escritura, `ValidationError`, `generateEntityId()` y la conservación del orden de listas y de las marcas `createdAt`/`updatedAt`.
+- [X] T007 [P] Ampliar `tests/unit/module-config.test.js` para exigir que `validateConfig()`, `loadModuleConfig()` y `normalizeConfig()` acepten un perfil válido y devuelvan `DEFAULT_CONFIG` con una lista de errores ante configuración inválida o conflictiva.
+- [X] T008 Implementar en `src/module-config.js` `DEFAULT_CONFIG`, `validateConfig()`, `loadModuleConfig()`, `normalizeConfig()`, `getLabel()`, `setActiveConfig()`, `getConfig()` y `sanitizeAccentColor()`, sin tocar los componentes.
+- [X] T009 [P] Ampliar `tests/unit/field-formats.test.js` con casos de `cl-rut` (`12345678-9` y `12.345.678-9`), `phone`, `email`, `nonEmpty` y `normalizeClRut()` eliminando puntos, guion y espacios.
+- [X] T010 Implementar en `src/utils/field-formats.js` `FORMAT_NAMES`, `hasFormat()`, `rutDigit()`, `normalizeClRut()`, `formatRut()`, `isValidRut()`, `isValidPhone()`, `isValidEmail()`, `isNonEmpty()` y `isValidFormat()` sin dependencias nuevas.
+- [X] T011 [P] Ampliar `tests/unit/field-rules.test.js` con casos de `hidden`, `searchable`, `required`, `format`, `normalize`, `when`, `group`, `order`, `placeholder` y opciones `{ value, label }` sobre campos base y personalizados.
+- [X] T012 Implementar en `src/utils/field-rules.js` `resolveFieldRules()`, `isConditionActive()`, `isFieldSearchable()`, `isFieldPotentiallySearchable()` y `pruneInactiveGroupValues()` con comportamiento base intacto cuando no hay reglas.
+- [X] T013 [P] Ampliar `tests/unit/sanitize.test.js` con entradas que contengan `<script>`, comillas en atributos y enlaces `javascript:` para exigir escape en texto y atributos.
+- [X] T014 Implementar en `src/utils/sanitize.js` `escapeHtml()` y `sanitizeText()` para todo contenido persistido que se renderice en el DOM.
 
-### Tests for User Story 7
-
-- [X] T008 [P] [US7] Ampliar `tests/integration/relabeling.test.js` para verificar la etiqueta "Fecha de nacimiento" en `#entity-form`, `src/components/entity-list.js`, `src/components/entity-detail.js` y el placeholder de `src/components/search-bar.js`, y su reversión al perfil base
-
-### Implementation for User Story 7
-
-- [X] T009 [US7] Sustituir el texto fijo "Fecha objetivo"/"Objetivo" por la etiqueta resuelta en `src/components/entity-form.js`, `src/components/entity-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js`, usando `resolveEntityDateRule(getConfig())`
-
-**Checkpoint**: El renombrado es completo y no rompe la terminología de otros módulos.
-
----
-
-## Phase 4: User Story 10 - Registrar una fecha objetivo / fecha de nacimiento (Priority: P2)
-
-**Goal**: Restringir el campo a fechas reales del calendario entre 1910-01-01 y la fecha local actual, reflejar `min`/`max` en la interfaz y actualizar el límite al cambiar de día sin recargar.
-
-**Independent Test**: El selector rechaza fechas imposibles y fuera de rango; con reloj falso, al cruzar la medianoche local el atributo `max` y el texto de ayuda cambian sin perder el borrador; el seed no genera fechas futuras.
-
-### Tests for User Story 10
-
-- [X] T010 [P] [US10] Ampliar `tests/unit/entity-date.test.js` con relojes falsos para comprobar que `watchLocalDayChange()` dispara una vez al cruzar la medianoche local y se reprograma, y que la cancelación detiene el temporizador
-- [X] T011 [P] [US10] Crear `tests/integration/entity-birthdate.test.js` para verificar `min="1910-01-01"`, `max` igual a la fecha local, mensaje de rango, rechazo de valores fuera de rango y actualización de `max`/texto de ayuda sin recargar ni borrar el borrador
-
-### Implementation for User Story 10
-
-- [X] T012 [US10] Añadir soporte para `def.min`, `def.max` y `def.hint` en `renderFieldHtml()` de `src/components/form-fields.js`, emitiendo atributos escapados y un `<p class="field-hint" data-role="date-range">`
-- [X] T013 [US10] Conectar `resolveEntityDateRule(getConfig())` a la definición de `targetDate` en `getEntityFieldDefs()` de `src/components/entity-form.js`, estableciendo `label`, `min`, `max` y `hint`
-- [X] T014 [US10] Suscribir `watchLocalDayChange()` en `initApp()` de `src/app.js`, actualizar `min`, `max` y el texto `data-role="date-range"` del formulario abierto sin re-renderizar, y exponer `destroy()` para cancelar el temporizador
-- [X] T015 [US10] Ajustar `src/seed.js` y `scripts/seed.mjs` para generar `targetDate` como fecha de nacimiento pasada dentro de 1910-01-01..hoy, y actualizar `tests/unit/seed.test.js` para dejar de esperar fechas futuras
-
-**Checkpoint**: La fecha de nacimiento es válida, visible y dinámica de extremo a extremo.
+**Punto de control**: Base compartida lista; las historias pueden implementarse de forma independiente.
 
 ---
 
-## Phase 5: User Story 2 - Registrar clientes y contactos comerciales (Priority: P2)
+## Phase 3: US1 - Definir datos compatibles con el ERP (Prioridad: P1)
 
-**Goal**: Activar la regla únicamente en el perfil CRM y conservar los valores históricos sin borrarlos, exigiéndolos corregir al editar.
+**Objetivo**: Modelo de `Entidad` y `Documento` con identificadores, código interno único y vínculo referencial verificable.
 
-**Independent Test**: Un cliente con fecha antigua fuera de rango se muestra igual; al editarlo, guardar otros campos sigue bloqueado hasta corregir la fecha. Un perfil sin `entityDate` sigue aceptando fechas futuras.
+**Prueba independiente**: Registrar un cliente de prueba y una interacción asociada; el sistema guarda la relación, asigna un código interno único sin solicitarlo y rechaza una interacción con `entity_id` inexistente.
 
-### Tests for User Story 2
+### Pruebas de US1
 
-- [X] T016 [P] [US2] Crear `tests/integration/client-birthdate-legacy.test.js` que siembre un cliente con `targetDate` fuera de rango, verifique que se muestra en lista y ficha, y exija corrección antes de guardar una edición
+- [X] T015 [P] [US1] Ampliar `tests/unit/storage.test.js` con `addEntity()` y `fieldRules.entity.code.generated` activo: genera `CLI-001`, rechaza códigos repetidos aunque difieran en mayúsculas o espacios, y asigna `id` y `entity_id` únicos.
+- [X] T016 [P] [US1] Crear `tests/integration/entity-relations.test.js` para registrar un cliente y una interacción, recargar `erp_entities`/`erp_documents` y comprobar que el documento conserva el `entity_id` correcto.
 
-### Implementation for User Story 2
+### Implementación de US1
 
-- [X] T017 [US2] Declarar `entityDate: { label: "Fecha de nacimiento", min: "1910-01-01", max: "localToday" }` en `MODULE_CONFIG` de `src/module-config.js`, sin añadir migración ni limpieza en `src/storage.js`
+- [X] T017 [US1] Implementar en `src/storage.js` `generateBusinessCode()` y la comprobación de unicidad de `code` en `validateEntityData()` usando recorte, minúsculas y eliminación de espacios.
+- [X] T018 [US1] Implementar en `src/storage.js` la validación de `entity_id` en `validateDocumentData()` con `errors.entity_id` claro y `countDocumentsForEntity()` para devolver el número de documentos vinculados.
 
-**Checkpoint**: El alcance queda limitado al perfil de clientes y no se pierden datos históricos.
-
----
-
-## Phase 6: User Story 13 - Configurar el ciclo de vida de estados de documentos (Priority: P2)
-
-**Goal**: Cerrar la tarea pendiente de la sesión 2026-11-16: estados "pendientes" marcados explícitamente en la configuración.
-
-**Independent Test**: Con ciclo de vida, `computeSummary()` y el resumen cuentan solo los estados marcados como pendientes; sin ciclo de vida, se mantiene la coincidencia normalizada con `pendiente`.
-
-### Tests for User Story 13
-
-- [X] T018 [P] [US13] Ampliar `tests/unit/module-config.test.js` y `tests/unit/storage.test.js` para validar `pendingStates` dentro de `statusLifecycle` y su uso exclusivo en `computeSummary()`
-- [X] T019 [P] [US13] Ampliar `tests/integration/commercial-summary.test.js` para verificar el resumen con estados marcados y el fallback a `pendiente` sin ciclo de vida
-
-### Implementation for User Story 13
-
-- [X] T020 [US13] Implementar `pendingStates` en `validateConfig`/`normalizeConfig` de `src/module-config.js` y usarlo en `computeSummary()` de `src/storage.js` (FR-044, SC-011)
-
-**Checkpoint**: Los indicadores deducen "pendiente" de la configuración, no de suposiciones de texto.
+**Punto de control**: La relación entidad-documento y la identidad única son verificables de forma independiente.
 
 ---
 
-## Phase 7: User Story 4 - Gestionar entidades y documentos en una pantalla dedicada (Priority: P1)
+## Phase 4: US3 - Consultar antecedentes del cliente (Prioridad: P1)
 
-**Goal**: Cerrar la tarea pendiente de la sesión 2026-11-16: confirmación antes de navegar con cambios sin guardar.
+**Objetivo**: Buscar una entidad, abrir su ficha y revisar un historial cronológico consistente con los registros y sus ediciones.
 
-**Independent Test**: Al cambiar de vista o módulo con un formulario modificado, aparece confirmación; solo se navega si se confirma descartar, y quedarse conserva el borrador.
+**Prueba independiente**: Buscar un cliente, abrir su ficha desde los resultados y comprobar que muestra sus datos y documentos ordenados por fecha, reflejando las ediciones hechas en gestión.
 
-### Tests for User Story 4
+### Pruebas de US3
 
-- [X] T021 [P] [US4] Crear `tests/integration/unsaved-navigation.test.js` para cubrir barra lateral, acciones rápidas y cambio de pestaña con borradores de `src/components/entity-form.js` y `src/components/document-form.js`
+- [X] T019 [P] [US3] Ampliar `tests/integration/entity-detail.test.js` para buscar por nombre, abrir la ficha desde `src/components/entity-list.js` y verificar historial ordenado por fecha y estado vacío sin coincidencias.
+- [X] T020 [P] [US3] Ampliar `tests/integration/client-history.test.js` para editar una interacción en gestión y confirmar que la ficha del cliente muestra el cambio sin recarga.
 
-### Implementation for User Story 4
+### Implementación de US3
 
-- [X] T022 [US4] Implementar seguimiento de estado "dirty" y confirmación antes de navegar en `src/app.js`, `src/components/entity-form.js` y `src/components/document-form.js` (FR-022)
+- [X] T021 [US3] Implementar `getEntityDocuments()` en `src/storage.js` filtrando por `entity_id` y ordenando por `startDate || createdAt` de forma estable.
+- [X] T022 [US3] Implementar `renderEntityDetailHtml()` en `src/components/entity-detail.js` con datos de la entidad, historial ordenado, estado vacío y acción «Editar».
+- [X] T023 [US3] Añadir en `src/components/entity-list.js` el botón «Ver ficha» con `data-action="view-entity"` y `data-entity-id`, conectado en `src/app.js` a `state.detailEntityId`.
 
-**Checkpoint**: La navegación nunca descarta cambios sin consentimiento explícito.
-
----
-
-## Phase 7b: Cierre de la primera tanda (completado)
-
-**Purpose**: Regresión, documentación y calidad de las historias de la primera tanda; se mantiene aquí para conservar el orden secuencial de IDs.
-
-- [X] T023 [P] Verificar y ajustar `README.md` y `specs/001-erp-base-module/quickstart.md` para documentar `entityDate`, el rango 1910-01-01..hoy, la fecha local y el comportamiento de valores históricos
-- [X] T024 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/`
-- [X] T025 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/`
-- [X] T026 Ejecutar los escenarios de `specs/001-erp-base-module/quickstart.md` de extremo a extremo, incluida la sección "Validación del Perfil de Clientes"
+**Punto de control**: La ficha consulta los mismos registros de gestión y presenta el historial cronológicamente.
 
 ---
 
-## Phase 8: Foundational - Reglas de campo del perfil cliente (segunda tanda 2026-11-23)
+## Phase 5: US4 - Gestionar entidades y documentos en una pantalla dedicada (Prioridad: P1)
 
-**Purpose**: Contrato de reglas de campo, validadores compartidos y resolución de preparación de ficha. BLOCKS las fases US8, US7, US2, US3, US9 y US12.
+**Objetivo**: Una única pantalla de gestión, alcanzable solo desde el panel, con pestañas de entidades y documentos y CRUD completo sin mostrar la lista de entidades.
 
-**�s�️ CRITICAL**: Ninguna tarea de las fases 9�?"13 puede comenzar hasta completar esta fase.
+**Prueba independiente**: Entrar por una acción rápida del panel, alternar pestañas, crear/editar/eliminar una entidad y un documento, confirmar la cascada con recuento y volver al panel.
 
-- [X] T027 [P] Crear `tests/unit/field-formats.test.js` con casos válidos e inválidos para `cl-rut` (dígito verificador, normalización de puntos/guion y unicidad delegada), `phone`, `email` y `nonEmpty`, siguiendo `contracts/entity-storage.md`
-- [X] T028 [P] Crear `tests/unit/field-rules.test.js` para `resolveFieldRules(config, entityType)` con herencia de reglas globales por entidad, `isFieldVisible()`, `isFieldSearchable()`, `isConditionActive()` y `getReadinessErrors()` ante clientes heredados incompletos
-- [X] T029 [P] Implementar `src/utils/field-formats.js` exportando los validadores `cl-rut`, `phone`, `email` y `nonEmpty`, reutilizando la lógica de RUT de `src/seed.js` y devolviendo booleanos sin efectos secundarios
-- [X] T030 Implementar `src/utils/field-rules.js` con `resolveFieldRules()`, `isFieldVisible()`, `isFieldSearchable()`, `isConditionActive()` y `getReadinessErrors()`, derivando `required`, `hidden`, `searchable`, `generated`, `unique`, `format`, `normalize`, `when` y `group` de `fieldRules`
-- [X] T031 [P] Ampliar `tests/unit/module-config.test.js` para exigir `fieldRules`, `detailPolicy` y `entityDate.required` en `DEFAULT_CONFIG`/`MODULE_CONFIG`, rechazar reglas con `format` desconocido y verificar fallback a `DEFAULT_CONFIG` con aviso
-- [X] T032 [P] Ampliar `tests/unit/storage.test.js` con casos de `addEntity()`/`updateEntity()` para código generado único y oculto, RUT inválido/duplicado, fecha de nacimiento obligatoria, campos condicionales por canal y exclusión de `code`, `category` y `description` de la búsqueda
-- [X] T033 Ampliar `src/module-config.js` con `fieldRules`, `detailPolicy`, `entityDate.required` y los campos condicionales del perfil cliente en `DEFAULT_CONFIG`, `validateConfig()`, `loadModuleConfig()` y `normalizeConfig()`, eliminando `pedidos` de la configuración
-- [X] T034 Integrar `src/utils/field-rules.js` y `src/utils/field-formats.js` en `src/storage.js` para validar requeridos, formatos, unicidad, grupo activo y reglas `generated`, conservando los valores heredados ocultos sin borrarlos
+### Pruebas de US4
 
-**Checkpoint**: Las reglas son configurables, se validan y las pruebas fallan hasta completar la implementación; las historias pueden comenzar.
+- [X] T024 [P] [US4] Ampliar `tests/integration/manage-screen.test.js` para comprobar que las acciones rápidas abren la gestión, que la lista de entidades no aparece en `#view-root` y que la barra lateral no ofrece esos apartados.
+- [X] T025 [P] [US4] Ampliar `tests/integration/manage-document.test.js` para crear, editar y eliminar un documento vinculado a una entidad desde la pestaña de documentos.
+- [X] T026 [P] [US4] Ampliar `tests/integration/edit-delete-entity.test.js` para confirmar que eliminar una entidad pide confirmación, indica cuántos documentos se borrarán y elimina ambos registros.
 
----
+### Implementación de US4
 
-## Phase 9: User Story 8 - Declarar campos y reglas del perfil de clientes (Priority: P1)
+- [X] T027 [US4] Implementar `renderManageView()`, `activeNavKey()` y los casos `manage-tab`, `quick-manage` y `quick-new-*` en `src/app.js`, soportando enlaces profundos `?view=manage-entity` y `?view=manage-document`.
+- [X] T028 [US4] Implementar `renderDocumentFormHtml()`, `collectDocumentFormData()`, `buildDocumentFormBaseline()` e `isDocumentFormDirty()` en `src/components/document-form.js` con selector de entidad y campos base/personalizados.
+- [X] T029 [US4] Implementar `onDeleteEntity()` en `src/app.js` usando `countDocumentsForEntity()` de `src/storage.js` para el mensaje de confirmación con recuento y la eliminación en cascada.
 
-**Goal**: La configuración del perfil cliente declara campos obligatorios, ocultos, generados, únicos y condicionales sin endurecer reglas en la interfaz.
-
-**Independent Test**: Con `MODULE_CONFIG` cargado, `resolveFieldRules()` expone `pedidos` ausente, `code` generado/oculto/no buscable y los cuatro canales con su grupo de contacto; el seed genera datos coherentes.
-
-### Tests for User Story 8
-
-- [X] T035 [P] [US8] Crear `tests/integration/client-field-rules.test.js` para verificar que la configuración declara RUT, fecha de nacimiento y canal como obligatorios, `pedidos` ausente, campos ocultos y campos condicionales por canal
-
-### Implementation for User Story 8
-
-- [X] T036 [US8] Aplicar en `src/module-config.js` la declaración final de `fieldRules.entity`, `detailPolicy.entity` y `entityDate.required: true` del perfil cliente, con `code` generado/único/oculto/no buscable y `category`/`description` ocultos/no buscables (depende de T033)
-- [X] T037 [US8] Actualizar `src/seed.js` y `scripts/seed.mjs` para no generar `pedidos`, producir RUT chileno válido y único, fecha de nacimiento pasada y datos de contacto coherentes con el canal, ajustando `tests/unit/seed.test.js`
-
-**Checkpoint**: La declaración de campos del perfil cliente está completa y es verificable sin tocar la interfaz.
+**Punto de control**: Gestión y navegación de vuelta al panel funcionan sin pérdida de registros.
 
 ---
 
-## Phase 10: User Story 7 - Ocultar campos retirados en todas las vistas (Priority: P1)
+## Phase 6: US5 - Definir un perfil de configuración del módulo (Prioridad: P1)
 
-**Goal**: `Código`, `Categoría`, `Descripción` y `Nº de pedidos` dejan de mostrarse en formulario, lista, ficha y selector, sin eliminar valores guardados.
+**Objetivo**: Adaptar identidad, terminología, campos, ciclo de vida y tema desde un único archivo sin modificar el código central.
 
-**Independent Test**: Con clientes sembrados que tienen valores en esos campos, ninguna vista los renderiza y el almacenamiento sigue conservándolos.
+**Prueba independiente**: Cargar un perfil de Ventas y ver el nombre y términos configurados en panel y marco; al quitar la configuración, volver a Entidad/Documento sin errores.
 
-### Tests for User Story 7
+### Pruebas de US5
 
-- [X] T038 [P] [US7] Ampliar `tests/integration/relabeling.test.js` para comprobar que `Código`, `Categoría`, `Descripción` y `Nº de pedidos` no aparecen en `#entity-form`, lista, ficha ni selector de campos
+- [X] T030 [P] [US5] Ampliar `tests/unit/module-config.test.js` con un perfil que declare `moduleName`, `labels`, `customFields`, `statusLifecycle` y `theme.accentColor`, y con los casos de ausencia y de configuración conflictiva.
+- [X] T031 [P] [US5] Ampliar `tests/integration/config-warning.test.js` para exigir el banner visible `#config-warning` y que el panel, la búsqueda y la gestión sigan utilizables con `DEFAULT_CONFIG`.
 
-### Implementation for User Story 7
+### Implementación de US5
 
-- [X] T039 [US7] Ocultar los campos retirados en `getEntityFieldDefs()` de `src/components/entity-form.js`, `renderEntityListHtml()` de `src/components/entity-list.js`, `renderEntityDetailHtml()` de `src/components/entity-detail.js` y `customFieldKeys()` de `src/app.js`, manteniendo los valores en almacenamiento
+- [X] T032 [US5] Completar en `src/module-config.js` la declaración de `MODULE_CONFIG`, `RESERVED_ENTITY_KEYS`, `RESERVED_DOCUMENT_KEYS` y la validación de choques de claves y tipos de campo desconocidos.
+- [X] T033 [US5] Conectar `loadModuleConfig()`, `setActiveConfig()`, `document.title` y el banner de advertencia en `initApp()` de `src/app.js`.
 
-**Checkpoint**: La retirada visual es completa y no destruye datos históricos.
-
----
-
-## Phase 11: User Story 2 - Registrar clientes con campos obligatorios y código generado (Priority: P2)
-
-**Goal**: El alta de clientes exige fecha de nacimiento, RUT chileno válido y único y canal de contacto, muestra un código generado solo internamente y guarda únicamente el dato del canal elegido.
-
-**Independent Test**: Sin completar los tres obligatorios no se puede guardar; al elegir cada canal aparece su casilla validada; el registro creado recibe un `code` único que no aparece en la interfaz.
-
-### Tests for User Story 2
-
-- [X] T040 [P] [US2] Ampliar `tests/integration/register-client.test.js` para exigir fecha de nacimiento, RUT válido y único, canal seleccionado y código generado no editable en el alta de clientes
-- [X] T041 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para verificar que `Teléfono`, `Correo electrónico`, `Lugar/Enlace de reunión` y `WhatsApp` son obligatorios y validados solo cuando su canal está activo, guardándose únicamente ese valor
-
-### Implementation for User Story 2
-
-- [X] T042 [US2] Hacer obligatoria la fecha de nacimiento en `resolveEntityDateRule()` de `src/utils/entity-date.js` y marcar `required` en la definición de `targetDate` de `getEntityFieldDefs()` en `src/components/entity-form.js`
-- [X] T043 [US2] Generar el `code` único en `addEntity()` de `src/storage.js` usando la regla `generated` y conservarlo en el registro sin incluirlo en formularios, listas ni fichas
-- [X] T044 [US2] Renderizar la casilla condicional del canal en `renderFieldHtml()` de `src/components/form-fields.js` y reaccionar al cambio de canal en `handleChange()` de `src/app.js` sin perder el borrador ni valores de otros canales
-
-**Checkpoint**: El registro de clientes es válido, completo y no expone el código interno.
+**Punto de control**: El perfil se carga, retrocede con aviso y no bloquea la aplicación.
 
 ---
 
-## Phase 12: User Story 3 - Consultar clientes heredados incompletos (Priority: P1)
+## Phase 7: US7 - Reetiquetar pantallas desde la configuración (Prioridad: P1)
 
-**Goal**: Los clientes con fecha/RUT inválidos o incompletos tienen la ficha bloqueada pero pueden editarse para completar los datos; la ficha nunca muestra campos retirados.
+**Objetivo**: Toda etiqueta visible derive de `labels` y de la regla de fecha activa, sin filtrar términos genéricos.
 
-**Independent Test**: Un cliente heredado se muestra en lista, su ficha muestra aviso y botón de edición en lugar de la consulta normal; tras guardar valores válidos, la ficha se desbloquea.
+**Prueba independiente**: Mapear Entidad→Cliente y Documento→Pedido de Venta; verificar pestañas, botones, encabezados, mensajes de vacío y «Fecha de nacimiento» en todas las pantallas.
 
-### Tests for User Story 3
+### Pruebas de US7
 
-- [X] T045 [P] [US3] Ampliar `tests/integration/client-birthdate-legacy.test.js` para cubrir clientes heredados con fecha/RUT inválidos: ficha bloqueada, acción de edición disponible y desbloqueo tras guardar valores válidos
-- [X] T046 [P] [US3] Ampliar `tests/integration/entity-detail.test.js` y `tests/integration/client-history.test.js` para verificar que la ficha no muestra campos ocultos pero conserva el historial de valores heredados
+- [X] T034 [P] [US7] Ampliar `tests/integration/relabeling.test.js` para comparar términos configurados frente a `DEFAULT_CONFIG` en `src/components/shell.js`, `src/components/dashboard.js`, `src/components/entity-form.js`, `src/components/document-form.js`, `src/components/entity-list.js`, `src/components/document-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js`.
 
-### Implementation for User Story 3
+### Implementación de US7
 
-- [X] T047 [US3] Implementar la comprobación de preparación con `detailPolicy.entity` en `renderDetailView()` de `src/app.js` y `renderEntityDetailHtml()` de `src/components/entity-detail.js`, ofreciendo botón de edición correctora y bloqueando la consulta normal
+- [X] T035 [US7] Sustituir texto fijo por `getLabel(config, clave)` en `src/components/shell.js`, `src/components/dashboard.js`, `src/components/entity-form.js`, `src/components/document-form.js`, `src/components/entity-list.js`, `src/components/document-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js`.
+- [X] T036 [US7] Usar `resolveEntityDateRule(getConfig()).label` en `src/components/entity-form.js`, `src/components/entity-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js` para mostrar «Fecha de nacimiento» en el perfil de clientes.
 
-**Checkpoint**: La consulta protege la integridad sin impedir la corrección.
-
----
-
-## Phase 13: User Story 9 / User Story 12 - Buscar solo por campos visibles (Priority: P2)
-
-**Goal**: La búsqueda de clientes y la pantalla de búsqueda ignoran `code`, `category` y `description`, y usan solo campos buscables del perfil.
-
-**Independent Test**: Buscar un código, categoría o descripción conocidos no devuelve clientes; buscar por nombre, fecha de nacimiento o campo de contacto visibles sí los devuelve y el placeholder no menciona campos ocultos.
-
-### Tests for User Story 9 / User Story 12
-
-- [X] T048 [P] [US9] Ampliar `tests/integration/search-entities.test.js` para verificar que los clientes no se encuentran por `code`, `category` ni `description`, pero sí por nombre, fecha de nacimiento y campos visibles
-- [X] T049 [P] [US12] Ampliar `tests/integration/search-screen.test.js` para comprobar que el placeholder y los resultados de `src/components/search-bar.js` reflejan solo campos buscables del perfil cliente
-
-### Implementation for User Story 9 / User Story 12
-
-- [X] T050 [US9] Excluir los campos no buscables en `matchesQuery()`/`searchEntities()` de `src/storage.js` y en `currentSearchResults()`/`customFieldKeys()` de `src/app.js`, usando `isFieldSearchable()`
-- [X] T051 [US12] Derivar el placeholder de búsqueda de `fieldRules` en `renderSearchBar()` de `src/components/search-bar.js`, eliminando referencias fijas a `Código` y `Categoría`
-
-**Checkpoint**: La búsqueda es coherente con los campos que el usuario ve.
+**Punto de control**: La terminología es consistente y la navegación no cambia al reetiquetar.
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns (tandas 1 y 2 �?" completado)
+## Phase 8: US8 - Declarar campos personalizados para los registros (Prioridad: P1)
 
-**Purpose**: Regresión, documentación y calidad finales de las historias de las fases 1�?"13, incluidas las reglas FR-051..FR-061.
+**Objetivo**: Que los campos declarados aparezcan en formularios, listas, ficha y búsqueda con validación, y que los valores huérfanos se conserven ocultos.
 
-- [X] T052 [P] Ampliar `README.md` y `specs/001-erp-base-module/quickstart.md` para documentar campos ocultos, código generado, RUT chileno obligatorio, campos condicionales por canal y ficha bloqueada de clientes heredados
-- [X] T053 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 8�?"13
-- [X] T054 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 8�?"13
-- [X] T055 Ejecutar de extremo a extremo las secciones "Validación del Perfil de Clientes" y "Validación del Perfil de Clientes (segunda tanda)" de `specs/001-erp-base-module/quickstart.md`
+**Prueba independiente**: Declarar un campo numérico obligatorio; ver entrada numérica, bloqueo al dejarlo vacío, valor visible en lista/ficha y coincidencia en búsqueda.
 
----
+### Pruebas de US8
 
-## Phase 14: Foundational - Metadatos de presentación y RUT normalizado (tercera tanda 2026-11-23)
+- [X] T037 [P] [US8] Ampliar `tests/unit/field-rules.test.js` para verificar reglas sobre campos base y personalizados, grupos exclusivos, condiciones `when` y opciones `{ value, label }`.
+- [X] T038 [P] [US8] Ampliar `tests/integration/custom-fields.test.js` con un campo numérico obligatorio que bloquee el guardado vacío y sea buscable y visible en lista y ficha.
+- [X] T039 [P] [US8] Ampliar `tests/integration/orphan-fields-ui.test.js` para conservar un valor no declarado en `erp_entities`, ocultarlo y volver a mostrarlo al redeclarar el campo.
 
-**Purpose**: Extender el contrato de presentación y garantizar que el RUT con y sin puntos valide y se compare de forma idéntica. BLOCKS las fases 15 y 16.
+### Implementación de US8
 
-**�s�️ CRITICAL**: Ninguna tarea de las fases 15�?"16 puede comenzar hasta completar esta fase.
+- [X] T040 [US8] Completar `src/utils/field-rules.js` para resolver reglas por clave, aplicar `hidden`/`searchable` y descartar valores de grupos inactivos antes de validar.
+- [X] T041 [US8] Completar `renderFieldHtml()`, `renderFieldsHtml()`, `collectFormData()`, `buildFormBaseline()` e `isFormDirty()` en `src/components/form-fields.js`, respetando `order`, `placeholder`, `when` y opciones con valor y etiqueta.
+- [X] T042 [US8] Conectar validación y persistencia de campos personalizados en `src/storage.js` y su presentación en `src/components/entity-list.js` y `src/components/entity-detail.js`.
 
-- [X] T056 [P] Ampliar `tests/unit/field-formats.test.js` para exigir que `isValidRut()` acepte `12.345.678-9` y `12345678-9`, que `normalizeClRut()` devuelva la misma cadena sin puntos para ambos y que `normalizeFieldValue(value, 'cl-rut')` reutilice esa normalización (FR-057, FR-062)
-- [X] T057 [P] Ampliar `tests/unit/storage.test.js` para rechazar dos clientes con RUT equivalente en formatos distintos (`12.345.678-9` frente a `12345678-9`) y verificar que la comparación de unicidad usa el valor normalizado sin reescribir el texto capturado (FR-057)
-- [X] T058 [P] Ampliar `tests/unit/module-config.test.js` para exigir validación de metadatos de presentación en `fieldRules`: `label` y `placeholder` como cadenas, `order` como número finito, `options` como cadena u objeto `{ value, label }`, con fallback a `DEFAULT_CONFIG` y aviso si son inválidos (FR-062, FR-063, FR-065, FR-066, FR-067)
-- [X] T059 Ajustar `validateFieldRules()` y `normalizeRuleMap()` en `src/module-config.js` para validar y conservar `label`, `placeholder`, `order` y `options` �?"cadenas u objetos `{ value, label }`�?" sin descartar las reglas existentes de `required`, `when`, `group` y `unique` (FR-062�?"FR-067)
-- [X] T060 Ajustar `normalizeClRut()` en `src/utils/field-formats.js` para eliminar puntos, guion y espacios, y confirmar que `normalizeForUniqueness()` en `src/storage.js` lo reutiliza para comparar RUT; conservar el formato original en el registro (FR-057, FR-062)
-
-**Checkpoint**: El contrato de presentación existe, el RUT se normaliza en validación y unicidad, y las pruebas fallan hasta completar la implementación; las fases 15�?"16 pueden comenzar.
+**Punto de control**: Los campos declarados funcionan de extremo a extremo sin código específico por dominio.
 
 ---
 
-## Phase 15: User Story 8 - Declarar metadatos de presentación del perfil cliente (Priority: P1)
+## Phase 9: US14 - Marco de espacio de trabajo ERP con marca (Prioridad: P1)
 
-**Goal**: La configuración del perfil cliente declara pistas grises, orden, etiquetas capitalizadas y catálogos cerrados sin endurecer reglas en los componentes.
+**Objetivo**: Barra superior con logotipo derivado y barra lateral persistente con Panel, Buscar, Resumen y Marketing en todas las pantallas.
 
-**Independent Test**: Con `MODULE_CONFIG` cargado, `resolveFieldRules(config, 'entity')` expone `order` del 1 al 6, `placeholder` en RUT y contacto, opciones `{ value, label }` en «Canal de Contacto» y exactamente diez opciones en `rubro`; el seed genera valores coherentes con ese catálogo.
+**Prueba independiente**: Recorrer las pantallas y comprobar marca, cuatro botones laterales, resaltado del activo, columna de iconos en viewport estrecho, color de acento y persistencia de datos al navegar; «Clientes» e «Interacciones» no figuran en el marcado y el panel no muestra «Abrir Marketing».
 
-### Tests for User Story 8
+### Pruebas de US14
 
-- [X] T061 [P] [US8] Ampliar `tests/integration/client-field-rules.test.js` para verificar que `MODULE_CONFIG` declara `placeholder` en `rut` y en los cuatro campos `contacto_*`, `order` 1�?"6, opciones `{ value, label }` con etiquetas «Llamada», «Correo», «Reunión» y «WhatsApp», y el catálogo exacto de diez opciones de `rubro` (FR-062�?"FR-067)
+- [X] T043 [P] [US14] Ampliar `tests/integration/workspace-shell.test.js` para verificar en `src/components/shell.js` el SVG monograma, `#brand-name`, los cuatro botones de `NAV_ITEMS`, `aria-current`, ausencia de Clientes/Interacciones y etiquetas accesibles con la barra contraída.
+- [X] T044 [P] [US14] Crear `tests/integration/marketing-navigation.test.js` para abrir Marketing desde la barra lateral, navegar a Panel, Buscar y Resumen, y comprobar que `erp_entities`/`erp_documents` permanecen intactos.
 
-### Implementation for User Story 8
+### Implementación de US14
 
-- [X] T062 [US8] Declarar en `fieldRules.entity` de `src/module-config.js` los metadatos de presentación: `name.order: 1`, `rut` con `placeholder: 'Ej: 11.111.111-1'` y `order: 2`, `targetDate.order: 3`, `canal_contacto` con opciones `{ value, label }` y `order: 4`, los cuatro `contacto_*` con su `placeholder` y `order: 4`, `rubro` con `label: 'Tipo de actividad'`, `type: 'select'`, diez opciones y `order: 5`, y `ejecutivo_asignado.order: 6` (FR-062�?"FR-067)
-- [X] T063 [US8] Actualizar `RUBROS` en `src/seed.js` y las expectativas en `tests/unit/seed.test.js` para generar solo los diez valores del catálogo de «Tipo de actividad», conservando el texto descriptivo del historial (FR-066)
+- [X] T045 [US14] Implementar `monogramSvg()`, `NAV_ITEMS` y `renderShellHtml()` en `src/components/shell.js` con Panel, Buscar, Resumen y Marketing, y añadir la regla de barra estrecha en `src/styles.css`.
+- [X] T046 [US14] Aplicar `theme.accentColor` validado por `src/module-config.js` en `src/app.js` mediante `--accent`/`--accent-color`, con valor integrado por defecto en `src/styles.css`.
+- [X] T047 [US14] Ajustar `navigate()` y `activeNavKey()` en `src/app.js` para resaltar la vista activa y pedir confirmación antes de salir de un formulario con cambios sin guardar.
 
-**Checkpoint**: La configuración es la única fuente de etiquetas, pistas y catálogos; no se han tocado claves de almacenamiento.
-
----
-
-## Phase 16: User Story 2 - Mostrar y validar la presentación del formulario de clientes (Priority: P2)
-
-**Goal**: El formulario y la creación rápida muestran «Nuevo Cliente», las pistas grises exactas, el orden solicitado y los desplegables con sus etiquetas, sin persistir pistas ni etiquetas como valores.
-
-**Independent Test**: Al abrir el alta de un cliente se observan, en orden, «Nombre de Cliente», «RUT» con `Ej: 11.111.111-1`, «Fecha de nacimiento», «Canal de Contacto» con sus etiquetas y su casilla adicional con la pista del canal, «Tipo de actividad» con diez opciones y «Ejecutivo Asignado»; el botón de creación dice «Nuevo Cliente» y guardar sin capturar la casilla adicional sigue fallando.
-
-### Tests for User Story 2
-
-- [X] T064 [P] [US2] Crear `tests/integration/client-form-presentation.test.js` para comprobar el orden de los campos, el placeholder del RUT, las etiquetas de «Canal de Contacto», las diez opciones de «Tipo de actividad», el título «Nuevo Cliente», la acción rápida «Nuevo Cliente» y que los placeholders no se envían como valores (FR-062�?"FR-066, SC-015, SC-016)
-- [X] T065 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para verificar la pista gris exacta de cada canal �?"`Ej: +56 9 1234 5678`, `Ej: nombre@ejemplo.cl` o `Ej: Sala 2 o enlace`�?" y que sigue siendo obligatoria capturar un valor real (FR-067, SC-017)
-
-### Implementation for User Story 2
-
-- [X] T066 [P] [US2] Extender `renderFieldHtml()` en `src/components/form-fields.js` para emitir `placeholder` escapado en campos de texto y textarea, y soportar `options` como objetos `{ value, label }` mostrando `label` y persistiendo `value`, conservando la opción vacía `-- Seleccionar --` (FR-062, FR-063, FR-066, FR-067)
-- [X] T067 [US2] Aplicar `order` y propagar `label`, `placeholder` y `options` en `getEntityFieldDefs()` de `src/components/entity-form.js`, ordenando campos base y personalizados de menor a mayor y manteniendo el orden de declaración para empatados, con el campo condicional inmediatamente después de `canal_contacto` (FR-065)
-- [X] T068 [P] [US2] Reemplazar el encabezado fijo en `renderManagementView()` de `src/app.js` por `Nuevo ${entityLabel}` sin forzar minúsculas ni género, conservando `Editar ${entityLabel.toLowerCase()}` para la edición (FR-064)
-- [X] T069 [P] [US2] Actualizar la acción rápida en `src/components/dashboard.js` a `Nuevo ${entityLabel}` sin forzar minúsculas, con «Cliente» como etiqueta por defecto (FR-064)
-- [X] T070 [P] [US2] Añadir o verificar en `src/styles.css` un estilo `::placeholder` en gris para los campos con pista, sin alterar el color del valor escrito (FR-062, FR-067)
-
-**Checkpoint**: Los escenarios 12�?"17 son verificables de extremo a extremo y las pistas no se persisten.
+**Punto de control**: El marco es idéntico en todas las vistas y la navegación no pierde datos.
 
 ---
 
-## Phase 17: Polish & Cross-Cutting Concerns (tercera tanda)
+## Phase 10: US15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
 
-**Purpose**: Regresión, documentación y calidad finales de los FR-062..FR-067.
+**Objetivo**: Panel de entrada con cinco acciones rápidas y tarjetas de estadísticas en vivo.
 
-- [X] T071 [P] Actualizar `README.md` y `specs/001-erp-base-module/quickstart.md` con la sección «Validación del Perfil de Clientes (tercera tanda)»: RUT con y sin puntos, pistas grises, opciones capitalizadas, «Nuevo Cliente», orden de campos, catálogo de «Tipo de actividad» y pistas por canal
-- [X] T072 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones en `tests/unit/` y `tests/integration/` derivadas de las fases 14�?"16
-- [X] T073 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/` derivado de las fases 14�?"16
-- [X] T074 Ejecutar de extremo a extremo los escenarios 12�?"17 de `specs/001-erp-base-module/spec.md` y la nueva sección de `specs/001-erp-base-module/quickstart.md`, confirmando que las pistas grises no se guardan
+**Prueba independiente**: Abrir la aplicación, contar al menos cinco acciones rápidas sin «Abrir Marketing», abrir cada destino con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
 
----
+### Pruebas de US15
 
-## Phase 18: Foundational - Configuración de Marketing y estado comercial (cuarta tanda 2026-11-23)
+- [X] T048 [P] [US15] Ampliar `tests/integration/dashboard.test.js` para comprobar las cinco acciones rápidas, la ausencia de «Abrir Marketing», el destino correcto de cada acción, las tarjetas en cero y los recuentos tras crear registros.
+- [X] T049 [P] [US15] Ampliar `tests/unit/dashboard-stats.test.js` para exigir entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)», además del embudo por estados de documento, con cero registros.
 
-**Purpose**: Declarar el bloque `marketing`, el campo `estado_comercial` y el contrato de consentimiento; BLOCKS las fases 19�?"23.
+### Implementación de US15
 
-**�s�️ CRITICAL**: No iniciar las historias de Marketing ni el cambio de navegación hasta completar esta fase.
+- [X] T050 [US15] Implementar `renderDashboardHtml()` y `formatCurrencyUsd()` en `src/components/dashboard.js` con las cinco tarjetas, el embudo por estados de documento y la lista «Últimas Interacciones / Próximos Seguimientos».
+- [X] T051 [US15] Implementar en `src/app.js` los casos `quick-new-entity`, `quick-new-document`, `quick-manage` y `quick-search`, abriendo el formulario vacío o enfocando `#search-input`.
+- [X] T052 [US15] Implementar `computeDashboardStats()` en `src/utils/marketing-stats.js` para derivar tarjetas y embudo desde entidades y documentos, reutilizándolo en `src/components/dashboard.js` sin escribir en `localStorage`.
 
-- [X] T075 [P] Crear `tests/unit/marketing-config.test.js` verificando valores predeterminados, versión del aviso y reglas inválidas que retroceden con advertencia
-- [X] T076 [P] Ampliar `tests/unit/module-config.test.js` con el bloque `marketing` y la opción `estado_comercial`
-- [X] T077 [P] Ampliar `tests/unit/storage.test.js` con consentimiento obligatorio y creación de `Documento` con `status: 'automatico'`
-- [X] T078 Implementar `src/utils/marketing-config.js` normalizando `privacyNoticeVersion`, `automationRules` y `captureFields` sin dependencias nuevas
-- [X] T079 Ampliar `src/module-config.js` con el bloque `marketing`, el campo `estado_comercial` y sus cinco valores internos
-- [X] T080 Ampliar `src/storage.js` para conservar `consentimiento`, `consentimiento_fecha` y `consentimiento_version` en la entidad
-
-**Checkpoint**: Configuración y contrato Marketing listos; las historias pueden comenzar.
+**Punto de control**: El panel ofrece accesos y cifras correctas incluso sin registros.
 
 ---
 
-## Phase 19: User Story 16 - Capturar prospectos con consentimiento (Priority: P2) �YZ� MVP del incremento
+## Phase 11: US2 - Registrar clientes y contactos comerciales (Prioridad: P2)
 
-**Goal**: Convertir visitas en prospectos mediante un formulario público embebible con consentimiento explícito.
+**Objetivo**: Perfil de clientes con campos obligatorios y ocultos, código generado, RUT válido y único, canal de contacto condicional y presentación declarativa.
 
-**Independent Test**: Abrir `?view=capture`, enviar sin consentimiento y verificar que no se crea nada; enviar con consentimiento y verificar una entidad en `prospecto` con fecha y versión del aviso.
+**Prueba independiente**: Registrar cliente y llamada asociada sin ver Código/Categoría/Descripción/Nº de pedidos; el guardado genera código único, exige fecha, canal, RUT y dato de contacto, y la ficha de un cliente heredado incompleto queda bloqueada hasta editarlo válidamente.
 
-### Tests for User Story 16 �s�️
+### Pruebas de US2
 
-> **NOTE: Escribir estas pruebas FIRST y confirmar que FALLAN antes de implementar.**
+- [X] T053 [P] [US2] Ampliar `tests/integration/client-field-rules.test.js` para verificar que formulario, lista, ficha y búsqueda no muestran «Código», «Categoría», «Descripción» ni «Nº de pedidos», que el código generado es distinto por cliente y que buscar por esos valores ocultos no devuelve registros.
+- [X] T054 [P] [US2] Ampliar `tests/integration/register-client.test.js` para rechazar guardados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», con dígito verificador inválido y con RUT repetido con y sin puntos.
+- [X] T055 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para exigir selección explícita del canal, mostrar solo la casilla adicional correspondiente con formatos `phone`/`email`/`nonEmpty` y conservar únicamente el valor del canal final.
+- [X] T056 [P] [US2] Ampliar `tests/integration/client-form-presentation.test.js` para comprobar título y acción rápida «Nuevo Cliente», orden «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla, «Tipo de actividad» y «Ejecutivo Asignado», pistas grises y diez opciones de `rubro`.
+- [X] T057 [P] [US2] Ampliar `tests/integration/client-birthdate-legacy.test.js` para bloquear la ficha de un cliente heredado sin datos obligatorios o con RUT inválido, explicar los campos pendientes, ofrecer «Editar» y desbloquearla al guardar válidamente.
 
-- [X] T081 [P] [US16] Crear `tests/integration/marketing-capture.test.js` con los escenarios 18 y 19 de `specs/001-erp-base-module/spec.md`
-- [X] T082 [P] [US16] Crear `tests/unit/capture-consent.test.js` verificando rechazo sin consentimiento y copia de la versión del aviso
+### Implementación de US2
 
-### Implementation for User Story 16
+- [X] T058 [US2] Completar `MODULE_CONFIG` en `src/module-config.js` con `entityDate`, `fieldRules.entity` para código generado/oculto, `category`/`description` ocultos, `rut` obligatorio único con `cl-rut` y pista, `canal_contacto` sin preselección, campos `contacto_*` con `when`/`group`/formato/pista, `rubro` con diez opciones, `ejecutivo_asignado` con `order: 6` y `detailPolicy.entity`, sin declarar `pedidos`.
+- [X] T059 [US2] Completar `validateEntityData()`, `validateFieldRules()`, `normalizeForUniqueness()` y `addEntity()` en `src/storage.js` para generar el código antes de validar, aplicar required/format/unique/normalize y conservar los valores ocultos en `updateEntity()`.
+- [X] T060 [US2] Ajustar `src/components/form-fields.js` y `src/components/entity-form.js` para renderizar pistas en gris, orden declarativo y opciones `{ value, label }`, y descartar los valores de canales inactivos al cambiar de selección.
+- [X] T061 [US2] Ajustar `src/components/entity-detail.js` para usar `validateEntity()` con `detailPolicy.entity.blockWhenInvalid` y mostrar la explicación y la acción de editar en lugar de los datos del cliente incompleto.
+- [X] T062 [US2] Ajustar `src/components/dashboard.js` y `src/components/search-bar.js` para mostrar «Nuevo Cliente» en la acción rápida y no mencionar campos ocultos en la ayuda de búsqueda.
 
-- [X] T083 [P] [US16] Crear `src/utils/capture-prospect.js` con `createProspectFromCapture(values, config)` según `contracts/marketing.md`
-- [X] T084 [P] [US16] Crear `src/components/capture-form.js` con campo de consentimiento, mensaje de error y envío accesible
-- [X] T085 [US16] Integrar la vista `?view=capture` en `src/app.js` sin persistir el estado de la vista
-- [X] T086 [US16] Añadir estilos del formulario público en `src/styles.css`
-
-**Checkpoint**: La captura con consentimiento funciona de forma aislada.
-
----
-
-## Phase 20: User Story 16 - Estado comercial y conversión a cliente (Priority: P1)
-
-**Goal**: Avanzar el prospecto por las cinco etapas y convertirlo en cliente conservando identidad e historial.
-
-**Independent Test**: Crear un prospecto, cambiarlo a `ganado` y comprobar que `id`, `entity_id`, documentos y campos personalizados permanecen intactos.
-
-### Tests for User Story 16 �s�️
-
-- [X] T087 [P] [US16] Crear `tests/unit/marketing-stage.test.js` con transiciones válidas, inválidas y conversión sin duplicados
-- [X] T088 [P] [US16] Ampliar `tests/integration/entity-detail.test.js` con la ficha de un prospecto convertido a cliente
-
-### Implementation for User Story 16
-
-- [X] T089 [US16] Crear `src/utils/marketing-stage.js` con `transitionStage` y validación de estados comerciales
-- [X] T090 [US16] Integrar la transición a `ganado` en `src/storage.js` conservando identificadores, documentos y campos personalizados
-
-**Checkpoint**: El ciclo comercial es verificable sin depender de las métricas.
+**Punto de control**: El perfil de clientes cumple todas las reglas declarativas sin ramas específicas en el código central.
 
 ---
 
-## Phase 21: User Story 16 - Contadores, embudo y gráfico de cartera (Priority: P1)
+## Phase 12: US9 - Buscar y encontrar entidades rápidamente (Prioridad: P2)
 
-**Goal**: Mostrar los cinco contadores, el embudo por etapas y la torta «Estado comercial de la cartera».
+**Objetivo**: Búsqueda instantánea sobre entidades y sus documentos, con estado vacío claro y buen comportamiento con cientos de registros.
 
-**Independent Test**: Sembrar entidades en los cinco estados y verificar contadores, tasas, conteo único y leyenda textual sin recarga.
+**Prueba independiente**: Introducir un término y ver solo coincidencias; sin coincidencias ver estado vacío; con 500 entidades obtener resultados sin retraso perceptible.
 
-### Tests for User Story 16 �s�️
+### Pruebas de US9
 
-- [X] T091 [P] [US16] Crear `tests/unit/marketing-stats.test.js` con `computeMarketingStats`, cero leads y categorías exhaustivas
-- [X] T092 [P] [US16] Crear `tests/integration/marketing-dashboard.test.js` con los escenarios 22�?"24 de `specs/001-erp-base-module/spec.md`
+- [X] T063 [P] [US9] Ampliar `tests/integration/search-entities.test.js` con coincidencias parciales, estado vacío y actualización de resultados mientras se escribe en `#search-input`.
+- [X] T064 [P] [US9] Ampliar `tests/integration/performance.test.js` para medir búsqueda y renderizado de listas con 500 entidades almacenadas.
 
-### Implementation for User Story 16
+### Implementación de US9
 
-- [X] T093 [P] [US16] Crear `src/utils/marketing-stats.js` con `computeMarketingStats` y `categoryForStage` según `data-model.md`
-- [X] T094 [US16] Crear `src/components/marketing.js` con tarjetas, embudo y gráfico SVG accesible sin librerías nuevas
-- [X] T095 [US16] Integrar la vista `marketing` en `src/app.js` y su acción rápida desde el panel
+- [X] T065 [US9] Implementar `normalizeText()`, `matchesQuery()` y `matchesAny()` en `src/utils/search.js` y usarlos en `searchEntities()` de `src/storage.js` sobre campos visibles y documentos vinculados.
+- [X] T066 [US9] Conectar `handleInput()` y `updateSearchResults()` en `src/app.js` con `renderSearchBarHtml()` y `renderEntityListHtml()` para actualizar solo `#search-results`.
 
-**Checkpoint**: El resumen de Marketing es completamente funcional y accesible.
-
----
-
-## Phase 22: User Story 16 - Automatización por eventos (Priority: P2)
-
-**Goal**: Ejecutar reglas configurables y dejar constancia en el historial de la entidad.
-
-**Independent Test**: Configurar una regla `entity_created`, capturar un prospecto y verificar un `Documento` con `status: 'automatico'` en su ficha.
-
-### Tests for User Story 16 �s�️
-
-- [X] T096 [P] [US16] Crear `tests/unit/marketing-automation.test.js` con los tres eventos y sus acciones
-- [X] T097 [P] [US16] Ampliar `tests/integration/marketing-dashboard.test.js` con el registro de ejecución en el historial
-
-### Implementation for User Story 16
-
-- [X] T098 [US16] Crear `src/utils/marketing-automation.js` con `runAutomationRules(event, entity, config, documents)`
-- [X] T099 [US16] Integrar la evaluación de reglas en `src/storage.js` tras crear entidades, cambiar etapas y registrar documentos
-
-**Checkpoint**: Cada evento dispara a lo sumo una ejecución por regla y queda trazado.
+**Punto de control**: La búsqueda es correcta y responde con rapidez sobre 500 registros.
 
 ---
 
-## Phase 23: User Stories 14 y 4 - Navegación lateral y accesos rápidos (Priority: P1)
+## Phase 13: US10 - Registrar una fecha objetivo (Prioridad: P2)
 
-**Goal**: Quitar Clientes e Interacciones de la barra lateral y mantener el acceso desde el panel.
+**Objetivo**: Fecha objetivo opcional en la base y «Fecha de nacimiento» obligatoria en clientes, con rango local 1910-01-01..hoy y actualización al cambiar de día.
 
-**Independent Test**: Recorrer todas las vistas y verificar que la barra lateral solo ofrece Panel, Buscar y Resumen, mientras el panel ofrece seis acciones rápidas incluida Marketing.
+**Prueba independiente**: Aceptar `1910-01-01` y hoy, rechazar fechas imposibles o fuera de rango, y actualizar `max` y la ayuda sin recargar al cruzar la medianoche local conservando el borrador.
 
-### Tests for User Stories 14 y 4 �s�️
+### Pruebas de US10
 
-- [X] T100 [P] [US14] Ampliar `tests/integration/workspace-shell.test.js` con la ausencia de Clientes e Interacciones en `NAV_ITEMS`
-- [X] T101 [P] [US4] Ampliar `tests/integration/dashboard.test.js` con la acción rápida «Abrir Marketing» y la navegación desde el panel
+- [X] T067 [P] [US10] Ampliar `tests/unit/entity-date.test.js` con reloj falso para `localTodayISO()`, `isValidISODate()`, `resolveEntityDateRule()` y `watchLocalDayChange()`, incluyendo reprogramación y cancelación.
+- [X] T068 [P] [US10] Ampliar `tests/integration/entity-birthdate.test.js` para comprobar `min`/`max`, rechazo de `1909-12-31`, mañana, `1910-02-29` y `2026-02-30`, y actualización del límite sin perder el borrador.
 
-### Implementation for User Stories 14 y 4
+### Implementación de US10
 
-- [X] T102 [US14] Actualizar `src/components/shell.js` eliminando `manage-entity` y `manage-document` de `NAV_ITEMS` y conservando `dashboard`, `search` y `summary`
-- [X] T103 [US4] Actualizar `src/components/dashboard.js` con la quinta y sexta acciones rápidas, reutilizando el estilo `.stat-card` solo en `src/components/marketing.js`
-- [X] T104 [US4] Ajustar `src/app.js` para que la navegación lateral no ofrezca los apartados retirados sin romper enlaces profundos
+- [X] T069 [US10] Implementar `src/utils/entity-date.js` con `LOCAL_TODAY`, componentes locales (`getFullYear`/`getMonth`/`getDate`), comparación lexicográfica de ISO y temporizador hasta la medianoche local.
+- [X] T070 [US10] Conectar la regla resuelta a las definiciones de campo en `src/components/entity-form.js` y actualizar `min`, `max` y `[data-role="date-range"]` desde `src/app.js` sin re-renderizar el formulario.
+- [X] T071 [US10] Mantener en `src/storage.js` los valores históricos fuera de rango sin migrarlos, exigiendo corrección sobre el objeto fusionado en `updateEntity()`.
 
-**Checkpoint**: La navegación es coherente y Marketing queda accesible solo desde el panel.
-
----
-
-## Phase 24: Polish & Cross-Cutting Concerns (cuarta tanda)
-
-**Purpose**: Regresión, documentación y calidad finales de FR-068..FR-075 y SC-018..SC-020.
-
-- [X] T105 [P] Actualizar `README.md` y `specs/001-erp-base-module/quickstart.md` con las secciones «Validación del Apartado de Marketing» y «Validación de la Navegación Lateral»
-- [X] T106 Ejecutar `npm test` desde la raíz del repositorio y corregir regresiones derivadas de las fases 18�?"23
-- [X] T107 Ejecutar `npm run lint` y `npm run build` desde la raíz del repositorio y corregir cualquier error en `src/`
-- [X] T108 Ejecutar de extremo a extremo los escenarios 18�?"24 de `specs/001-erp-base-module/spec.md` y las secciones nuevas de `quickstart.md`
+**Punto de control**: La regla de fecha es válida, dinámica y no destruye datos históricos.
 
 ---
 
-## Dependencies & Execution Order
+## Phase 14: US11 - Registrar los detalles de documentos de una entidad (Prioridad: P2)
 
-### Phase Dependencies
+**Objetivo**: Documentos con campos base y personalizados, asociados a exactamente una entidad y eliminados en cascada.
 
-- **Setup (Phase 1)**: Sin dependencias
-- **Foundational (Phase 2)**: Depende de Phase 1; BLOCKS US7, US10 y US2 de la primera tanda
-- **US7 (Phase 3)**: Depende de T004, T005 y T007
-- **US10 (Phase 4)**: Depende de T004, T005, T007 y T009
-- **US2 (Phase 5)**: Depende de T005, T007, T009 y T015
-- **US13 (Phase 6)**: Depende de la base completada de US5/US11; independiente de US7, US10 y US2
-- **US4 (Phase 7)**: Depende de la base completada de US14 y de los formularios de US1/US11; independiente de la regla de fecha
-- **Foundational segunda tanda (Phase 8)**: Depende de Phase 2; BLOCKS US8, US7, US2, US3, US9 y US12 de las fases 9�?"13
-- **US8 (Phase 9)**: Depende de T027�?"T034
-- **US7 segunda tanda (Phase 10)**: Depende de T030, T033 y T034
-- **US2 segunda tanda (Phase 11)**: Depende de T034, T036 y T039
-- **US3 (Phase 12)**: Depende de T030, T034, T036 y T039
-- **US9 / US12 (Phase 13)**: Dependen de T030, T034, T036 y T039
-- **Foundational tercera tanda (Phase 14)**: Depende de Phase 8; BLOCKS US8 y US2 de las fases 15�?"16
-- **US8 tercera tanda (Phase 15)**: Depende de T056�?"T060
-- **US2 tercera tanda (Phase 16)**: Depende de T056�?"T063
-- **Foundational cuarta tanda (Phase 18)**: Depende de Phase 14; BLOCKS US16 y US14/US4 de las fases 19�?"23
-- **US16 captura (Phase 19)**: Depende de T075�?"T080
-- **US16 estado comercial (Phase 20)**: Depende de T075, T078�?"T080 y T083
-- **US16 métricas (Phase 21)**: Depende de T078�?"T080, T089 y T090
-- **US16 automatización (Phase 22)**: Depende de T078�?"T080, T089 y T090
-- **US14 / US4 navegación (Phase 23)**: Depende de T078�?"T080 y de la vista `marketing` integrada en T095
-- **Polish (Phases N, 17 y 24)**: Depende de todas las fases deseadas
+**Prueba independiente**: Añadir un documento a una entidad, ver sus detalles junto a ella, editarlo y eliminarlo, y comprobar que la eliminación de la entidad elimina sus documentos.
 
-### User Story Dependencies
+### Pruebas de US11
 
-- **US7 (P1, primera tanda)**: Puede comenzar tras Foundational; no depende de otras historias pendientes
-- **US10 (P2, primera tanda)**: Depende de US7 para la etiqueta, pero es verificable de forma independiente con el reloj falso
-- **US2 (P2, primera tanda)**: Depende de US7 y US10 para activar el perfil cliente completo
-- **US13 (P2)**: Independiente del resto de historias pendientes
-- **US4 (P1)**: Independiente del resto de historias pendientes
-- **US8 (P1, segunda tanda)**: Puede comenzar tras Phase 8; no depende de US7/US2/US3/US9/US12 de la segunda tanda
-- **US7 (P1, segunda tanda)**: Depende de las reglas declaradas en US8, pero es verificable de forma independiente revisando vistas
-- **US2 (P2, segunda tanda)**: Depende de US8 y US7 para registrar clientes con campos visibles y reglas activas
-- **US3 (P1)**: Depende de US8 y US7; verificable de forma independiente con clientes heredados sembrados
-- **US9 / US12 (P2)**: Dependen de US8 y US7; verificables de forma independiente con búsquedas sembradas
-- **US8 (P1, tercera tanda)**: Puede comenzar tras Phase 14; declara metadatos sin depender de los componentes de la fase 16
-- **US2 (P2, tercera tanda)**: Depende de Phase 14 y de los metadatos de US8; cubre directamente los escenarios 12�?"17
-- **US16 (P2, cuarta tanda)**: Se divide en cuatro incrementos verificables: captura (Phase 19), estado comercial (Phase 20), métricas (Phase 21) y automatización (Phase 22); cada uno es independiente tras Phase 18
-- **US14 (P1, cuarta tanda)**: Quitar Clientes e Interacciones de la barra lateral depende de Phase 18 y de la vista Marketing; no depende de las pruebas de US16
-- **US4 (P1, cuarta tanda)**: Accesos rápidos desde el panel; verificable de forma independiente con `tests/integration/dashboard.test.js`
-- **Historias baseline (US1, US3, US5, US8, US9, US11, US12, US14, US15, US6)**: Completadas en su versión original; solo se validan en las fases de polish junto con sus incrementos
+- [X] T072 [P] [US11] Ampliar `tests/unit/storage.test.js` con campos base `id`, `entity_id`, `startDate`, `endDate`, `notes`, `status`, marcas de tiempo y regla `endDate >= startDate`, más campos personalizados declarados.
+- [X] T073 [P] [US11] Ampliar `tests/integration/add-document.test.js` para añadir, editar y eliminar un documento desde la pestaña de documentos y verlo en la ficha de la entidad.
 
-### Within Each User Story
+### Implementación de US11
 
-- Las pruebas marcadas `[P]` se escriben y fallan antes de la implementación
-- La utilidad/configuración va antes de los componentes
-- Los componentes van antes de la integración en `src/app.js`
-- En la segunda tanda, `field-formats`/`field-rules` van antes que `module-config`/`storage`, y estos antes que componentes y búsqueda
-- En la tercera tanda, la validación y normalización van antes que la declaración de metadatos, y esta antes que `form-fields`/`entity-form`/`app`/`dashboard`
-- En la cuarta tanda, `marketing-config` y `marketing-stage` van antes que `capture-prospect`/`marketing-stats`/`marketing-automation`, y estos antes que los componentes y su integración en `app.js`
-- Cada historia se valida en su checkpoint antes de avanzar
+- [X] T074 [US11] Completar `validateDocumentData()`, `addDocument()`, `updateDocument()`, `deleteDocument()` y `deleteDocumentsForEntity()` en `src/storage.js`, rechazando entity_id inexistente y fechas inválidas.
+- [X] T075 [US11] Completar `src/components/document-form.js` y `onDocumentFormSubmit()` en `src/app.js` con mensajes de error por campo para datos obligatorios y fechas.
 
-### Parallel Opportunities
-
-- T001, T002, T003 y T006 pueden ejecutarse en paralelo tras el setup
-- T004 y T005 pueden ejecutarse en paralelo
-- T008, T018, T019 y T021 pueden ejecutarse en paralelo una vez lista la base
-- T010 y T011 pueden ejecutarse en paralelo
-- US13 y US4 pueden avanzar en paralelo con US7/US10/US2 tras Foundational
-- T027, T028, T031 y T032 pueden ejecutarse en paralelo al iniciar Phase 8
-- T029 puede ejecutarse en paralelo con T028 y T030; T033 va después de T031 y T034 después de T030/T032/T033
-- T035 puede ejecutarse en paralelo con T036; T038, T040, T041, T045, T046, T048 y T049 pueden ejecutarse en paralelo tras Phase 8
-- US7, US2, US3, US9 y US12 de la segunda tanda pueden avanzar en paralelo entre sí una vez completas Phase 8 y Phase 9
-- T052 puede ejecutarse en paralelo con las últimas implementaciones; T053�?"T055 van al final
-- T056, T057 y T058 pueden ejecutarse en paralelo al iniciar Phase 14; T059 y T060 van después de esas pruebas
-- T061, T064 y T065 pueden ejecutarse en paralelo como pruebas escribiéndose primero; T062 va después de T061
-- T066, T068, T069 y T070 pueden ejecutarse en paralelo; T067 va después de T062 y T066
-- T071 puede ejecutarse en paralelo con las últimas implementaciones; T072�?"T074 van al final
-- T075, T076 y T077 pueden ejecutarse en paralelo al iniciar Phase 18; T078 y T079 van después de esas pruebas
-- T081 y T082 pueden ejecutarse en paralelo; T083 y T084 también, una vez fallidas las pruebas
-- T087 y T088 pueden ejecutarse en paralelo; T089 precede a T090
-- T091 y T092 pueden ejecutarse en paralelo; T093 va después de T091 y T094/T095 después de T092
-- T096 y T097 pueden ejecutarse en paralelo; T098 precede a T099
-- T100 y T101 pueden ejecutarse en paralelo; T102 y T103 también, con T104 al final
-- T105 puede ejecutarse en paralelo con las últimas implementaciones; T106�?"T108 van al final
+**Punto de control**: Los documentos quedan íntegramente vinculados a su entidad.
 
 ---
 
-## Parallel Example: User Story 10
+## Phase 15: US12 - Buscar entidades en una pantalla dedicada (Prioridad: P2)
+
+**Objetivo**: Pantalla de búsqueda separada de la gestión, accesible desde barra lateral y panel, sin edición en línea.
+
+**Prueba independiente**: Abrir la pantalla desde la barra lateral o una acción rápida, buscar, ver estado vacío y volver al panel con el botón Panel.
+
+### Pruebas de US12
+
+- [X] T076 [P] [US12] Ampliar `tests/integration/search-screen.test.js` para cubrir ambos accesos, coincidencias, estado vacío, botón Panel y exclusión de categoría/descripción en el perfil de clientes.
+
+### Implementación de US12
+
+- [X] T077 [US12] Implementar `renderSearchView()` y la navegación a `search`/`dashboard` en `src/app.js`, con `focusSearchOnRender` al llegar desde el panel.
+- [X] T078 [US12] Ajustar `src/components/search-bar.js` para ofrecer un formulario accesible con `#search-input` y texto de ayuda derivado de la configuración.
+
+**Punto de control**: La búsqueda dedicada es independiente de la gestión y no expone campos ocultos.
+
+---
+
+## Phase 16: US13 - Configurar el ciclo de vida de estados de documentos (Prioridad: P2)
+
+**Objetivo**: Estados y transiciones declarados por configuración, con estados pendientes explícitos y texto libre como comportamiento base.
+
+**Prueba independiente**: Configurar cotización→pedido→facturado; ver solo transiciones válidas, rechazar una inválida con explicación, mostrar el estado en listas y conservar texto libre sin ciclo de vida.
+
+### Pruebas de US13
+
+- [X] T079 [P] [US13] Ampliar `tests/integration/document-lifecycle.test.js` para verificar transiciones permitidas, rechazo de transición inválida por cualquier vía, estado visible en listas y texto libre sin `statusLifecycle`.
+- [X] T080 [P] [US13] Ampliar `tests/unit/module-config.test.js` para validar `statusLifecycle.states`, `transitions` y `pendingStates` y rechazar referencias a estados desconocidos.
+
+### Implementación de US13
+
+- [X] T081 [US13] Implementar `isValidTransition()` y la rama de `status` en `validateDocumentData()` de `src/storage.js`, y hacer que `computeSummary()` use `pendingStates` antes que la coincidencia normalizada con «pendiente».
+- [X] T082 [US13] Implementar opciones de estado a partir de `statusLifecycle.transitions` en `src/components/document-form.js` y distintivo visual del estado en `src/components/document-list.js`.
+
+**Punto de control**: El ciclo de vida se aplica por igual en formularios, almacenamiento y resumen.
+
+---
+
+## Phase 17: US16 - Capturar y convertir prospectos desde Marketing (Prioridad: P2)
+
+**Objetivo**: Captura pública con consentimiento, prospectos como `Entidad`, automatización por eventos, conversión sin pérdida de identidad y panel/Marketing derivados de los mismos registros.
+
+**Prueba independiente**: Enviar `?view=capture` con consentimiento, ver creado el prospecto y la ejecución automática, avanzar a Cliente conservando historial, y comprobar que Marketing muestra las cinco tarjetas y el embudo del panel sin torta ni selector de etapas.
+
+### Pruebas de US16
+
+- [X] T083 [P] [US16] Ampliar `tests/unit/capture-consent.test.js` para exigir `consentimiento = true`, `consentimiento_fecha`, `consentimiento_version` desde `marketing.privacyNoticeVersion`, `estado_comercial = 'prospecto'` y rechazo sin consentimiento.
+- [X] T084 [P] [US16] Ampliar `tests/unit/marketing-stats.test.js` para verificar que las cinco tarjetas y el embudo por estados de documento coinciden con el panel, contabilizan cada documento una sola vez y muestran cero sin registros.
+- [X] T085 [P] [US16] Ampliar `tests/integration/marketing-capture.test.js` para comprobar que `?view=capture` se renderiza sin marco ERP, sin consentimiento no crea entidad y con consentimiento muestra confirmación clara.
+- [X] T086 [P] [US16] Ampliar `tests/integration/marketing-dashboard.test.js` para verificar en Marketing las cinco tarjetas, el embudo y «Últimas Interacciones / Próximos Seguimientos» del panel, sin torta «Estado comercial de la cartera» ni selector de etapas, y sin mostrar `estado_comercial`.
+
+### Implementación de US16
+
+- [X] T087 [US16] Reimplementar `computeDashboardStats()` y `computeMarketingStats()` en `src/utils/marketing-stats.js` sobre entidades y documentos, compartiendo fórmulas con `src/components/dashboard.js` y sin escribir resultados derivados en `localStorage`.
+- [X] T088 [US16] Implementar `createProspectFromCapture()` y `CaptureError` en `src/utils/capture-prospect.js`, filtrando por `marketing.captureFields` y guardando consentimiento con fecha y versión.
+- [X] T089 [US16] Implementar `getCaptureFieldDefs()`, `renderCaptureFormHtml()` y `collectCaptureFormData()` en `src/components/capture-form.js` con casilla de consentimiento y errores comprensibles.
+- [X] T090 [US16] Conectar en `src/app.js` las vistas iniciales `?view=capture` y `?view=marketing`, el envío `#capture-form` y `renderMarketingView()` con las estadísticas compartidas.
+- [X] T091 [US16] Reimplementar `renderMarketingHtml()` en `src/components/marketing.js` con cinco tarjetas, embudo por estados de documento, lista de interacciones con «Ver ficha» y estados vacíos, eliminando la torta y el selector de etapas.
+- [X] T092 [US16] Implementar `runAutomationRules()` en `src/utils/marketing-automation.js` y `persistAutomation()` en `src/storage.js`, con `automation_key = event|from|to|label`, `status = 'automatico'` y un `Documento` por ejecución en el historial de la entidad.
+- [X] T093 [US16] Ajustar `transitionStage()` en `src/utils/marketing-stage.js` y `updateEntityStage()` en `src/storage.js` para que `ganado` conserve `id`, `entity_id`, documentos y campos personalizados, manteniendo `estado_comercial` oculto en `src/module-config.js`.
+
+**Punto de control**: Marketing y panel coinciden exactamente y la captura es trazable sin nueva entidad.
+
+---
+
+## Phase 18: US17 - Consultar el Equipo de ventas y logros (Prioridad: P2)
+
+**Objetivo**: Equipos e integrantes capturados por el usuario con real mensual y objetivo mensual calculados por el sistema.
+
+**Prueba independiente**: Crear equipo e integrante con nombre, cargo y estado, sin casillas de métricas, y comprobar que real mensual suma documentos «Cerrado ganado» del mes del ejecutivo y objetivo mensual proyecta `ventas ÷ días transcurridos × días del mes`.
+
+### Pruebas de US17
+
+- [X] T094 [P] [US17] Crear `tests/unit/sales-team-metrics.test.js` con casos de suma de importes «Cerrado ganado» del mes por `ejecutivo_asignado`, proyección al cierre del mes y cero sin ventas o sin días transcurridos.
+- [X] T095 [P] [US17] Crear `tests/integration/marketing-team.test.js` para abrir «Equipo de ventas y logros», crear/editar/eliminar equipos e integrantes con nombre, cargo y «Activo»/«Inactivo», ver estado vacío y actualizar métricas tras cambiar documentos.
+
+### Implementación de US17
+
+- [X] T096 [US17] Implementar `computeSalesTeamMetrics()` en `src/utils/sales-team-metrics.js` con las fórmulas de FR-078 y FR-079, sin persistir resultados.
+- [X] T097 [US17] Implementar la sección «Equipo de ventas y logros» en `src/components/marketing.js` y sus estilos en `src/styles.css`, sin entradas para real ni objetivo.
+- [X] T098 [US17] Conectar en `src/app.js` las acciones de equipo e integrante y persistir solo nombre, cargo y estado en `erp_marketing_config` desde `src/storage.js`, usando `marketing.salesTeams` como valores iniciales.
+
+**Punto de control**: Las cifras del equipo son calculadas, verificables y recalculadas sin recarga.
+
+---
+
+## Phase 19: US18 - Registrar interacciones en redes sociales (Prioridad: P2)
+
+**Objetivo**: Registro manual de interacciones de Twitter, Instagram, YouTube y otras redes, vinculadas al prospecto o cliente como `Documento`.
+
+**Prueba independiente**: Abrir «Redes sociales» desde Marketing, registrar una interacción de Instagram con plataforma, fecha, tipo, nota y enlace, y verla guardada, ordenada por fecha y en la ficha de la entidad.
+
+### Pruebas de US18
+
+- [X] T099 [P] [US18] Crear `tests/unit/marketing-social.test.js` para exigir que `registerSocialInteraction()` cree un `Documento` con `entity_id`, `plataforma`, `startDate`, `tipo_interaccion`, `nota`, `enlace` y `campaña` opcional.
+- [X] T100 [P] [US18] Crear `tests/integration/marketing-social.test.js` para registrar, editar y eliminar una interacción vinculada, ver estado vacío, orden cronológico y reflejo en `src/components/entity-detail.js`.
+
+### Implementación de US18
+
+- [X] T101 [US18] Implementar `registerSocialInteraction()` en `src/utils/marketing-social.js` reutilizando `addDocument()` de `src/storage.js` y los campos personalizados declarados.
+- [X] T102 [US18] Implementar `renderMarketingSocialHtml()` en `src/components/marketing-social.js` con formulario, lista, acciones de edición/eliminación y estado vacío.
+- [X] T103 [US18] Declarar en `src/module-config.js` los campos personalizados de documento `plataforma`, `tipo_interaccion`, `enlace` y `campaña`, y conectar las acciones del componente en `src/app.js` usando `escapeHtml()` de `src/utils/sanitize.js`.
+
+**Punto de control**: Las redes usan `Documento` y permanecen en la ficha de la entidad al navegar.
+
+---
+
+## Phase 20: US19 - Ofrecer chat con respuestas rápidas (Prioridad: P2)
+
+**Objetivo**: Chat en captura y Marketing con respuestas desde FAQ configuradas, acuse para consultas sin coincidencia y consentimiento previo.
+
+**Prueba independiente**: Pregunta configurada recibe respuesta inmediata; pregunta sin coincidencia muestra acuse y queda como `Documento`; sin consentimiento no se registra ningún mensaje; ambas superficies comparten historial.
+
+### Pruebas de US19
+
+- [X] T104 [P] [US19] Crear `tests/unit/marketing-chat.test.js` para verificar `answerFaq()` con texto normalizado, `null` sin coincidencia y `registerChatMessage()` con consentimiento, canal `chat`, `mensaje`, `tipo_interaccion` y `campaña` opcional.
+- [X] T105 [P] [US19] Crear `tests/integration/marketing-chat.test.js` para usar el chat en `?view=capture` y en Marketing, comprobar respuesta rápida, acuse de recibo, documento de seguimiento, bloqueo sin consentimiento y mensajes visibles en la ficha.
+
+### Implementación de US19
+
+- [X] T106 [US19] Implementar `answerFaq()` y `registerChatMessage()` en `src/utils/marketing-chat.js` usando `marketing.faq` y `addDocument()`, sin APIs externas.
+- [X] T107 [US19] Implementar `renderMarketingChatHtml()` en `src/components/marketing-chat.js` con casilla de consentimiento, mensajes, respuesta/acuse y estado vacío sin FAQ.
+- [X] T108 [US19] Integrar el chat en `src/components/capture-form.js` y `src/components/marketing.js`, con manejadores en `src/app.js` que lean `getEntityDocuments()` para compartir mensajes entre superficies.
+- [X] T109 [US19] Ampliar `validateMarketingConfig()` en `src/utils/marketing-config.js` para exigir pares `pregunta`/`respuesta` no vacíos en `marketing.faq` y añadir ejemplos en `src/module-config.js`.
+
+**Punto de control**: El chat responde, registra y respeta el consentimiento en ambos puntos de entrada.
+
+---
+
+## Phase 21: US20 - Programar campañas de marketing internas (Prioridad: P2)
+
+**Objetivo**: Campañas por etapa y periodo que ejecutan reglas internas con acciones limitadas y desempate determinista.
+
+**Prueba independiente**: Crear campaña «En proceso», disparar evento sobre prospecto de esa etapa, ver seguimiento/historial sin envíos externos, detenerla sin borrar historial y comprobar que con dos campañas solo se ejecuta la más reciente y la otra queda «omitida por solapamiento».
+
+### Pruebas de US20
+
+- [X] T110 [P] [US20] Crear `tests/unit/marketing-campaigns.test.js` con casos de creación, edición, detención, periodo activo y etapa objetivo, verificando que solo se ejecutan acciones internas: crear documento de seguimiento, asignar ejecutivo y actualizar `estado_comercial`.
+- [X] T111 [US20] Crear `tests/unit/marketing-campaigns-overlap.test.js` para dos campañas activas sobre el mismo prospecto y evento: ejecuta la de `createdAt` más reciente, registra la otra con `notes = 'omitida por solapamiento'`, `campaignId`, fecha y motivo, sin acciones duplicadas.
+- [X] T112 [P] [US20] Crear `tests/integration/marketing-campaigns.test.js` para abrir la vista de campañas con estado vacío, crear/editar/detener una campaña y consultar historial con fecha, prospecto y acción.
+
+### Implementación de US20
+
+- [X] T113 [US20] Implementar `createCampaign()`, `updateCampaign()`, `stopCampaign()`, `isCampaignActive()` y `selectCampaignsForEvent()` en `src/utils/marketing-campaigns.js`, sin correos, mensajes externos ni publicaciones.
+- [X] T114 [US20] Ampliar `runAutomationRules()` en `src/utils/marketing-automation.js` y `persistAutomation()` en `src/storage.js` con `campaignId`, contexto de etapa y registro en historial para cada acción o solapamiento.
+- [X] T115 [US20] Implementar la vista de campañas en `src/components/marketing.js` y sus acciones en `src/app.js`, persistiendo en `erp_marketing_config` desde `src/storage.js` con `marketing.campaigns` como semilla y validando fechas en `src/utils/marketing-config.js`.
+
+**Punto de control**: Las campañas ejecutan reglas locales, registran todo y no duplican acciones.
+
+---
+
+## Phase 22: US21 - Medir el rendimiento de Marketing (Prioridad: P2)
+
+**Objetivo**: Indicadores derivados de registros existentes, filtrables por campaña, con grupo «Sin campaña» y sin captura manual.
+
+**Prueba independiente**: Abrir «Rendimiento de campañas», seleccionar una campaña y comprobar prospectos, conversión, interacciones, consultas respondidas y ventas ganadas coinciden con los registros y se actualizan sin recarga; campaña vacía muestra cero con explicación.
+
+### Pruebas de US21
+
+- [X] T116 [P] [US21] Crear `tests/unit/marketing-performance.test.js` para verificar `computeMarketingPerformance()` con prospectos capturados, conversiones por etapa, tasa de conversión, interacciones registradas, consultas respondidas y ventas «Cerrado ganado», sin persistir resultados.
+- [X] T117 [US21] Crear `tests/unit/marketing-performance-attribution.test.js` para comprobar filtro por `campaignId`/`campaña`, agrupación «Sin campaña» y ceros con explicación para campañas sin registros.
+- [X] T118 [P] [US21] Crear `tests/integration/marketing-performance.test.js` para abrir la vista, seleccionar campaña, comparar cifras con el panel y ver actualización sin recarga tras cambios en entidades o documentos.
+
+### Implementación de US21
+
+- [X] T119 [US21] Implementar `computeMarketingPerformance()` en `src/utils/marketing-performance.js` a partir de `entities`, `documents` y `campaigns`, reutilizando `computeDashboardStats()` para los valores compartidos.
+- [X] T120 [US21] Implementar la vista «Rendimiento de campañas» en `src/components/marketing.js` con selector de campaña, tarjetas de indicadores y mensaje claro para campañas sin registros, sin campos de captura manual.
+- [X] T121 [US21] Conectar `renderMarketingView()` y `handleChange()` en `src/app.js` para recalcular indicadores en cada render, y declarar el campo opcional `campaña` en entidades y documentos de `src/module-config.js`.
+
+**Punto de control**: Rendimiento y panel coinciden porque ambos derivan de los mismos registros.
+
+---
+
+## Phase 23: US6 - Consultar indicadores de Gestión Comercial (Prioridad: P6)
+
+**Objetivo**: Resumen de clientes, interacciones y seguimientos pendientes por entidad, con etiquetas de CRM y estado vacío.
+
+**Prueba independiente**: Abrir el resumen, comparar totales y pendientes con las fichas, registrar un seguimiento nuevo y ver el indicador actualizado; sin registros ver ceros y guía inicial.
+
+### Pruebas de US6
+
+- [X] T122 [P] [US6] Ampliar `tests/integration/commercial-summary.test.js` para verificar totales, pendientes por cliente, selección que abre la ficha, estado vacío, etiquetas «Clientes»/«Historial/Ficha» y actualización tras crear o completar seguimientos.
+- [X] T123 [P] [US6] Ampliar `tests/unit/storage.test.js` para comprobar en `computeSummary()` la precedencia de `pendingStates` y, sin ciclo de vida, la coincidencia del estado normalizado con «pendiente».
+
+### Implementación de US6
+
+- [X] T124 [US6] Completar `computeSummary()` en `src/storage.js` con `totalEntities`, `totalDocuments`, `totalPending` y `pendingByEntity` derivados de los registros vigentes.
+- [X] T125 [US6] Completar `renderCommercialSummaryHtml()` en `src/components/commercial-summary.js` y su renderizado desde `src/app.js` con estado vacío y enlaces a la ficha.
+
+**Punto de control**: El resumen refleja exactamente lo registrado en clientes y documentos.
+
+---
+
+## Phase 24: Polish & Cross-Cutting Concerns
+
+**Propósito**: Regresión, rendimiento, seguridad y cierre de la validación ejecutable.
+
+- [X] T126 [P] Ampliar `tests/integration/performance.test.js` para afirmar que búsqueda y renderizado de listas permanecen correctos con 500 entidades y 500 documentos.
+- [X] T127 [P] Ampliar `tests/unit/sanitize.test.js` y verificar en `src/utils/sanitize.js` que nombres, notas, enlaces y mensajes de chat se escapan antes de renderizarse en `src/components/`.
+- [X] T128 [P] Ampliar `tests/integration/unsaved-navigation.test.js` para confirmar que salir desde cualquier botón de `src/components/shell.js` o `src/components/dashboard.js` con el formulario modificado solo navega tras confirmar descartar.
+- [X] T129 [P] Ampliar `tests/integration/orphan-fields-ui.test.js` para conservar en `erp_entities` los valores de `category`, `description` y `pedidos` sin mostrarlos en `src/components/`.
+- [X] T130 [P] Actualizar `README.md` con los comandos `npm install`, `npm test`, `npm run lint`, `npm run dev` y la limitación de mismo origen de `?view=capture` descrita en `contracts/marketing.md`.
+- [X] T131 [P] Ampliar `tests/integration/marketing-navigation.test.js` para verificar que no existen «Abrir Marketing», torta «Estado comercial de la cartera» ni selector de etapas, y que Marketing está como cuarta opción en `src/components/shell.js`.
+- [X] T132 Ejecutar `npm test` y `npm run lint` definidos en `package.json` y corregir los fallos en `src/` y `tests/` hasta que ambos comandos terminen sin errores.
+- [X] T133 [P] Ampliar `tests/integration/marketing-dashboard.test.js` con la comparación final de cinco tarjetas y embudo entre el panel y Marketing tras crear, editar y eliminar documentos, comprobando que no se escriben resultados derivados en `localStorage`.
+
+**Punto de control**: Todas las historias pasan sus pruebas independientes y la suite completa queda en verde.
+
+---
+
+## Dependencias y orden de ejecución
+
+### Dependencias de fases
+
+- **Phase 1 (Setup)**: sin dependencias; solo verifica el entorno existente.
+- **Phase 2 (Foundational)**: depende de Setup y bloquea todas las historias.
+- **Phase 3-23 (historias)**: comienzan tras Foundational; se entregan en el orden de prioridad del documento, no en orden de dependencia.
+- **Phase 24 (Polish)**: depende de que estén completas las historias que se desean incluir en la entrega.
+
+### Dependencias entre historias
+
+- **US1 (P1)**: sin dependencias entre historias; define identidad y vínculo para US3, US4 y US16.
+- **US3 (P1)**: depende de los registros de US1/US2 y de la pantalla de gestión de US4 para reflejar ediciones.
+- **US4 (P1)**: depende de US1 para el modelo y precede a US15 como destino de las acciones rápidas.
+- **US5 (P1)**: prerrequisito lógico de US7, US8, US14, US15 y de todo el bloque Marketing.
+- **US7 (P1)**: depende de US5 para `labels` y de la regla de fecha compartida con US10.
+- **US8 (P1)**: depende de US5 y alimenta US2, US11, US18, US19 y US21.
+- **US14 (P1)**: depende de US5 para nombre, tema y terminología; reestructura la navegación de US4 y US15.
+- **US15 (P1)**: depende de US14 para el marco y de las estadísticas compartidas con US16.
+- **US2 (P2)**: depende de US5, US7, US8 y US10; US3 bloquea su ficha cuando faltan datos.
+- **US9 (P2)**: reutiliza `searchEntities()` de US1 y las reglas de visibilidad de US8.
+- **US10 (P2)**: depende de US5 y US7; conserva valores históricos junto con US2.
+- **US11 (P2)**: depende de US1 y US8 para campos de documento y cascada.
+- **US12 (P2)**: depende de US9 y US14 para pantalla y navegación.
+- **US13 (P2)**: depende de US5/US8 y del resumen de US6 para `pendingStates`.
+- **US16 (P2)**: depende de US15 para las tarjetas compartidas y de US8 para campos personalizados; habilita US17-US21.
+- **US17 (P2)**: depende de US16, US2 y US11 para ejecutivos y documentos de venta.
+- **US18 (P2)**: depende de US16 y US8 para vincular `Documento` y declarar campos de redes.
+- **US19 (P2)**: depende de US16/US18 para consentimiento, FAQ e historial compartido.
+- **US20 (P2)**: depende de US16, US18 y US19 para eventos y reglas existentes.
+- **US21 (P2)**: depende de US16-US20 para los registros que alimentan los indicadores.
+- **US6 (P6)**: depende de US2, US3, US11 y US13 para totales y pendientes.
+
+### Dentro de cada historia
+
+- Las pruebas marcadas al inicio de la fase se escriben primero y deben fallar antes de la implementación.
+- La configuración declarativa precede a los componentes; los componentes preceden al cableado en `src/app.js`.
+- Las utilidades puras preceden a las vistas que las consumen; el historial de `Documento` es la única fuente de ejecuciones.
+
+## Oportunidades de paralelismo
+
+- Setup: T001, T002, T003 y T004 pueden ejecutarse en paralelo porque tocan `package.json`, `vitest.config.mjs`, `index.html` y `tests/setup/test-setup.js`.
+- Foundational: T005, T007, T009, T011 y T013 pueden avanzar juntas; cada implementación (T006, T008, T010, T012, T014) parte de su prueba correspondiente.
+- US2: T053-T057 son cinco suites independientes en `tests/integration/`; la configuración de T058 y las adaptaciones T059-T062 se hacen después.
+- US16: T083-T086 cubren consentimiento, estadísticas, captura y panel en archivos de prueba distintos; T087-T093 se implementan después.
+- Marketing P2: US17, US18, US19, US20 y US21 pueden repartirse entre personas distintas una vez cerrada US16, siempre que cada una mantenga sus propias suites en `tests/unit/` y `tests/integration/`.
+- Polish: T126-T131 y T133 tocan archivos de prueba o documentación distintos y pueden ejecutarse en paralelo; T132 se ejecuta al final.
+
+### Ejemplo de paralelismo: US16
 
 ```bash
-# Ejecutar juntas las pruebas unitaria y de integración de la fecha de nacimiento:
-Task: "Ampliar tests/unit/entity-date.test.js con relojes falsos para medianoche local"
-Task: "Crear tests/integration/entity-birthdate.test.js con min/max y actualización sin recarga"
+T083 "Ampliar tests/unit/capture-consent.test.js ..."
+T084 "Ampliar tests/unit/marketing-stats.test.js ..."
+T085 "Ampliar tests/integration/marketing-capture.test.js ..."
+T086 "Ampliar tests/integration/marketing-dashboard.test.js ..."
 ```
 
-## Parallel Example: Foundational
+### Ejemplo de paralelismo: campañas y rendimiento
 
 ```bash
-# Crear pruebas primero y luego utilidad/configuración en paralelo:
-Task: "Crear tests/unit/entity-date.test.js"
-Task: "Ampliar tests/unit/module-config.test.js"
-Task: "Ampliar tests/unit/storage.test.js"
-Task: "Implementar src/utils/entity-date.js"
-Task: "Ampliar src/module-config.js"
+T110 "Crear tests/unit/marketing-campaigns.test.js ..."
+T112 "Crear tests/integration/marketing-campaigns.test.js ..."
+T116 "Crear tests/unit/marketing-performance.test.js ..."
+T118 "Crear tests/integration/marketing-performance.test.js ..."
 ```
 
-## Parallel Example: Foundational segunda tanda
+## Estrategia de implementación
 
-```bash
-# Escribir pruebas y utilidades independientes en paralelo:
-Task: "Crear tests/unit/field-formats.test.js"
-Task: "Crear tests/unit/field-rules.test.js"
-Task: "Implementar src/utils/field-formats.js"
-Task: "Ampliar tests/unit/module-config.test.js"
-Task: "Ampliar tests/unit/storage.test.js"
-```
+### MVP primero
 
-## Parallel Example: User Story 2 (segunda tanda)
+1. Completar Phase 1 (Setup) y Phase 2 (Foundational).
+2. Completar Phase 3 (US1: identidad, código único y relación entidad-documento).
+3. **DETENER Y VALIDAR**: ejecutar T015 y T016 y comprobar la prueba independiente de US1.
+4. Mostrar una demo mínima con cliente e interacción persistidos; no incluir Marketing todavía.
 
-```bash
-# Ejecutar juntas las pruebas de registro y campos condicionales:
-Task: "Ampliar tests/integration/register-client.test.js"
-Task: "Ampliar tests/integration/register-client-contact.test.js"
-```
+### Entrega incremental
 
-## Parallel Example: Tercera tanda
+1. Añadir US3, US4, US5, US7, US8, US14 y US15 para completar el espacio de trabajo ERP base.
+2. Añadir US2, US9, US10, US11, US12 y US13 para el perfil de clientes y la búsqueda avanzada.
+3. Añadir US16 para habilitar Marketing con panel compartido y captura con consentimiento.
+4. Añadir US17-US21 para equipo, redes, chat, campañas y rendimiento.
+5. Cerrar con US6 y Polish; cada fase se valida con su prueba independiente antes de continuar.
 
-```bash
-# Escribir pruebas de presentación y normalización en paralelo:
-Task: "Ampliar tests/unit/field-formats.test.js con RUT con y sin puntos"
-Task: "Ampliar tests/unit/storage.test.js con duplicados normalizados"
-Task: "Ampliar tests/unit/module-config.test.js con placeholder, order y options"
-Task: "Crear tests/integration/client-form-presentation.test.js"
-Task: "Ampliar tests/integration/register-client-contact.test.js"
-```
+### Estrategia con equipo paralelo
 
-### Parallel Example: Cuarta tanda
+- Una persona completa Setup + Foundational antes de repartir historias.
+- Después de Foundational: un desarrollador toma US1-US4, otro US5-US8 y otro US14-US15.
+- Tras US16: equipo A US17/US20, equipo B US18/US19, equipo C US21; US6 se asigna al cierre.
 
-```bash
-# Escribir pruebas y utilidades independientes en paralelo:
-Task: "Crear tests/unit/marketing-config.test.js"
-Task: "Crear tests/integration/marketing-capture.test.js"
-Task: "Crear tests/unit/marketing-stats.test.js"
-Task: "Crear tests/unit/marketing-automation.test.js"
-Task: "Ampliar tests/integration/workspace-shell.test.js"
-Task: "Implementar src/utils/marketing-config.js"
-Task: "Implementar src/utils/marketing-stats.js"
-```
+## Notas
 
----
-
-## Implementation Strategy
-
-### MVP First (Segunda tanda 2026-11-23)
-
-1. Completar Phase 8 (reglas de campo y validadores)
-2. Completar Phase 9 (US8: declaración de campos del perfil cliente)
-3. Completar Phase 10 (US7: ocultar campos retirados)
-4. **DETENERSE y VALIDAR**: ejecutar `tests/integration/client-field-rules.test.js` y `tests/integration/relabeling.test.js`
-5. Desplegar/demostrar si está listo
-
-### MVP First (Tercera tanda 2026-11-23)
-
-1. Completar Phase 14 (normalización de RUT y metadatos de presentación)
-2. Completar Phase 15 (US8: declaración de pistas, orden y catálogos)
-3. Completar Phase 16 (US2: renderizado y títulos del formulario)
-4. **DETENERSE y VALIDAR**: ejecutar `tests/integration/client-form-presentation.test.js` y `tests/integration/register-client-contact.test.js`
-5. Desplegar/demostrar si está listo
-
-### MVP First (Cuarta tanda 2026-11-23)
-
-1. Completar Phase 18 (configuración de Marketing y estado comercial)
-2. Completar Phase 19 (US16: captura con consentimiento)
-3. **DETENERSE y VALIDAR**: ejecutar `tests/integration/marketing-capture.test.js` y `tests/unit/capture-consent.test.js`
-4. Desplegar/demostrar si está listo
-
-### Incremental Delivery
-
-1. Foundational primera tanda �?' contrato de fecha listo
-2. US7 �?' terminología coherente
-3. US10 �?' fecha válida y dinámica
-4. US2 �?' perfil cliente completo
-5. US13 y US4 �?' aclaraciones 2026-11-16 pendientes
-6. Foundational segunda tanda �?' reglas de campo y validadores listos
-7. US8 �?' configuración declarativa del perfil cliente
-8. US7 �?' campos retirados invisibles sin pérdida de datos
-9. US2 �?' registro con obligatorios, código generado y campos condicionales
-10. US3 �?' ficha bloqueada de clientes heredados con edición correctora
-11. US9 / US12 �?' búsqueda coherente con campos visibles
-12. Foundational tercera tanda �?' RUT normalizado y contrato de presentación
-13. US8 �?' metadatos de pistas, orden, etiquetas y catálogos
-14. US2 �?' formulario con «Nuevo Cliente», pistas grises y orden solicitado
-15. Polish �?' regresión y documentación
-16. Foundational cuarta tanda �?' bloque `marketing`, consentimiento y estado comercial
-17. US16 �?' captura pública con consentimiento
-18. US16 �?' conversión a cliente conservando historial
-19. US16 �?' contadores, embudo y torta accesible
-20. US16 �?' automatización por eventos
-21. US14 / US4 �?' barra lateral reducida y accesos rápidos; Polish final
-
-### Parallel Team Strategy
-
-1. El equipo completa Setup + Foundational de la primera tanda
-2. Tras la base:
-   - Desarrollador A: US7 �?' US10 �?' US2
-   - Desarrollador B: US13
-   - Desarrollador C: US4
-3. Tras esas fases, completar Phase 8 y Phase 9 juntos
-4. Tras Phase 9:
-   - Desarrollador A: US7 (ocultar campos) �?' US2 (registro)
-   - Desarrollador B: US3 (ficha heredada)
-   - Desarrollador C: US9 / US12 (búsqueda)
-5. Tras Phase 14, completar Phase 15 entre todos y repartir Phase 16:
-   - Desarrollador A: `form-fields.js` y `entity-form.js`
-   - Desarrollador B: `app.js` y `dashboard.js`
-   - Desarrollador C: `styles.css` y documentación de quickstart
-6. Integrar cada historia en su checkpoint y ejecutar Phase 17 al final
-7. Tras Phase 18, repartir la cuarta tanda:
-   - Desarrollador A: `capture-form.js`, `capture-prospect.js` y vista `?view=capture`
-   - Desarrollador B: `marketing-stage.js`, `marketing-stats.js` y `marketing.js`
-   - Desarrollador C: `marketing-automation.js`, `shell.js` y `dashboard.js`
-8. Integrar en los checkpoints de las fases 19�?"23 y ejecutar Phase 24 al final
-
----
-
-## Notes
-
-- `[P]` indica archivos distintos y sin dependencias pendientes
-- `[US#]` traza la tarea a la historia de usuario correspondiente
-- Las tareas de prueba se incluyen por mandato de la Constitución (Principio II)
-- Verificar que las pruebas fallan antes de implementar
-- No añadir dependencias de fechas: usar `Date` nativo y cadenas ISO
-- Confirmar con `npm test`, `npm run lint` y `npm run build` antes de cerrar cada fase
-- Los metadatos de presentación no cambian claves de almacenamiento: `rubro` conserva su clave y valores internos
-- Las pistas grises son `placeholder`: nunca se validan, se guardan ni se cuentan como captura
-- El bloque `marketing` es opcional: sin él no se ejecuta automatización ni se ofrece captura pública
-- El gráfico de torta se construye con SVG nativo; no se añaden dependencias de gráficos
-- Cada entidad se contabiliza una sola vez: la categoría se deriva de `estado_comercial`, no de un campo duplicado
-- Evitar tareas vagas, conflictos de archivo y dependencias que rompan la independencia
+- `[P]` significa archivos distintos y sin dependencias pendientes; no implica que las pruebas deban ejecutarse en paralelo, porque `vitest.config.mjs` fija `fileParallelism: false`.
+- `[USn]` permite trazar cada tarea hasta su historia y su prueba independiente en `spec.md`.
+- Todas las suites se escriben antes de la implementación y se comprueba que fallan; `npm test` y `npm run lint` se ejecutan al final de cada fase y en Polish.
+- Marketing reutiliza `Entidad` y `Documento`: no hay nueva entidad, backend, dependencias ni almacenamiento de resultados derivados.
+- El campo `estado_comercial`, las reglas y las campañas son internos; Marketing no ofrece torta ni selector de etapas y el panel no ofrece «Abrir Marketing».
+- La captura pública se sirve en `?view=capture` y requiere mismo origen con el `localStorage` de la aplicación.

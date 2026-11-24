@@ -14,8 +14,17 @@ function consentField(config) {
 
 export function getCaptureFieldDefs(config, values = {}) {
   const allowed = new Set(config?.marketing?.captureFields || []);
+  const campaigns = config?.marketing?.campaigns || [];
   const fields = getEntityFieldDefs(config, values).filter((def) => allowed.has(def.key));
-  return [...fields, consentField(config)];
+  const campaignDef = (config?.customFields?.entity || []).find((def) => def.key === 'campaña');
+  const campaignField = campaignDef
+    ? {
+        ...campaignDef,
+        type: 'select',
+        options: campaigns.map((campaign) => ({ value: campaign.id, label: campaign.name })),
+      }
+    : null;
+  return [...fields, ...(campaignField ? [campaignField] : []), consentField(config)];
 }
 
 export function renderCaptureFormHtml(config, values = {}, errors = {}, submitted = false) {

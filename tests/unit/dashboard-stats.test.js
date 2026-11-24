@@ -3,6 +3,7 @@ import { JSDOM } from 'jsdom';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
 import { formatCurrencyUsd, formatPercent } from '../../src/components/dashboard.js';
 import { addEntity, addDocument, deleteEntity } from '../../src/storage.js';
+import { initApp } from '../../src/app.js';
 
 let dom;
 
@@ -26,6 +27,17 @@ function cards() {
   }));
 }
 
+function createClient() {
+  return addEntity({
+    name: 'Acme',
+    code: 'AC-1',
+    targetDate: '1980-05-05',
+    rut: '11.111.111-1',
+    canal_contacto: 'llamada',
+    contacto_telefono: '+56912345678',
+  });
+}
+
 describe('formato de indicadores del panel', () => {
   it('formatea moneda USD y porcentajes de forma limpia', () => {
     expect(formatCurrencyUsd(1500)).toBe('$1,500');
@@ -37,38 +49,27 @@ describe('formato de indicadores del panel', () => {
   });
 });
 
-describe('panel de CRM Comercial', () => {
-  it('muestra los valores de referencia cuando no hay registros', async () => {
-    const { boot } = await import('../../src/app.js');
-    const app = boot(document.getElementById('app'));
+describe('panel de CRM Comercial sin datos de demostración', () => {
+  it('muestra ceros reales y el embudo vacío cuando no hay registros', () => {
+    const app = initApp(document.getElementById('app'));
 
     expect(cards()).toEqual([
-      { value: '421', label: 'Clientes' },
-      { value: '35', label: 'Interacciones' },
-      { value: '25', label: 'Cerrado ganado' },
-      { value: '64%', label: 'Tasa de conversión' },
-      { value: '$1,500', label: 'Pipeline (USD)' },
+      { value: '0', label: 'Clientes' },
+      { value: '0', label: 'Interacciones' },
+      { value: '0', label: 'Cerrado ganado' },
+      { value: '0%', label: 'Tasa de conversión' },
+      { value: '$0', label: 'Pipeline (USD)' },
     ]);
-    expect(document.querySelector('.demo-note')).toBeTruthy();
-    expect(document.querySelector('.commercial-funnel').textContent).toContain('25');
-
-    app.setDemoMode(false);
-    expect(cards()[0].value).toBe('0');
     expect(document.querySelector('.demo-note')).toBeNull();
+    expect([...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)).toEqual([
+      '0', '0', '0', '0', '0', '0',
+    ]);
+    app.destroy();
   });
 
-  it('recalcula los indicadores al crear y eliminar registros reales', async () => {
-    const { boot } = await import('../../src/app.js');
-    const app = boot(document.getElementById('app'));
-
-    const client = addEntity({
-      name: 'Acme',
-      code: 'AC-1',
-      targetDate: '1980-05-05',
-      rut: '11.111.111-1',
-      canal_contacto: 'llamada',
-      contacto_telefono: '+56912345678',
-    });
+  it('recalcula los indicadores al crear y eliminar registros reales', () => {
+    const app = initApp(document.getElementById('app'));
+    const client = createClient();
     addDocument({ entity_id: client.entity_id, status: 'cerrado ganado', startDate: '2026-10-01' });
     addDocument({ entity_id: client.entity_id, status: 'en negociacion', startDate: '2026-10-02', importe: 250 });
     app.navigate('dashboard');
@@ -80,11 +81,13 @@ describe('panel de CRM Comercial', () => {
       { value: '100%', label: 'Tasa de conversión' },
       { value: '$250', label: 'Pipeline (USD)' },
     ]);
-    expect(document.querySelector('.demo-note')).toBeNull();
+    expect([...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)).toEqual([
+      '0', '0', '1', '1', '0', '0',
+    ]);
 
     deleteEntity(client.id);
     app.navigate('dashboard');
-    expect(cards()[0]).toEqual({ value: '421', label: 'Clientes' });
-    expect(document.querySelector('.demo-note')).toBeTruthy();
+    expect(cards().map((card) => card.value)).toEqual(['0', '0', '0', '0%', '$0']);
+    app.destroy();
   });
 });

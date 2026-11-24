@@ -1,6 +1,6 @@
 # Modelo de Datos: Módulo Base ERP
 
-**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM y Marketing descritos en las Historias de Usuario 2, 3, 5, 6, 7 y 16 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
+**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM y Marketing descritos en las Historias de Usuario 2, 3, 5, 6, 7 y 16 a 21 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
 
 Para la forma exacta de los campos y las operaciones de almacenamiento, ver `contracts/entity-storage.md`, que es la fuente autoritativa; este documento resume las relaciones y la extensión vía configuración.
 
@@ -56,7 +56,7 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `detailPolicy.entity` | object | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058). |
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067). |
 | `options` (en campos `select`) | array | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063). |
-| `marketing` | object \| null | Bloque opcional con `privacyNoticeVersion`, `automationRules` y `captureFields`; ausente = sin comportamiento de Marketing (FR-068 a FR-074). |
+| `marketing` | object \| null | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-090). |
 | `theme.accentColor` | string | Color de acento opcional (FR-038). |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
@@ -108,7 +108,7 @@ La búsqueda del perfil de clientes deriva sus campos de estas reglas: solo `nam
 
 **Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad.
 
-## 3. Perfil de Marketing (Historia de Usuario 16)
+## 3. Perfil de Marketing (Historias de Usuario 16 a 21)
 
 Marketing **no introduce entidades nuevas**: usa `Entidad` para prospectos/clientes y `Documento` para interacciones y ejecuciones de automatización (FR-068, XR-001).
 
@@ -123,33 +123,24 @@ Marketing **no introduce entidades nuevas**: usa `Entidad` para prospectos/clien
 
 Conversión a Cliente (FR-068): al pasar `estado_comercial` de cualquier estado a `ganado`, la misma `Entidad` conserva `id`, `entity_id`, documentos y campos personalizados; no se crea un registro nuevo ni se migra información.
 
-### 3.2 Correspondencia con las categorías del gráfico
+### 3.2 Fuente de las tarjetas y del embudo
 
-| Estado almacenado | Categoría mostrada |
-|---|---|
-| `ganado` | Clientes ganados |
-| `en_recontacto` | En recontacto |
-| `en_proceso` | En proceso |
-| `perdido` | Perdidos |
-| `prospecto` | Sin resultados definitivos |
-
-Cada entidad pertenece a una sola categoría. El estado inicial «Prospecto» se clasifica como «Sin resultados definitivos» hasta que avance (FR-074).
+Marketing ya no usa `estado_comercial` para sus tarjetas ni muestra la torta «Estado comercial de la cartera». Las cinco tarjetas y el embudo se derivan de `Entidad` y `Documento` con las mismas reglas del panel principal (FR-072 a FR-075). `estado_comercial` se conserva únicamente como dato interno de la automatización.
 
 ### 3.3 Agregaciones derivadas (no persistidas)
 
-`computeMarketingStats({ entities })` calcula en memoria, sin escribir en `localStorage`:
+`computeMarketingStats({ entities, documents })` calcula en memoria, sin escribir en `localStorage`:
 
 | Salida | Definición |
 |---|---|
-| `leadsAnalyzed` | Total de entidades. |
-| `openOpportunities` | Entidades con `estado_comercial` en `en_proceso` o `en_recontacto`. |
-| `wonClients` | Entidades con `estado_comercial = ganado`. |
-| `lossRate` | `perdido / leadsAnalyzed * 100`, o cero si no hay leads. |
-| `conversionRate` | `ganado / leadsAnalyzed * 100`, o cero si no hay leads. |
-| `funnel` | Conteo por etapa `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y tasas entre etapas consecutivas. |
-| `categories` | Arreglo de cinco `{ label, count, value }` para la torta, en el orden de la sección 3.2. |
+| `totalEntities` | Total de entidades almacenadas. |
+| `totalDocuments` | Total de documentos almacenados. |
+| `closedWon` | Importe de los documentos en estado «Cerrado ganado». |
+| `conversionRate` | Tasa de conversión calculada con la misma fórmula del panel. |
+| `pipeline` | Importe del pipeline calculado con la misma fórmula del panel. |
+| `funnel` | Conteo y porcentajes por estado de documento, idénticos al embudo del panel. |
 
-Estas cifras alimentan los contadores (FR-073), el embudo (FR-072) y la torta (FR-074); al estar derivadas de las entidades, cualquier cambio de estado se refleja sin recarga.
+Al derivarse de los registros almacenados, cualquier creación, edición o eliminación se refleja al volver a consultar la vista sin recarga (FR-074).
 
 ### 3.4 Reglas de automatización
 
@@ -162,8 +153,65 @@ Estas cifras alimentan los contadores (FR-073), el embudo (FR-072) y la torta (F
 | `action` | string | `create_document` (crea un `Documento` en el historial de la entidad) o `notify` (registra el aviso en ese historial). |
 | `label` | string | Texto legible mostrado en el historial y en mensajes. |
 
-Cada ejecución se persiste como un `Documento` con `notes = label`, `status = 'automatico'`, `entity_id` de la entidad afectada y `automation_key = event|from|to|label`. La clave se declara como campo personalizado oculto de `Documento` y evita repetir ejecuciones ya registradas. Por tanto, el historial de la ficha ya existente muestra la automatización sin un almacén adicional. Con `marketing` ausente o `automationRules` vacío, no se ejecuta ninguna acción.
+Cada ejecución se persiste como un `Documento` con `notes = label`, `status = 'automatico'`, `entity_id` de la entidad afectada, `automation_key = event|from|to|label`, `campaña` opcional y `campaignId` cuando proviene de una campaña. La clave evita repetir ejecuciones ya registradas. Por tanto, el historial de la ficha ya existente muestra la automatización sin un almacén adicional. Con `marketing` ausente o sin reglas ni campañas, no se ejecuta ninguna acción.
 
 ### 3.5 Navegación
 
-La retirada de Clientes e Interacciones de la barra lateral no afecta al modelo de datos: `NAV_ITEMS` es configuración de interfaz en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la captura pública se selecciona con `?view=capture` y tampoco altera datos hasta que se envía el formulario.
+Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cuarta opción de `NAV_ITEMS` en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la captura pública se selecciona con `?view=capture` y no altera datos hasta que se envía el formulario. El chat aparece tanto en la captura pública como en Marketing usando los mismos documentos.
+
+## 4. Equipo de ventas y logros
+
+`marketing.salesTeams` es un arreglo opcional de equipos y sirve de semilla. Cada equipo y sus integrantes se capturan en la interfaz y las definiciones editadas se guardan en `erp_marketing_config`; las métricas se calculan, no se persisten.
+
+| Objeto | Campo | Tipo | Notas |
+|---|---|---|---|
+| Equipo | `name` | string | Nombre editable del equipo (FR-076). |
+| Equipo | `integrantes` | array | Lista editable de integrantes. |
+| Integrante | `name` | string | Nombre editable del integrante (FR-077). |
+| Integrante | `role` | string | Cargo editable del integrante (FR-077). |
+| Integrante | `active` | boolean | Estado «Activo»/«Inactivo» editable (FR-077). |
+| Integrante (derivado) | `realMensual` | number | Suma de importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al integrante (FR-078). |
+| Integrante (derivado) | `objetivoMensual` | number | `ventasAcumuladas / díasTranscurridos * díasDelMes`; cero sin ventas o sin días transcurridos (FR-079). |
+
+La relación se resuelve por el valor de texto de `ejecutivo_asignado`, sin crear una entidad separada para el ejecutivo. Un equipo sin integrantes muestra un estado vacío.
+
+## 5. Redes sociales y chat
+
+| Concepto | Se implementa como | Campos/ reglas |
+|---|---|---|
+| Interacción en redes | `Documento` vinculado al prospecto o cliente | `plataforma`, `tipo_interaccion`, `nota`, `enlace`, `campaña` opcional, `startDate = fecha` (FR-080, FR-081). |
+| Mensaje o consulta de chat | `Documento` vinculado al prospecto o cliente | `canal = 'chat'`, `mensaje`, `tipo_interaccion`, `campaña` opcional y marcas de tiempo (FR-081, FR-083). |
+| Pregunta frecuente | Entrada de configuración `marketing.faq` | `{ pregunta, respuesta }`; la coincidencia se resuelve sobre texto normalizado (FR-082). |
+| Consentimiento del chat | Campos de la entidad | Reutiliza `consentimiento`, `consentimiento_fecha` y `consentimiento_version`; sin consentimiento no se registra el primer mensaje (FR-085). |
+
+Las interacciones se ordenan por fecha en el apartado «Redes sociales» y en la ficha de la entidad. Las consultas sin coincidencia se registran como `Documento` con un acuse visible para el visitante.
+
+## 6. Campañas de marketing
+
+`marketing.campaigns` es un arreglo opcional de campañas y sirve de semilla; las campañas creadas, editadas o detenidas se guardan en `erp_marketing_config` y se gestionan desde Marketing.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `id` | string | Identificador interno de la campaña. |
+| `name` | string | Nombre editable (FR-086). |
+| `stage` | string | Estado comercial objetivo (`prospecto`, `en_proceso`, `en_recontacto`, `ganado`, `perdido`) (FR-086). |
+| `startDate` / `endDate` | string (ISO date) | Periodo activo; fuera de él no se ejecutan acciones nuevas (FR-086). |
+| `status` | string | `activa` o `detenida`; al detener se conserva el historial (FR-086). |
+| `createdAt` | string (ISO timestamp) | Fecha de creación; desempate ante solapamientos (FR-090). |
+
+Acciones internas permitidas (FR-089): crear un `Documento` de seguimiento, asignar `ejecutivo_asignado` y actualizar `estado_comercial`. Cada ejecución, incluida la omisión por solapamiento, se registra como `Documento` con `campaignId`, fecha, entidad, acción y motivo cuando aplica. No se envían correos, mensajes externos ni publicaciones en redes.
+
+## 7. Rendimiento de marketing
+
+`computeMarketingPerformance({ entities, documents, campaigns })` deriva indicadores sin persistirlos:
+
+| Indicador | Definición |
+|---|---|
+| `prospectosCapturados` | Entidades con `estado_comercial = prospecto` o creadas desde la captura. |
+| `conversionesPorEtapa` | Conteo de entidades por estado comercial objetivo de campaña. |
+| `tasaDeConversion` | Proporción de entidades que alcanzaron `ganado`. |
+| `interaccionesRegistradas` | Documentos de redes y otras interacciones vinculados a entidades. |
+| `consultasRespondidas` | Mensajes de chat que recibieron respuesta rápida. |
+| `ventasGanadas` | Cantidad de documentos «Cerrado ganado», coincidente con la tarjeta del panel. |
+
+Cuando se selecciona una campaña, los indicadores se filtran por el campo `campaña` o `campaignId`. Los registros sin campaña aparecen bajo el grupo «Sin campaña» (FR-088). Una campaña sin registros muestra cero con una explicación clara (SC-026).

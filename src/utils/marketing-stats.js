@@ -1,50 +1,70 @@
-import {
-  MARKETING_STAGES,
-  MARKETING_STAGE_LABELS,
-  MARKETING_CATEGORIES,
-  categoryForStage,
-} from './marketing-stages.js';
+import { getLabel } from '../module-config.js';
+import { normalizeText } from './search.js';
+import { categoryForStage } from './marketing-stages.js';
 
 export { categoryForStage };
 
-export function computeMarketingStats({ entities = [] } = {}) {
-  const leadsAnalyzed = entities.length;
-  const counts = Object.fromEntries(MARKETING_STAGES.map((stage) => [stage, 0]));
-  for (const entity of entities) {
-    if (Object.prototype.hasOwnProperty.call(counts, entity?.estado_comercial)) {
-      counts[entity.estado_comercial] += 1;
-    }
+const FALLBACK_STATES = [
+  'prospecto',
+  'contactado',
+  'en negociacion',
+  'cerrado ganado',
+  'cerrado perdido',
+  'pendiente',
+];
+
+const ACTIVE_STATES = ['prospecto', 'contactado', 'en negociacion'];
+
+function statusLabel(status) {
+  const text = String(status ?? '')
+    .replace(/_/g, ' ')
+    .trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+}
+
+function funnelFor(documents, config) {
+  const states =
+    Array.isArray(config?.statusLifecycle?.states) && config.statusLifecycle.states.length
+      ? config.statusLifecycle.states
+      : FALLBACK_STATES;
+  const counts = new Map(states.map((status) => [normalizeText(status), 0]));
+  for (const document of documents) {
+    const key = normalizeText(document?.status);
+    if (counts.has(key)) counts.set(key, counts.get(key) + 1);
   }
-
-  const funnel = MARKETING_STAGES.map((stage, index) => {
-    const count = counts[stage];
-    const previous = index > 0 ? counts[MARKETING_STAGES[index - 1]] : 0;
-    return {
-      stage,
-      label: MARKETING_STAGE_LABELS[stage],
-      count,
-      rate: leadsAnalyzed ? (count / leadsAnalyzed) * 100 : 0,
-      stepRate: previous > 0 ? (count / previous) * 100 : 0,
-    };
-  });
-
-  const categories = MARKETING_CATEGORIES.map((category) => ({
-    key: category.key,
-    label: category.label,
-    color: category.color,
-    count: entities.filter((entity) => categoryForStage(entity?.estado_comercial).key === category.key).length,
-  })).map((category) => ({
-    ...category,
-    value: leadsAnalyzed ? (category.count / leadsAnalyzed) * 100 : 0,
+  return states.map((status) => ({
+    status,
+    label: statusLabel(status),
+    count: counts.get(normalizeText(status)) || 0,
   }));
+}
 
+export function computeDashboardStats({ entities = [], documents = [], config } = {}) {
+  const safeEntities = Array.isArray(entities) ? entities : [];
+  const safeDocuments = Array.isArray(documents) ? documents : [];
+  const funnel = funnelFor(safeDocuments, config);
+  let wonDocuments = 0;
+  let pipelineTotal = 0;
+  for (const document of safeDocuments) {
+    const status = normalizeText(document?.status);
+    if (status === 'cerrado ganado') wonDocuments += 1;
+    if (ACTIVE_STATES.includes(status)) pipelineTotal += Number(document?.importe) || 0;
+  }
+  const entityCount = safeEntities.length;
   return {
-    leadsAnalyzed,
-    openOpportunities: counts.en_proceso + counts.en_recontacto,
-    wonClients: counts.ganado,
-    lossRate: leadsAnalyzed ? (counts.perdido / leadsAnalyzed) * 100 : 0,
-    conversionRate: leadsAnalyzed ? (counts.ganado / leadsAnalyzed) * 100 : 0,
+    entityCount,
+    documentCount: safeDocuments.length,
+    wonDocuments,
+    conversionRate: entityCount > 0 ? (wonDocuments / entityCount) * 100 : 0,
+    pipelineTotal,
     funnel,
-    categories,
+    documents: safeDocuments,
+    entities: safeEntities,
+    entityLabel: getLabel(config, 'entity'),
+    entityPlural: getLabel(config, 'entityPlural'),
+    documentLabel: getLabel(config, 'document'),
+    documentPlural: getLabel(config, 'documentPlural'),
   };
 }
+
+export const computeMarketingStats = computeDashboardStats;

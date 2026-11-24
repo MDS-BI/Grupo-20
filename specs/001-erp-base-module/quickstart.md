@@ -3,12 +3,13 @@
 ## Configuración
 
 1. Instale las dependencias con `npm install`.
-2. Inicie el servidor de desarrollo con `npm run dev`.
-3. Abra la URL local de Vite en un navegador.
+2. Ejecute la suite automatizada con `npm test` y la comprobación de estilo con `npm run lint` antes de validar en el navegador.
+3. Inicie el servidor de desarrollo con `npm run dev`.
+4. Abra la URL local de Vite en un navegador.
 
 ## Flujo de Usuario Principal
 
-1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos, buscar registros o abrir Marketing).
+1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos o buscar registros), o abra Marketing desde la barra lateral.
 2. Cree una entidad usando el formulario y añádale un documento asociado.
 3. Busque una entidad usando la pantalla de búsqueda y abra su ficha para ver el historial de documentos ordenado por fecha.
 4. Edite o elimine una entidad desde el área de gestión; confirme que la ficha de esa entidad refleja el cambio.
@@ -71,21 +72,41 @@ La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/enti
 
 ## Validación del Apartado de Marketing
 
-1. Abra el panel principal y confirme que la barra lateral muestra solo Panel, Buscar y Resumen: «Clientes» e «Interacciones» no aparecen.
-2. Compruebe que el panel ofrece las acciones rápidas de nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros y abrir Marketing; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí.
-3. Abra Marketing y confirme los cinco contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual», además del embudo por etapas y del gráfico «Estado comercial de la cartera».
-4. Con cero prospectos, verifique que los contadores muestran cero y que la torta muestra las cinco categorías en cero con un estado vacío claro.
-5. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe explicarse el motivo.
-6. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas.
-7. Avance el prospecto a «En proceso», «En recontacto» y «Cliente ganado»; tras cada cambio, compruebe que los contadores, el embudo y la torta se actualizan sin recargar y que cada entidad cuenta una sola vez.
-8. Confirme que el gráfico ofrece leyenda textual con las cinco categorías y que su descripción accesible enumera las cantidades.
-9. Verifique que las reglas configuradas en `marketing.automationRules` se ejecutan al capturar o cambiar de etapa y que cada ejecución aparece como un documento en el historial de la entidad.
+1. Abra el panel principal y confirme que la barra lateral muestra Panel, Buscar, Resumen y Marketing; «Clientes» e «Interacciones» no aparecen y el panel ya no ofrece «Abrir Marketing».
+2. Compruebe que el panel ofrece las acciones rápidas de nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos y buscar registros; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí.
+3. Abra Marketing y confirme las cinco tarjetas del panel —entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— y el mismo embudo por estados de documento, con idénticos valores que en el panel.
+4. Confirme que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas, y que la lista «Últimas Interacciones / Próximos Seguimientos» coincide con la del panel.
+5. Con cero registros, verifique que las tarjetas y el embudo muestran cero con un estado vacío claro.
+6. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe explicarse el motivo.
+7. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas.
+8. Cree, edite y elimine documentos «Cerrado ganado» y confirme que las tarjetas, el embudo y los valores del panel se actualizan sin recarga y sin duplicar documentos.
+9. Verifique que `estado_comercial` y las reglas automáticas siguen operando internamente, sin mostrarse en Marketing, y que cada ejecución aparece como documento en la ficha de la entidad.
 
-La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/marketing.md) y su efecto en el modelo en [`data-model.md`](data-model.md#3-perfil-de-marketing-historia-de-usuario-16).
+La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/marketing.md) y su efecto en el modelo en [`data-model.md`](data-model.md#3-perfil-de-marketing-historias-de-usuario-16-a-21).
+
+## Validación del Equipo de Ventas, Redes y Chat
+
+1. Abra «Equipo de ventas y logros», cree un equipo y un integrante con nombre, cargo y estado, confirme que no hay casillas para capturar objetivo mensual ni real mensual, y recargue la página para verificar que la definición persiste.
+2. Registre documentos «Cerrado ganado» del mes para el ejecutivo asignado y confirme que el real mensual es la suma de sus importes y que el objetivo mensual es la proyección `ventas ÷ días transcurridos × días del mes`; sin ventas, ambos muestran cero.
+3. Abra «Redes sociales», registre una interacción de Instagram vinculada a un prospecto con plataforma, fecha, tipo, nota y enlace, y compruebe que aparece ordenada por fecha en la vista y en la ficha de la entidad.
+4. Abra el chat desde `?view=capture` y desde Marketing; confirme que una pregunta configurada recibe su respuesta rápida sin recarga y que una pregunta sin coincidencia muestra un acuse y queda guardada como documento para seguimiento.
+5. Intente enviar el primer mensaje sin marcar el consentimiento del chat: el envío debe bloquearse y no debe registrarse ningún mensaje.
+6. Compruebe que los mensajes del chat y las interacciones de redes aparecen en la ficha de la entidad vinculada y permanecen intactos al navegar entre vistas.
+
+## Validación de Campañas y Rendimiento
+
+1. Cree una campaña con nombre, etapa objetivo «En proceso» y fechas de inicio y fin; verifique que puede editarse, detenerse y consultarse, recargue la página para comprobar que la definición persiste, y confirme que su historial se conserva al finalizar.
+2. Con un prospecto en la etapa objetivo, dispare un evento de captura, cambio de etapa o interacción y confirme que la acción se limita a crear un documento de seguimiento, asignar un ejecutivo o actualizar el estado comercial interno; compruebe que no se envía correo ni se publica en redes.
+3. Cree dos campañas activas para el mismo prospecto y evento: solo debe ejecutarse la más reciente y la otra debe quedar registrada como «omitida por solapamiento», sin acciones duplicadas.
+4. Asigne el campo opcional «Campaña» a un prospecto, una interacción y una venta; deje otro registro sin campaña y confirme que aparece bajo «Sin campaña».
+5. Abra «Rendimiento de campañas» y confirme que los indicadores globales y por campaña —prospectos, conversión por etapa, interacciones, consultas respondidas y ventas ganadas— coinciden con los registros almacenados y se actualizan sin recarga.
+6. Seleccione una campaña sin registros y confirme que los indicadores muestran cero con una explicación clara.
+
+La forma de campañas, atribución e indicadores está en [`contracts/marketing.md`](contracts/marketing.md#forma-de-los-datos) y su efecto en el modelo en [`data-model.md`](data-model.md#6-campañas-de-marketing).
 
 ## Validación de la Navegación Lateral
 
-1. Recorra todas las pantallas y confirme que la barra lateral mantiene Panel, Buscar y Resumen con el elemento activo resaltado.
+1. Recorra todas las pantallas y confirme que la barra lateral mantiene Panel, Buscar, Resumen y Marketing con el elemento activo resaltado.
 2. Intente localizar los botones de Clientes e Interacciones en la barra lateral: no deben existir en el marcado.
 3. Navegue a la gestión de entidades y de documentos desde las acciones rápidas del panel y vuelva al panel: los registros deben permanecer intactos.
 4. Abra `?view=manage-entity` y `?view=manage-document`: las vistas deben seguir funcionando como enlaces profundos aunque no figuren en la barra lateral.
@@ -100,5 +121,6 @@ Los módulos ERP personalizados adaptan la base mediante un único archivo de co
 4. Opcionalmente declare `entityDate` (etiqueta, `min`, `max` o `localToday`) para renombrar y restringir la fecha base de la entidad.
 5. Opcionalmente establezca `theme.accentColor` para remarcar los resaltados y controles principales de todo el espacio de trabajo.
 6. Añada reglas de validación específicas del módulo junto a las reglas base donde sea necesario.
+7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional.
 
 La generación de identidad, marcas de tiempo, integridad referencial entre entidades y documentos, eliminación en cascada, navegación y búsqueda siguen siendo gestionadas por el módulo base. Sin archivo de configuración, la aplicación se ejecuta con el comportamiento predeterminado Entidad/Documento. Consulte `specs/001-erp-base-module/` para la especificación completa.

@@ -47,11 +47,13 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     mount();
   });
 
-  it('muestra un estado vacío con indicadores en cero cuando no hay registros', () => {
+  it('muestra un estado vacío con indicadores en cero y las etiquetas Clientes e Historial/Ficha', () => {
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
     const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
     expect(values).toEqual(['0', '0', '0']);
     expect(document.querySelector('.empty-state')).toBeTruthy();
+    expect(document.querySelector('.commercial-summary h2').textContent).toBe('Clientes');
+    expect(document.querySelector('.commercial-summary').textContent).toContain('Historial/Ficha');
   });
 
   it('los indicadores coinciden con los registros y se actualiza al completar un estado', () => {
@@ -62,6 +64,8 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     let values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
     expect(values).toEqual(['1', '1', '1']);
     expect(document.querySelector('.pending-list').textContent).toContain('Cliente Uno');
+    expect(document.querySelector('.commercial-summary').textContent).toContain('Historial/Ficha');
+    expect(document.querySelector('.pending-list [data-action="view-entity"]').textContent).toBe('Ver ficha');
 
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');

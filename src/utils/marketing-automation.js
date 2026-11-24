@@ -1,3 +1,5 @@
+import { selectCampaignsForEvent } from './marketing-campaigns.js';
+
 function automationKey(rule, context = {}) {
   return [
     rule.event,
@@ -16,22 +18,84 @@ function matchesRule(rule, event, context) {
   return true;
 }
 
+function campaignDocument(campaign, entity, event, context) {
+  const action = campaign.action || 'create_document';
+  const notes =
+    action === 'assign_executive'
+      ? `Asignar ejecutivo: ${campaign.executive || 'Sin ejecutivo'}`
+      : action === 'update_stage'
+        ? `Actualizar estado comercial: ${campaign.targetStage || 'Sin estado'}`
+        : campaign.notes || 'Seguimiento de campaña';
+  return {
+    entity_id: entity.entity_id,
+    notes,
+    status: 'automatico',
+    automation_key: `campaign|${campaign.id}|${event}|${entity.entity_id}`,
+    campaignId: campaign.id,
+    campaña: campaign.name,
+    campaignAction: action,
+    executive: campaign.executive || '',
+    targetStage: campaign.targetStage || '',
+    startDate: context.now ? new Date(context.now).toISOString().slice(0, 10) : '',
+  };
+}
+
+function skippedDocument(skipped, entity, event) {
+  return {
+    entity_id: entity.entity_id,
+    notes: 'omitida por solapamiento',
+    status: 'automatico',
+    automation_key: `campaign_skipped|${skipped.campaignId}|${event}|${entity.entity_id}`,
+    campaignId: skipped.campaignId,
+    campaña: skipped.name,
+    skipReason: skipped.skipReason,
+    fecha: skipped.fecha,
+    startDate: skipped.fecha ? skipped.fecha.slice(0, 10) : '',
+  };
+}
+
 export function runAutomationRules(event, entity, config, documents = [], context = {}) {
-  const rules = config?.marketing?.automationRules;
-  if (!Array.isArray(rules) || !entity?.entity_id) return [];
+  const marketing = config?.marketing;
+  const rules = marketing?.automationRules;
+  if (!marketing || !entity?.entity_id) return [];
   const existingKeys = new Set(documents.map((document) => document.automation_key).filter(Boolean));
   const pending = [];
-  for (const rule of rules) {
-    if (!matchesRule(rule, event, context)) continue;
-    const key = automationKey(rule, context);
-    if (existingKeys.has(key)) continue;
-    existingKeys.add(key);
-    pending.push({
-      entity_id: entity.entity_id,
-      notes: rule.label,
-      status: 'automatico',
-      automation_key: key,
-    });
+  if (Array.isArray(rules)) {
+    for (const rule of rules) {
+      if (!matchesRule(rule, event, context)) continue;
+      const key = automationKey(rule, context);
+      if (existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      pending.push({
+        entity_id: entity.entity_id,
+        notes: rule.label,
+        status: 'automatico',
+        automation_key: key,
+      });
+    }
+  }
+
+  const campaigns = context.campaigns || marketing.campaigns || [];
+  const { selected, skipped } = selectCampaignsForEvent({
+    event,
+    entity,
+    campaigns,
+    now: context.now || new Date(),
+    context,
+  });
+  if (selected) {
+    const doc = campaignDocument(selected, entity, event, context);
+    if (!existingKeys.has(doc.automation_key)) {
+      existingKeys.add(doc.automation_key);
+      pending.push(doc);
+    }
+  }
+  for (const skippedCampaign of skipped) {
+    const doc = skippedDocument(skippedCampaign, entity, event);
+    if (!existingKeys.has(doc.automation_key)) {
+      existingKeys.add(doc.automation_key);
+      pending.push(doc);
+    }
   }
   return pending;
 }

@@ -24,6 +24,12 @@ export function renderFieldHtml(def, value, error) {
       })
       .join('');
     input = `<select id="${id}" name="${def.key}" ${requiredAttr}${describedByAttr}><option value="">-- Seleccionar --</option>${options}</select>`;
+  } else if (def.type === 'datalist') {
+    const listId = `options-${def.key}`;
+    const options = (def.options || [])
+      .map((option) => `<option value="${escapeHtml(optionValue(option))}"></option>`)
+      .join('');
+    input = `<input type="text" id="${id}" name="${def.key}" list="${listId}" value="${escapeHtml(val)}" ${requiredAttr}${describedByAttr}${placeholderAttr} /><datalist id="${listId}">${options}</datalist>`;
   } else if (def.type === 'date') {
     const minAttr = def.min ? ` min="${escapeHtml(def.min)}"` : '';
     const maxAttr = def.max ? ` max="${escapeHtml(def.max)}"` : '';

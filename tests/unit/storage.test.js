@@ -249,6 +249,30 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     });
     expect(fallback.totalPending).toBe(1);
   });
+
+  it('computa totales y pendientes derivados sin persistirlos (T123/T124)', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-4' });
+    addDocument({ entity_id: entity.entity_id, status: 'pendiente' });
+    addDocument({ entity_id: entity.entity_id, status: 'en_revision' });
+    const lifecycle = {
+      states: ['pendiente', 'en_revision', 'cerrado'],
+      pendingStates: ['en_revision'],
+    };
+    const summary = computeSummary({
+      entities: loadEntities(),
+      documents: loadDocuments(),
+      statusLifecycle: lifecycle,
+    });
+    expect(summary).toEqual({
+      totalEntities: 1,
+      totalDocuments: 2,
+      totalPending: 1,
+      pendingByEntity: [{ entityId: entity.entity_id, entity, count: 1 }],
+    });
+    const stored = `${localStorage.getItem('erp_entities')}${localStorage.getItem('erp_documents')}`;
+    expect(stored).not.toContain('"totalPending"');
+    expect(stored).not.toContain('"pendingByEntity"');
+  });
 });
 
 const CLIENT_PROFILE = {

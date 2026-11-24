@@ -5,7 +5,6 @@ import {
   loadDocuments,
   addEntity,
   updateEntity,
-  updateEntityStage,
   deleteEntity,
   countDocumentsForEntity,
   addDocument,
@@ -14,11 +13,12 @@ import {
   getEntityDocuments,
   searchEntities,
   computeSummary,
+  loadMarketingConfig,
+  saveMarketingConfig,
   ValidationError,
 } from './storage.js';
 import { renderShellHtml } from './components/shell.js';
 import { renderDashboardHtml } from './components/dashboard.js';
-import { DASHBOARD_DEMO_STATS } from './dashboard-demo.js';
 import {
   renderEntityFormHtml,
   collectEntityFormData,
@@ -39,7 +39,12 @@ import { renderCommercialSummaryHtml } from './components/commercial-summary.js'
 import { renderCaptureFormHtml, collectCaptureFormData } from './components/capture-form.js';
 import { createProspectFromCapture, CaptureError } from './utils/capture-prospect.js';
 import { renderMarketingHtml } from './components/marketing.js';
-import { computeMarketingStats } from './utils/marketing-stats.js';
+import { renderMarketingChatHtml } from './components/marketing-chat.js';
+import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
+import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
+import { registerSocialInteraction } from './utils/marketing-social.js';
+import { answerFaq, registerChatMessage, markChatAnswered, ChatConsentError } from './utils/marketing-chat.js';
+import { createCampaign, updateCampaign, stopCampaign } from './utils/marketing-campaigns.js';
 import { resolveEntityDateRule, watchLocalDayChange } from './utils/entity-date.js';
 import { isFieldPotentiallySearchable, resolveFieldRules } from './utils/field-rules.js';
 
@@ -92,6 +97,20 @@ export function initApp(rootEl = null, options = {}) {
     captureValues: {},
     captureErrors: {},
     captureSubmitted: false,
+    captureEntityId: null,
+    marketingConfig: { salesTeams: [], faq: [], campaigns: [] },
+    marketingSection: 'team',
+    teamFormValues: {},
+    memberFormValues: {},
+    editingTeamId: null,
+    editingMemberId: null,
+    socialValues: {},
+    editingSocialId: null,
+    chatValues: { entity_id: '', mensaje: '', consentimiento: false, campaña: '' },
+    chatResponse: '',
+    campaignForm: {},
+    editingCampaignId: null,
+    selectedCampaignId: 'all',
     manageTab: requestedView === 'manage-document' ? 'document' : 'entity',
     editingEntityId: null,
     editingDocumentId: null,
@@ -105,19 +124,17 @@ export function initApp(rootEl = null, options = {}) {
     entityFormBaseline: null,
     documentFormBaseline: null,
     focusSearchOnRender: false,
-    demoStatsEnabled: !(
-      typeof window !== 'undefined' &&
-      new URLSearchParams(window.location?.search || '').get('demo') === '0'
-    ),
   };
 
   function refreshData() {
     state.entities = loadEntities();
     state.documents = loadDocuments();
+    state.marketingConfig = loadMarketingConfig();
   }
 
   function activeNavKey() {
     if (state.view === 'manage') return `manage-${state.manageTab}`;
+    if (state.view === 'marketing') return 'marketing';
     return state.view;
   }
 
@@ -131,14 +148,12 @@ export function initApp(rootEl = null, options = {}) {
   // -- View renderers --------------------------------------------------
 
   function renderDashboardView() {
-    if (state.demoStatsEnabled && state.entities.length === 0 && state.documents.length === 0) {
-      return renderDashboardHtml(state.config, DASHBOARD_DEMO_STATS);
-    }
-    return renderDashboardHtml(state.config, {
-      entityCount: state.entities.length,
-      documentCount: state.documents.length,
+    const stats = computeDashboardStats({
+      entities: state.entities,
       documents: state.documents,
+      config: state.config,
     });
+    return renderDashboardHtml(state.config, stats);
   }
 
   function renderManageView() {
@@ -242,8 +257,44 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function renderMarketingView() {
-    const stats = computeMarketingStats({ entities: state.entities });
-    return renderMarketingHtml(state.config, stats, state.entities);
+    const stats = computeMarketingStats({
+      entities: state.entities,
+      documents: state.documents,
+      config: state.config,
+    });
+    const teams = (state.marketingConfig.salesTeams || []).map((team) => ({
+      ...team,
+      members: team.members || [],
+    }));
+    const metrics = computeSalesTeamMetrics({
+      teams,
+      entities: state.entities,
+      documents: state.documents,
+    });
+    return renderMarketingHtml(state.config, stats, {
+      entities: state.entities,
+      documents: state.documents,
+      marketingConfig: state.marketingConfig,
+      section: state.marketingSection,
+      team: {
+        teams,
+        metrics,
+        editingTeamId: state.editingTeamId,
+        editingMemberId: state.editingMemberId,
+        teamFormValues: state.teamFormValues,
+        memberFormValues: state.memberFormValues,
+      },
+      social: { values: state.socialValues, editingId: state.editingSocialId },
+      chat: {
+        selectedEntityId: state.chatValues.entity_id,
+        campaignId: state.chatValues.campaña,
+        consent: state.chatValues.consentimiento,
+        message: state.chatValues.mensaje,
+        response: state.chatResponse,
+      },
+      campaigns: { campaignForm: state.campaignForm, editingCampaignId: state.editingCampaignId },
+      selectedCampaignId: state.selectedCampaignId,
+    });
   }
 
   function renderCurrentView() {
@@ -251,7 +302,17 @@ export function initApp(rootEl = null, options = {}) {
       case 'marketing':
         return renderMarketingView();
       case 'capture':
-        return renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted);
+        return `${renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted)}${state.config.marketing ? renderMarketingChatHtml({
+          messages: state.captureEntityId ? getEntityDocuments(state.captureEntityId, state.documents) : [],
+          faq: state.marketingConfig.faq || [],
+          entities: state.captureEntityId ? state.entities.filter((entity) => entity.entity_id === state.captureEntityId) : [],
+          selectedEntityId: state.captureEntityId || '',
+          campaignId: state.chatValues.campaña,
+          consent: state.chatValues.consentimiento,
+          message: state.chatValues.mensaje,
+          response: state.chatResponse,
+          publicView: true,
+        }) : ''}`;
       case 'manage':
         return renderManageView();
       case 'search':
@@ -270,10 +331,11 @@ export function initApp(rootEl = null, options = {}) {
 
   function render() {
     refreshData();
-    rootEl.innerHTML = `
-      <div id="config-warning" class="config-warning" role="alert" ${state.warning ? '' : 'hidden'}>${state.warning ? escapeHtml(state.warning) : ''}</div>
-      ${renderShellHtml(state.config, activeNavKey())}
-    `;
+    const warningHtml = `<div id="config-warning" class="config-warning" role="alert" ${state.warning ? '' : 'hidden'}>${state.warning ? escapeHtml(state.warning) : ''}</div>`;
+    rootEl.innerHTML =
+      state.view === 'capture'
+        ? `${warningHtml}${renderCurrentView()}`
+        : `${warningHtml}${renderShellHtml(state.config, activeNavKey())}`;
     const accent = state.config.theme?.accentColor || '#2563eb';
     rootEl.style.setProperty('--accent-color', state.config.theme?.accentColor || '');
     if (typeof document !== 'undefined' && document.documentElement?.style) {
@@ -281,7 +343,7 @@ export function initApp(rootEl = null, options = {}) {
       document.documentElement.style.setProperty('--accent-color', accent);
     }
     const viewRoot = rootEl.querySelector('#view-root');
-    viewRoot.innerHTML = renderCurrentView();
+    if (viewRoot) viewRoot.innerHTML = renderCurrentView();
 
     if (state.view === 'manage' && state.manageTab === 'entity') {
       const editing = state.editingEntityId ? state.entities.find((e) => e.id === state.editingEntityId) : null;
@@ -417,6 +479,137 @@ export function initApp(rootEl = null, options = {}) {
     render();
   }
 
+  function formValues(formEl) {
+    return Object.fromEntries(new FormData(formEl).entries());
+  }
+
+  function resetMarketingForms() {
+    state.teamFormValues = {};
+    state.memberFormValues = {};
+    state.editingTeamId = null;
+    state.editingMemberId = null;
+    state.socialValues = {};
+    state.editingSocialId = null;
+    state.campaignForm = {};
+    state.editingCampaignId = null;
+  }
+
+  function persistMarketingConfig() {
+    saveMarketingConfig(state.marketingConfig);
+    refreshData();
+  }
+
+  function handleTeamSubmit(formEl) {
+    const values = formValues(formEl);
+    const teams = [...(state.marketingConfig.salesTeams || [])];
+    if (state.editingTeamId) {
+      state.marketingConfig.salesTeams = teams.map((team) =>
+        team.id === state.editingTeamId ? { ...team, name: String(values.teamName || '').trim() } : team,
+      );
+    } else {
+      state.marketingConfig.salesTeams = [
+        ...teams,
+        { id: `team_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name: String(values.teamName || '').trim(), members: [] },
+      ];
+    }
+    persistMarketingConfig();
+    resetMarketingForms();
+    render();
+  }
+
+  function handleMemberSubmit(formEl) {
+    const values = formValues(formEl);
+    const teams = state.marketingConfig.salesTeams || [];
+    const teamIndex = teams.findIndex((team) => team.id === values.teamId);
+    if (teamIndex < 0) return;
+    const member = {
+      id: state.editingMemberId || `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name: String(values.memberName || '').trim(),
+      role: String(values.memberRole || '').trim(),
+      active: values.memberActive === 'on',
+    };
+    const updatedTeams = teams.map((team, index) => {
+      if (index !== teamIndex) return team;
+      const members = [...(team.members || [])];
+      if (state.editingMemberId) {
+        const memberIndex = members.findIndex((candidate) => candidate.id === state.editingMemberId);
+        if (memberIndex >= 0) members[memberIndex] = member;
+      } else {
+        members.push(member);
+      }
+      return { ...team, members };
+    });
+    state.marketingConfig.salesTeams = updatedTeams;
+    persistMarketingConfig();
+    resetMarketingForms();
+    render();
+  }
+
+  function handleSocialSubmit(formEl) {
+    const values = formValues(formEl);
+    const entity = state.entities.find((candidate) => candidate.entity_id === values.entity_id) || null;
+    if (!entity) return;
+    if (state.editingSocialId) {
+      updateDocument(state.editingSocialId, values, {
+        customFieldDefs: state.config.customFields.document,
+        statusLifecycle: state.config.statusLifecycle,
+      });
+    } else {
+      registerSocialInteraction(values, entity, state.config);
+    }
+    refreshData();
+    state.socialValues = {};
+    state.editingSocialId = null;
+    render();
+  }
+
+  function handleCampaignSubmit(formEl) {
+    const values = formValues(formEl);
+    const campaigns = state.marketingConfig.campaigns || [];
+    state.marketingConfig.campaigns = state.editingCampaignId
+      ? updateCampaign(state.editingCampaignId, values, campaigns)
+      : createCampaign(values, campaigns);
+    persistMarketingConfig();
+    resetMarketingForms();
+    render();
+  }
+
+  function handleChatSubmit(formEl) {
+    const values = formValues(formEl);
+    const entity = state.entities.find((candidate) => candidate.entity_id === values.entity_id) || null;
+    state.chatValues = {
+      entity_id: values.entity_id || '',
+      mensaje: String(values.mensaje || '').trim(),
+      campaña: values.campaña || '',
+      consentimiento: values.consentimiento === 'on',
+    };
+    try {
+      const created = registerChatMessage(
+        { ...state.chatValues, consentimiento: state.chatValues.consentimiento || entity?.consentimiento === true },
+        entity,
+        state.config,
+      );
+      const answer = answerFaq(state.chatValues.mensaje, state.config);
+      if (answer) {
+        markChatAnswered(created.id, { respuesta: answer });
+        state.chatResponse = answer;
+      } else {
+        state.chatResponse = 'Recibimos tu consulta. Un ejecutivo hará seguimiento desde la ficha.';
+      }
+      state.chatValues.mensaje = '';
+      state.chatValues.consentimiento = false;
+      refreshData();
+    } catch (err) {
+      state.chatResponse =
+        err instanceof ChatConsentError
+          ? err.errors.consentimiento
+          : err?.errors
+            ? Object.values(err.errors).join(' ')
+            : 'No se pudo registrar el mensaje.';
+    }
+    render();
+  }
+
   function handleClick(event) {
     const target = event.target.closest('[data-action]');
     if (!target) return;
@@ -487,6 +680,92 @@ export function initApp(rootEl = null, options = {}) {
         state.documentFormErrors = {};
         render();
         break;
+      case 'marketing-section':
+        state.marketingSection = target.dataset.section;
+        render();
+        break;
+      case 'edit-team': {
+        const team = (state.marketingConfig.salesTeams || []).find((candidate) => candidate.id === target.dataset.id);
+        if (!team) break;
+        state.editingTeamId = team.id;
+        state.teamFormValues = { name: team.name };
+        render();
+        break;
+      }
+      case 'delete-team':
+        state.marketingConfig.salesTeams = (state.marketingConfig.salesTeams || []).filter((team) => team.id !== target.dataset.id);
+        persistMarketingConfig();
+        resetMarketingForms();
+        render();
+        break;
+      case 'cancel-team-edit':
+        state.editingTeamId = null;
+        state.teamFormValues = {};
+        render();
+        break;
+      case 'edit-member': {
+        const team = (state.marketingConfig.salesTeams || []).find((candidate) => candidate.id === target.dataset.teamId);
+        const member = team?.members?.find((candidate) => candidate.id === target.dataset.id);
+        if (!member) break;
+        state.editingMemberId = member.id;
+        state.memberFormValues = { ...member, teamId: team.id };
+        render();
+        break;
+      }
+      case 'delete-member':
+        state.marketingConfig.salesTeams = (state.marketingConfig.salesTeams || []).map((team) =>
+          team.id === target.dataset.teamId
+            ? { ...team, members: (team.members || []).filter((member) => member.id !== target.dataset.id) }
+            : team,
+        );
+        persistMarketingConfig();
+        resetMarketingForms();
+        render();
+        break;
+      case 'cancel-member-edit':
+        state.editingMemberId = null;
+        state.memberFormValues = {};
+        render();
+        break;
+      case 'edit-social': {
+        const doc = state.documents.find((candidate) => candidate.id === target.dataset.id);
+        if (!doc) break;
+        state.editingSocialId = doc.id;
+        state.socialValues = { ...doc };
+        render();
+        break;
+      }
+      case 'delete-social':
+        deleteDocument(target.dataset.id);
+        refreshData();
+        state.socialValues = {};
+        state.editingSocialId = null;
+        render();
+        break;
+      case 'cancel-social-edit':
+        state.socialValues = {};
+        state.editingSocialId = null;
+        render();
+        break;
+      case 'edit-campaign': {
+        const campaign = (state.marketingConfig.campaigns || []).find((candidate) => candidate.id === target.dataset.id);
+        if (!campaign) break;
+        state.editingCampaignId = campaign.id;
+        state.campaignForm = { ...campaign };
+        render();
+        break;
+      }
+      case 'stop-campaign':
+        state.marketingConfig.campaigns = stopCampaign(target.dataset.id, state.marketingConfig.campaigns || []);
+        persistMarketingConfig();
+        resetMarketingForms();
+        render();
+        break;
+      case 'cancel-campaign-edit':
+        state.editingCampaignId = null;
+        state.campaignForm = {};
+        render();
+        break;
       default:
         break;
     }
@@ -503,10 +782,13 @@ export function initApp(rootEl = null, options = {}) {
       event.preventDefault();
       const values = collectCaptureFormData(event.target, state.config, state.captureValues);
       try {
-        createProspectFromCapture(values, state.config);
+        const prospect = createProspectFromCapture(values, state.config);
+        state.captureEntityId = prospect.entity_id;
+        state.chatValues.entity_id = prospect.entity_id;
         state.captureValues = {};
         state.captureErrors = {};
         state.captureSubmitted = true;
+        refreshData();
         render();
       } catch (err) {
         if (!(err instanceof CaptureError)) throw err;
@@ -516,6 +798,21 @@ export function initApp(rootEl = null, options = {}) {
       }
     } else if (event.target.id === 'search-form') {
       event.preventDefault();
+    } else if (event.target.id === 'team-form') {
+      event.preventDefault();
+      handleTeamSubmit(event.target);
+    } else if (event.target.id === 'team-member-form') {
+      event.preventDefault();
+      handleMemberSubmit(event.target);
+    } else if (event.target.id === 'social-form') {
+      event.preventDefault();
+      handleSocialSubmit(event.target);
+    } else if (event.target.id === 'campaign-form') {
+      event.preventDefault();
+      handleCampaignSubmit(event.target);
+    } else if (event.target.id === 'chat-form') {
+      event.preventDefault();
+      handleChatSubmit(event.target);
     }
   }
 
@@ -527,8 +824,8 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function handleChange(event) {
-    if (event.target.matches?.('[data-role="marketing-stage"]')) {
-      updateEntityStage(event.target.dataset.id, event.target.value);
+    if (event.target.id === 'performance-campaign') {
+      state.selectedCampaignId = event.target.value || 'all';
       render();
       return;
     }
@@ -594,10 +891,6 @@ export function initApp(rootEl = null, options = {}) {
     navigate,
     getState: () => state,
     destroy: stopEntityDateWatcher,
-    setDemoMode(enabled) {
-      state.demoStatsEnabled = Boolean(enabled);
-      render();
-    },
   };
 }
 

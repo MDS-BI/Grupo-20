@@ -181,26 +181,26 @@
 ### Decisión: El prospecto reutiliza `Entidad` con un campo `estado_comercial` declarado
 
 - **Decisión**: Añadir un campo personalizado de entidad `estado_comercial` (`select`) con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`, etiquetas «Prospecto», «En proceso», «En recontacto», «Cliente ganado» y «Perdido», y valor inicial `prospecto`. El estado inicial «Prospecto» de FR-068 queda representado sin crear un tipo de registro nuevo (XR-001).
-- **Justificación**: El módulo base ya persiste entidades, documentos, campos personalizados y reglas `fieldRules`; un campo declarado mantiene la adaptación por configuración y evita una segunda estructura de almacenamiento. Los cinco valores permiten derivar las cinco categorías del gráfico sin duplicar datos.
+- **Justificación**: El módulo base ya persiste entidades, documentos, campos personalizados y reglas `fieldRules`; un campo declarado mantiene la adaptación por configuración y evita una segunda estructura de almacenamiento. Los cinco valores permiten gobernar la automatización y el rendimiento por etapa sin duplicar datos.
 - **Alternativas consideradas**: Crear una entidad `Prospecto` separada (contradice la aclaración del usuario y duplica identidad/historial); usar `Documento.status` (en el módulo base gobierna documentos, no entidades, y no permite convertir la entidad en cliente); guardar una categoría calculada sin campo (no se puede editar el avance comercial).
 
-### Decisión: Categorías del gráfico derivadas del estado comercial, con regla determinista para el estado inicial
+### Decisión: Marketing reutiliza el embudo y las tarjetas del panel
 
-- **Decisión**: `ganado → Clientes ganados`, `en_recontacto → En recontacto`, `en_proceso → En proceso`, `perdido → Perdidos`, `prospecto → Sin resultados definitivos`. Cada entidad cuenta exactamente en una categoría. La asignación se implementa en una única función pura `computeMarketingStats()` en `src/utils/marketing-stats.js`.
-- **Justificación**: FR-074 exige cinco categorías mutuamente exclusivas, pero el estado inicial acordado es «Prospecto», que no aparece como categoría. La correspondencia explícita resuelve la aparente contradicción y hace comprobable el gráfico.
-- **Alternativas consideradas**: Añadir «Prospecto» como sexta categoría (contradice FR-074); dejar los prospectos fuera del gráfico (los contadores no cuadrarían con el total de leads).
+- **Decisión**: `computeMarketingStats()` deriva las cinco tarjetas y el embudo de entidades y documentos con las mismas reglas del panel principal; `estado_comercial` queda como dato interno para la automatización. Se eliminan la torta «Estado comercial de la cartera» y el selector de etapas.
+- **Justificación**: La especificación actual exige que Marketing y el panel muestren exactamente los mismos valores derivados de los mismos registros (FR-072 a FR-075). Reutilizar una sola utilidad evita dos cálculos que puedan divergir y elimina la contradicción con la decisión anterior del gráfico.
+- **Alternativas consideradas**: Mantener la torta con categorías de `estado_comercial` (contradice FR-075); duplicar las fórmulas en Marketing (riesgo de desincronización y pruebas frágiles).
 
-### Decisión: Contadores y tasas calculados en una sola utilidad pura
+### Decisión: Contadores y embudo calculados en una sola utilidad pura
 
-- **Decisión**: `computeMarketingStats({ entities })` devuelve `{ leadsAnalyzed, openOpportunities, wonClients, lossRate, conversionRate, funnel, categories }`. `leadsAnalyzed` es el total de entidades; `openOpportunities` cuenta `en_proceso` y `en_recontacto`; `wonClients` cuenta `ganado`; `lossRate = perdido / leadsAnalyzed * 100`; `conversionRate = ganado / leadsAnalyzed * 100`; con cero leads, ambas tasas son cero.
-- **Justificación**: FR-073 exige fórmulas verificables y FR-072 un embudo derivado de los mismos estados; una sola función evita dos fuentes de verdad y permite pruebas unitarias sin DOM.
+- **Decisión**: `computeMarketingStats({ entities, documents })` devuelve las cinco tarjetas del panel —total de entidades, total de documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— y el `funnel` por estados de documento, aplicando las mismas reglas que el panel. Con cero registros, las tarjetas muestran cero.
+- **Justificación**: FR-073 y FR-074 exigen valores idénticos a los del panel; una sola función compartida permite probar las fórmulas sin DOM y evita cálculos divergentes tras crear, editar o eliminar documentos.
 - **Alternativas consideradas**: Calcular en el componente HTML (difícil de probar y duplica la lógica); almacenar contadores en `localStorage` (pueden quedar desincronizados tras editar una entidad).
 
-### Decisión: Gráfico de torta sin dependencias, con SVG accesible
+### Decisión: Sin gráfico de torta; embudo accesible reutilizado del panel
 
-- **Decisión**: Renderizar la torta con un `<svg>` de cinco sectores generados a partir de los conteos, usando cinco tokens CSS de categoría y una leyenda textual con etiqueta y valor. El `<svg>` lleva `role="img"` y `aria-label` con el detalle de las cinco categorías. Sin estado, se muestran las cinco categorías a cero.
-- **Justificación**: El proyecto no tiene librería de gráficos y la constitución exige huella mínima de librerías; SVG es nativo, escalable y accesible, y reutiliza el patrón de HTML generado por componentes puros.
-- **Alternativas consideradas**: Instalar Chart.js o similar (dependencia nueva innecesaria); `conic-gradient` CSS (menos preciso para etiquetas y más difícil de hacer accesible); `<canvas>` (no ofrece semántica accesible sin trabajo adicional).
+- **Decisión**: Marketing no renderiza la torta «Estado comercial de la cartera». Muestra el embudo del panel con barras porcentuales y etiquetas textuales derivadas de los estados de documento; las reglas de accesibilidad del panel siguen aplicando.
+- **Justificación**: La especificación eliminó explícitamente la torta y el selector de etapas (FR-075). Reutilizar el embudo existente evita dependencias de gráficos y mantiene una sola representación verificable del estado comercial basado en documentos.
+- **Alternativas consideradas**: Conservar la torta con otra fuente de datos (contradice FR-075); crear un nuevo componente de gráfico (duplicación y más superficie de pruebas).
 
 ### Decisión: Captura pública como vista autónoma por parámetro de URL
 
@@ -220,14 +220,46 @@
 - **Justificación**: Reutilizar `Documento` como registro de ejecución evita un nuevo tipo de dato y hace que la automatización aparezca en la ficha ya existente. Las reglas en configuración mantienen el patrón de adaptación del módulo base.
 - **Alternativas consideradas**: Motor de reglas concriptor en código central (rompe XR-002); tabla de ejecuciones nueva (duplica historial y requiere migración); ejecutar reglas en la interfaz (se pierde si la mutación llega por otra vía).
 
-### Decisión: Entrada a Marketing desde una acción rápida del panel
+### Decisión: Entrada a Marketing desde la barra lateral
 
-- **Decisión**: No añadir Marketing a la barra lateral; el panel ofrece una acción rápida adicional «Abrir Marketing» que navega a `state.view = 'marketing'`. La barra lateral conserva Panel, Buscar y Resumen.
-- **Justificación**: El usuario pidió reducir la barra lateral, no ampliarla; el panel es el punto de entrada acordado para los apartados de gestión. Mantener la barra en tres elementos evita reintroducir la navegación que se está retirando.
-- **Alternativas consideradas**: Añadir un botón «Marketing» en la barra lateral (contradice la dirección del cambio pedido); accesible solo por URL (poca descubribilidad).
+- **Decisión**: `NAV_ITEMS` incluye Panel, Buscar, Resumen y Marketing; el panel elimina «Abrir Marketing». Clientes e Interacciones siguen accesibles solo desde el panel o enlaces profundos.
+- **Justificación**: La decisión posterior del usuario traslada explícitamente el acceso a Marketing a la barra lateral (FR-012, FR-033). El marco mantiene una sola fuente de navegación y resalta el módulo activo como antes.
+- **Alternativas consideradas**: Mantener «Abrir Marketing» en el panel (contradice FR-033); dejar Marketing solo por URL (poca descubribilidad).
 
 ### Decisión: Retirar solo «Clientes» e «Interacciones» de la barra lateral
 
 - **Decisión**: Eliminar `manage-entity` y `manage-document` de `NAV_ITEMS` en `src/components/shell.js`; conservar `dashboard`, `search` y `summary`. Añadir una quinta acción rápida «abrir gestión de documentos» en `src/components/dashboard.js` para que ambos apartados sigan siendo accesibles solo desde el panel (FR-012, FR-013, FR-014, FR-033).
 - **Justificación**: El usuario nombró únicamente esos dos apartados; retirar también «Resumen» sería un cambio no solicitado. Las pruebas de integración que navegaban por `#nav-entities`/`#nav-documents` deben usar las acciones rápidas o `app.navigate(...)`.
 - **Alternativas consideradas**: Retirar también «Resumen» (excede la petición); ocultar los botones con CSS (deja el marcado y los selectores accesibles, contradictorio con «eliminar»).
+
+## Decisiones de diseño (equipo, canales, campañas y rendimiento)
+
+### Decisión: Equipo de ventas con métricas calculadas, no capturadas
+
+- **Decisión**: `marketing.salesTeams` contiene equipos con `name` e `integrantes`; cada integrante guarda `name`, `role`/`cargo` y `active`. El real mensual se calcula sumando importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al integrante. El objetivo mensual es `ventasAcumuladas / díasTranscurridos * díasDelMes`, o cero sin ventas o sin días transcurridos.
+- **Justificación**: La especificación exige que el usuario capture solo datos del equipo y que el sistema derive ambas cifras (FR-076 a FR-079). Reutilizar documentos y el campo existente evita una nueva estructura y mantiene una sola fuente de verdad.
+- **Alternativas consideradas**: Capturar objetivo y real manualmente (contradice FR-077); crear un almacén de ventas separado (rompe XR-001 y duplica el historial).
+
+### Decisión: Redes y chat como `Documento` con tipos declarados
+
+- **Decisión**: Las interacciones de redes y los mensajes/consultas del chat se persisten como `Documento` con campos personalizados `plataforma`/`canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace` y `campaña`. Las respuestas rápidas se declaran en `marketing.faq` como pares pregunta/respuesta. El chat bloquea el primer mensaje sin consentimiento y reutiliza `privacyNoticeVersion`.
+- **Justificación**: FR-080 a FR-085 exigen trazabilidad en la ficha de la entidad, consentimiento y respuestas configurables; `Documento` ya aporta vinculación, historial y sanitización al renderizar. No se introducen APIs de redes ni proveedores de mensajería.
+- **Alternativas consideradas**: Nueva entidad «Interacción social» (duplica identidad e historial); integración con plataformas externas (contradice la decisión de registro manual y añade dependencias).
+
+### Decisión: Campañas internas como programación declarativa sobre reglas existentes
+
+- **Decisión**: `marketing.campaigns` contiene `{ id, name, stage, startDate, endDate, status }`. Durante el periodo activo, `runAutomationRules()` evalúa las campañas junto a `automationRules`; las acciones internas permitidas son crear documento de seguimiento, asignar `ejecutivo_asignado` y actualizar `estado_comercial`. Cada ejecución se registra como `Documento` con `campaignId`, fecha, entidad, acción y resultado.
+- **Justificación**: Organiza la automatización ya aprobada sin crear un motor externo ni enviar correos/publicaciones (FR-086, FR-089). El historial único por entidad sigue siendo la fuente verificable para auditoría y para el cálculo de rendimiento.
+- **Alternativas consideradas**: Envío por correo o publicación en redes (contradice la decisión de sin servicios externos); tabla de ejecuciones separada (duplica el historial y añade migración).
+
+### Decisión: Atribución opcional por campaña con grupo «Sin campaña»
+
+- **Decisión**: El campo personalizado opcional `campaña` se declara en entidades y documentos. El filtro de rendimiento agrupa los registros sin valor bajo «Sin campaña» y muestra ese grupo junto a las campañas creadas.
+- **Justificación**: La atribución opcional evita exigir campañas antes de capturar prospectos y hace auditable el rendimiento (FR-087, FR-088). El grupo explícito evita descartar registros históricos.
+- **Alternativas consideradas**: Asignar automáticamente la campaña activa de la etapa (puede atribuir de forma incorrecta); no filtrar por campaña (contradice FR-087).
+
+### Decisión: Rendimiento derivado y desempate determinista de campañas
+
+- **Decisión**: `computeMarketingPerformance()` deriva prospectos capturados, conversiones por etapa, tasa de conversión, interacciones, consultas respondidas y ventas «Cerrado ganado» desde entidades, documentos y ejecuciones ya almacenadas, globalmente y por campaña. Si dos campañas activas aplican al mismo prospecto y evento, se ejecuta la creada más recientemente y las demás se registran como «omitida por solapamiento» con motivo.
+- **Justificación**: Cumple SC-025 y SC-026 con valores verificables y evita acciones duplicadas o contradictorias en la ficha del prospecto sin crear un sistema de prioridades configurable.
+- **Alternativas consideradas**: Ejecutar todas las campañas (duplica acciones); rechazar la segunda campaña (reduce flexibilidad y no registra el conflicto); integración con analítica externa (contradice la decisión de una sola fuente de datos local).

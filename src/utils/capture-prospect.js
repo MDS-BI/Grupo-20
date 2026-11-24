@@ -21,7 +21,7 @@ export function createProspectFromCapture(values = {}, config) {
   }
   if (Object.keys(errors).length) throw new CaptureError(errors);
 
-  const captureFields = new Set(marketing.captureFields || []);
+  const captureFields = new Set([...(marketing.captureFields || []), 'campaña']);
   const data = {};
   for (const [key, value] of Object.entries(values)) {
     if (captureFields.has(key)) data[key] = value;

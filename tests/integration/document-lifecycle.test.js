@@ -28,15 +28,16 @@ function createEntityAndSelectForDocuments() {
 }
 
 describe('Ciclo de vida de estados de documentos (H13)', () => {
-  it('ofrece solo los estados alcanzables y rechaza una transición inválida', () => {
+  it('ofrece los estados de las transiciones como sugerencias con texto libre y rechaza una transición inválida', () => {
     mount(LIFECYCLE_CONFIG);
     createEntityAndSelectForDocuments();
-    const statusSelect = document.getElementById('field-status');
-    expect(statusSelect.tagName).toBe('SELECT');
-    const optionValues = Array.from(statusSelect.options).map((o) => o.value).filter(Boolean);
+    const statusInput = document.getElementById('field-status');
+    expect(statusInput.tagName).toBe('INPUT');
+    expect(statusInput.getAttribute('list')).toBe('options-status');
+    const optionValues = Array.from(document.querySelectorAll('#options-status option')).map((o) => o.value);
     expect(optionValues).toEqual(['cotizacion', 'pedido', 'facturado']);
 
-    statusSelect.value = 'cotizacion';
+    statusInput.value = 'cotizacion';
     document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.status-badge').textContent).toBe('cotizacion');
 

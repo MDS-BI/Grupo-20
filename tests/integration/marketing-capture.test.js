@@ -22,13 +22,16 @@ function submit() {
   document.getElementById('capture-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
-describe('Captura pública con consentimiento (T081)', () => {
+describe('Captura pública sin marco ERP (T085)', () => {
   beforeEach(() => mountCapture());
   afterEach(() => window.history.replaceState({}, '', '/'));
 
-  it('abre el formulario público cuando la vista es capture', () => {
+  it('renderiza el formulario público sin barra superior, lateral ni navegación', () => {
     expect(document.getElementById('capture-form')).toBeTruthy();
-    expect(document.querySelector('[data-action="navigate"][data-view="dashboard"]')).toBeTruthy();
+    expect(document.querySelector('.topbar')).toBeNull();
+    expect(document.querySelector('.sidebar')).toBeNull();
+    expect(document.querySelector('#view-root')).toBeNull();
+    expect(document.querySelector('[data-action="navigate"]')).toBeNull();
   });
 
   it('no crea el prospecto y explica el motivo si falta el consentimiento', () => {
@@ -38,12 +41,15 @@ describe('Captura pública con consentimiento (T081)', () => {
     expect(document.getElementById('error-consentimiento').textContent).toContain('consentimiento');
   });
 
-  it('crea el prospecto con consentimiento y muestra confirmación', () => {
+  it('crea el prospecto con consentimiento y muestra confirmación clara sin marco ERP', () => {
     fillCommonFields();
     document.getElementById('field-consentimiento').checked = true;
     submit();
     expect(loadEntities()).toHaveLength(1);
     expect(loadEntities()[0].estado_comercial).toBe('prospecto');
-    expect(document.getElementById('capture-confirmation')).toBeTruthy();
+    const confirmation = document.getElementById('capture-confirmation');
+    expect(confirmation.textContent).toContain('Gracias');
+    expect(confirmation.getAttribute('role')).toBe('status');
+    expect(document.querySelector('.sidebar')).toBeNull();
   });
 });

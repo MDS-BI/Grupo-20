@@ -1,5 +1,5 @@
 import { sanitizeText } from './utils/sanitize.js';
-import { normalizeText } from './utils/search.js';
+import { matchesAny, matchesQuery, normalizeText } from './utils/search.js';
 import { isValidISODate, resolveEntityDateRule } from './utils/entity-date.js';
 import { isValidFormat, normalizeFieldValue } from './utils/field-formats.js';
 import {
@@ -11,9 +11,11 @@ import {
 import { getConfig } from './module-config.js';
 import { transitionStage } from './utils/marketing-stage.js';
 import { runAutomationRules } from './utils/marketing-automation.js';
+import { normalizeMarketingConfig } from './utils/marketing-config.js';
 
 const ENTITIES_KEY = 'erp_entities';
 const DOCUMENTS_KEY = 'erp_documents';
+const MARKETING_CONFIG_KEY = 'erp_marketing_config';
 
 export class ValidationError extends Error {
   constructor(errors) {
@@ -54,6 +56,35 @@ export function saveDocuments(documents) {
   writeJson(DOCUMENTS_KEY, documents);
 }
 
+function marketingSeed() {
+  const { config } = normalizeMarketingConfig(getConfig()?.marketing);
+  return {
+    salesTeams: config.salesTeams || [],
+    faq: config.faq || [],
+    campaigns: config.campaigns || [],
+  };
+}
+
+export function loadMarketingConfig() {
+  const seed = marketingSeed();
+  let raw;
+  try {
+    raw = JSON.parse(localStorage.getItem(MARKETING_CONFIG_KEY));
+  } catch {
+    raw = null;
+  }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return seed;
+  return {
+    salesTeams: Array.isArray(raw.salesTeams) ? raw.salesTeams : seed.salesTeams,
+    faq: Array.isArray(raw.faq) ? raw.faq : seed.faq,
+    campaigns: Array.isArray(raw.campaigns) ? raw.campaigns : seed.campaigns,
+  };
+}
+
+export function saveMarketingConfig(value) {
+  writeJson(MARKETING_CONFIG_KEY, value);
+}
+
 let idCounter = 0;
 function generateId(prefix) {
   idCounter += 1;
@@ -72,21 +103,41 @@ function persistAutomation(event, entity, context = {}) {
   const config = getConfig();
   if (!config?.marketing || !entity) return [];
   const documents = loadDocuments();
-  const pending = runAutomationRules(event, entity, config, documents, context);
+  const marketingConfig = loadMarketingConfig();
+  const pending = runAutomationRules(event, entity, config, documents, {
+    ...context,
+    campaigns: marketingConfig.campaigns,
+  });
   if (!pending.length) return [];
   const now = new Date().toISOString();
   const created = pending.map((item) => ({
     id: generateRecordId(),
     entity_id: item.entity_id,
-    startDate: '',
+    startDate: item.startDate || '',
     endDate: '',
     notes: item.notes,
     status: item.status,
     automation_key: item.automation_key,
+    ...(item.campaignId ? { campaignId: item.campaignId } : {}),
+    ...(item.campaña ? { campaña: item.campaña } : {}),
+    ...(item.skipReason ? { skipReason: item.skipReason } : {}),
+    ...(item.fecha ? { fecha: item.fecha } : {}),
     createdAt: now,
     updatedAt: now,
   }));
   saveDocuments([...documents, ...created]);
+  let currentEntities = loadEntities();
+  for (const item of pending) {
+    if (!item.campaignAction || !currentEntities.some((candidate) => candidate.entity_id === entity.entity_id)) continue;
+    currentEntities = currentEntities.map((candidate) => {
+      if (candidate.entity_id !== entity.entity_id) return candidate;
+      const updated = { ...candidate, updatedAt: now };
+      if (item.campaignAction === 'assign_executive') updated.ejecutivo_asignado = item.executive || '';
+      if (item.campaignAction === 'update_stage' && item.targetStage) updated.estado_comercial = item.targetStage;
+      return updated;
+    });
+  }
+  if (currentEntities.some((candidate) => candidate.updatedAt === now)) saveEntities(currentEntities);
   return created;
 }
 
@@ -515,7 +566,7 @@ function searchableValues(record, keys, rules) {
   return haystacks;
 }
 
-function matchesQuery(entity, needle, documents, customFieldKeys) {
+function entityMatchesQuery(entity, query, documents, customFieldKeys) {
   const entityRules = resolveFieldRules(getConfig(), 'entity');
   const documentRules = resolveFieldRules(getConfig(), 'document');
   const entityKeys = new Set([
@@ -524,12 +575,11 @@ function matchesQuery(entity, needle, documents, customFieldKeys) {
     ...customFieldKeys,
   ]);
   const haystacks = searchableValues(entity, entityKeys, entityRules);
-  if (haystacks.some((v) => v && v.toLowerCase().includes(needle))) return true;
+  if (haystacks.some((value) => matchesQuery(value, query))) return true;
   const docs = documents.filter((d) => d.entity_id === entity.entity_id);
   return docs.some((d) => {
     const documentKeys = new Set(['notes', 'status', ...Object.keys(d), ...customFieldKeys]);
-    const docHaystacks = searchableValues(d, documentKeys, documentRules);
-    return docHaystacks.some((v) => v && v.toLowerCase().includes(needle));
+    return matchesAny(searchableValues(d, documentKeys, documentRules), query);
   });
 }
 
@@ -537,9 +587,8 @@ export function searchEntities(
   query,
   { entities = loadEntities(), documents = loadDocuments(), customFieldKeys = [] } = {},
 ) {
-  const needle = (query || '').trim().toLowerCase();
-  if (!needle) return entities.slice();
-  return entities.filter((e) => matchesQuery(e, needle, documents, customFieldKeys));
+  if (!normalizeText(query)) return entities.slice();
+  return entities.filter((e) => entityMatchesQuery(e, query, documents, customFieldKeys));
 }
 
 // ---------------------------------------------------------------------------

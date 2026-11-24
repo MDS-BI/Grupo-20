@@ -18,7 +18,7 @@ Cada registro de entidad **base** (sin ningún módulo personalizado configurado
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8). El perfil de clientes declara `rubro` (mismo clave, etiqueta «Tipo de actividad» y `select` con diez opciones), `ejecutivo_asignado`, `canal_contacto` (selección obligatoria con valores `llamada`, `correo`, `reunion`, `whatsapp` y etiquetas «Llamada», «Correo», «Reunión», «WhatsApp»), `rut` (obligatorio, `format: "cl-rut"`, `unique: true`, pista gris `Ej: 11.111.111-1`) y los campos condicionales `contacto_telefono`, `contacto_correo`, `contacto_lugar` y `contacto_whatsapp` (obligatorios según el canal, con `group: "contactDetail"` y pista gris por canal). Otros módulos pueden declarar `taxId`, `email`, `phone`, `address`, `creditLimit` o `paymentTerms`. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001). `pedidos` ya no se declara en el perfil de clientes; sus valores anteriores se conservan sin mostrarse.
+Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8). El perfil de clientes declara `rubro` (mismo clave, etiqueta «Tipo de actividad» y `select` con diez opciones), `ejecutivo_asignado`, `canal_contacto` (selección obligatoria con valores `llamada`, `correo`, `reunion`, `whatsapp` y etiquetas «Llamada», «Correo», «Reunión», «WhatsApp»), `rut` (obligatorio, `format: "cl-rut"`, `unique: true`, pista gris `Ej: 11.111.111-1`) y los campos condicionales `contacto_telefono`, `contacto_correo`, `contacto_lugar` y `contacto_whatsapp` (obligatorios según el canal, con `group: "contactDetail"` y pista gris por canal). Otros módulos pueden declarar `taxId`, `email`, `phone`, `address`, `creditLimit` o `paymentTerms`. El perfil de Marketing declara `estado_comercial`, `consentimiento`, `consentimiento_fecha`, `consentimiento_version` y `campaña` opcional. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001). `pedidos` ya no se declara en el perfil de clientes; sus valores anteriores se conservan sin mostrarse.
 
 ## Operaciones
 
@@ -29,8 +29,6 @@ Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3,
 - `deleteEntity(id)`: elimina una entidad por id.
 
 ## Almacenamiento de Documentos
-
-Cada registro de documento debe incluir:
 
 Cada registro de documento **base** debe incluir:
 
@@ -43,7 +41,7 @@ Cada registro de documento **base** debe incluir:
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
+Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
 
 Operaciones:
 
@@ -76,6 +74,9 @@ Operaciones:
 - Un documento sin un `entity_id` que coincida con una entidad existente debe rechazarse.
 - Eliminar una entidad también debe eliminar todos los documentos vinculados a su entity_id.
 - Las operaciones de almacenamiento deben preservar el orden actual de la lista y actualizar las marcas de tiempo.
+- Con `marketing` activo, una entidad capturada desde el formulario público requiere `consentimiento = true`, `consentimiento_fecha` y `consentimiento_version`; el guardado debe rechazarse sin ellos (FR-071, FR-085).
+- `estado_comercial` debe conservar su valor interno aunque no se renderice en Marketing (FR-068, FR-075).
+- `campaña` es opcional en entidades y documentos; su ausencia significa «Sin campaña» y no debe rechazarse (FR-088).
 
 ## Contrato de Configuración `entityDate`
 

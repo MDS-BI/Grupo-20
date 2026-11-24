@@ -57,6 +57,23 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 - Q: ¿Qué debe desencadenar las acciones automáticas sobre un prospecto en el apartado de Marketing? → A: Reglas configurables por evento (captura, cambio de etapa o interacción) que ejecutan una acción sobre el prospecto.
 - Q: ¿Qué requisito de consentimiento debe exigirse al capturar datos personales de un prospecto mediante el formulario web? → A: Consentimiento explícito obligatorio con registro de la fecha y la versión del aviso aceptado.
 - Q: ¿Cómo debe medirse la conversión de visitas en clientes en el apartado de Marketing? → A: Embudo por etapas con conteo por etapa y tasa de conversión entre etapas, derivado del estado de la Entidad.
+- Q: ¿Qué datos concretos del panel principal deben sustituir a los actuales «Prospecto», «En proceso», «En recontacto», «Perdidos» y «Sin resultados definitivos» en Marketing? → A: Las cinco tarjetas del panel y su embudo por estados de documento, con los mismos cálculos sobre las mismas entidades y documentos.
+- Q: Al sustituir las etapas comerciales por los datos del panel, ¿qué debe ocurrir con la torta «Estado comercial de la cartera» y con la lista de prospectos que permite cambiar entre «Prospecto», «En proceso» y «En recontacto»? → A: Eliminar la torta y el selector de etapas; mostrar en su lugar el embudo y la lista de «Últimas Interacciones / Próximos Seguimientos» del panel.
+- Q: Ahora que Marketing ya no muestra ni permite cambiar etapas, ¿qué debe pasar con el campo «Estado comercial» y con las reglas automáticas que se activan al cambiar de etapa? → A: Conservar el campo y las reglas de forma interna, sin mostrarlos en Marketing; la captura sigue creando prospectos en «Prospecto» y la conversión puede ocurrir por otros flujos.
+- Q: Al pasar «Abrir Marketing» a la barra lateral, ¿debe desaparecer ese botón del panel principal y con qué etiqueta debe figurar en la barra lateral? → A: Eliminar el botón del panel; la barra lateral incluye «Marketing» como cuarta opción junto a Panel, Buscar y Resumen y la resalta al estar activa.
+- Q: ¿Cómo debe funcionar el nuevo acceso «Equipo de ventas y logros» dentro de Marketing: con equipos e integrantes capturados por el usuario o con datos calculados de los registros existentes? → A: Una lista editable de varios equipos; cada integrante tiene nombre, cargo y estado «Activo/Inactivo» capturados por el usuario, mientras que el objetivo mensual y el real mensual los actualiza el sistema según las ventas realizadas por el ejecutivo, sin captura manual.
+- Q: ¿Qué registros deben contar como «ventas» de un ejecutivo para calcular el real mensual del integrante? → A: Documentos en estado «Cerrado ganado» de clientes con ese Ejecutivo Asignado, sumando sus importes del mes actual.
+- Q: ¿Cómo debe calcular el sistema el objetivo mensual de un integrante a partir de las ventas del ejecutivo? → A: Proyección del mes: ventas acumuladas ÷ días transcurridos × días del mes; sin ventas o sin días transcurridos, cero.
+- Q: ¿Cómo debe realizar Marketing el seguimiento de interacciones en Twitter, Instagram, YouTube y otras redes sociales? → A: Registro manual dentro de Marketing: plataforma, fecha, tipo de interacción, nota y enlace, vinculado al prospecto o cliente.
+- Q: ¿Dónde deben guardarse las interacciones de redes sociales y los mensajes del chat para que queden relacionados con el prospecto o cliente? → A: Como Documentos vinculados a la entidad, con campos personalizados para plataforma o canal y tipo de interacción.
+- Q: ¿Cómo deben generarse las respuestas rápidas del chat integrado en el sitio web? → A: Respuestas automáticas desde preguntas frecuentes configuradas; sin coincidencia, la consulta se registra como Documento para seguimiento.
+- Q: ¿Dónde debe estar disponible el chat integrado para que los clientes potenciales puedan consultar y el equipo pueda dar seguimiento? → A: En el formulario público de captura del sitio web y en el apartado de Marketing para seguimiento.
+- Q: ¿Debe exigirse consentimiento explícito antes de registrar mensajes del chat o interacciones de redes sociales que contengan datos personales? → A: Sí: consentimiento explícito antes del primer mensaje del chat, con fecha y versión del aviso; las interacciones de redes usan el consentimiento del prospecto.
+- Q: ¿Qué alcance debe tener la automatización de campañas de Marketing que deseas recomendada e integrada en la especificación? → A: Reglas internas por evento y campañas programadas por etapa, sin servicios externos.
+- Q: ¿Qué indicadores debe mostrar el seguimiento del rendimiento de Marketing para evaluar las campañas? → A: Prospectos, conversión por etapa, interacciones, consultas respondidas y ventas ganadas.
+- Q: ¿Cómo debe vincularse un prospecto, una interacción o una venta a una campaña para que el rendimiento pueda filtrarse por campaña? → A: Campo «Campaña» opcional en prospecto, interacciones y documentos; sin selección, «Sin campaña».
+- Q: ¿Qué acciones internas debe poder ejecutar una campaña sobre el prospecto cuando ocurre un evento? → A: Crear documento de seguimiento, asignar ejecutivo y actualizar estado comercial interno.
+- Q: ¿Cómo debe resolverse cuando dos campañas activas aplican al mismo prospecto y al mismo evento? → A: Ejecutar la campaña más reciente y registrar la otra como omitida por solapamiento.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -310,12 +327,12 @@ Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, co
 
 **Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 15 y 4).
 
-**Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Buscar y Resumen con el módulo activo resaltado visualmente, los apartados «Clientes» (entidades) e «Interacciones» (documentos) solo se acceden desde el panel principal, y navegar entre módulos nunca pierde datos.
+**Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Buscar, Resumen y Marketing con el módulo activo resaltado visualmente, los apartados «Clientes» (entidades) e «Interacciones» (documentos) solo se acceden desde el panel principal sin que este muestre «Abrir Marketing», y navegar entre módulos nunca pierde datos.
 
 **Escenarios de Aceptación**:
 
 1. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la página, **entonces** es visible una barra superior que contiene un logotipo SVG en línea derivado del nombre del módulo y el nombre del módulo configurado.
-2. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la barra lateral, **entonces** se muestran botones de módulo para Panel, Buscar y Resumen usando la terminología configurada, y NO aparecen «Clientes» ni «Interacciones» (entidades y documentos).
+ 2. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la barra lateral, **entonces** se muestran botones de módulo para Panel, Buscar, Resumen y Marketing —con la etiqueta «Marketing»— usando la terminología configurada, y NO aparecen «Clientes» ni «Interacciones» (entidades y documentos).
 3. **Dado** que el usuario está en cualquier pantalla, **cuando** mira la barra lateral, **entonces** el botón del módulo activo está resaltado visualmente.
 4. **Dado** que la ventana gráfica es estrecha, **cuando** se usa la aplicación en una pantalla pequeña, **entonces** la barra lateral se contrae a una columna de iconos manteniéndose utilizable y etiquetada de forma accesible.
 5. **Dada** una configuración que define un color de acento, **cuando** cualquier pantalla carga, **entonces** el marco lo usa consistentemente para resaltados y controles principales; sin valor configurado o con un valor inválido, se usan los valores predeterminados integrados sin errores.
@@ -333,7 +350,7 @@ Como usuario de negocio, quiero un panel de inicio con accesos directos a las ta
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cinco botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros), sin que la barra lateral ofrezca accesos a esos apartados.
+ 1. **Dado** que la aplicación carga, **cuando** el usuario la abre, **entonces** aterriza en el panel de inicio con al menos cinco botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros), sin «Abrir Marketing» y sin que la barra lateral ofrezca accesos a esos apartados.
 2. **Dado** que el usuario activa la acción rápida de nueva entidad o nuevo documento, **cuando** se ejecuta, **entonces** se abre el área de gestión correspondiente con un formulario vacío listo para introducir datos.
 3. **Dado** que existen entidades y documentos almacenados, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas reflejan el número actual de cada uno.
 4. **Dado** que no existen entidades ni documentos, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas muestran cero sin errores.
@@ -346,17 +363,110 @@ Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automa
 
 **Por qué esta prioridad**: El apartado de Marketing completa el ciclo comercial del módulo al aprovechar las entidades, documentos e indicadores ya existentes para transformar cada visita en un registro gestionable y medible.
 
-**Prueba Independiente**: Un visitante envía el formulario web con consentimiento explícito; el sistema crea un prospecto, una regla por evento registra una interacción automática, el prospecto avanza a Cliente conservando su historial y el resumen muestra el embudo actualizado.
+**Prueba Independiente**: Un visitante envía el formulario web con consentimiento explícito; el sistema crea un prospecto, una regla por evento registra una interacción automática, el prospecto avanza a Cliente conservando su historial y el resumen muestra las mismas tarjetas y el mismo embudo que el panel principal, actualizados con los registros.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** un visitante en el formulario web embebible, **cuando** envía sus datos con el consentimiento explícito marcado, **entonces** se crea una Entidad en estado «Prospecto» con la fecha y la versión del aviso aceptado (FR-068, FR-069, FR-071).
 2. **Dado** un visitante que no marca el consentimiento explícito, **cuando** envía el formulario, **entonces** el prospecto no se crea y se le explica el motivo (FR-071).
-3. **Dado** un prospecto con una regla configurada, **cuando** se captura, cambia de etapa o se registra una interacción, **entonces** se ejecuta la acción configurada y la ejecución queda en su historial (FR-070).
+ 3. **Dado** un prospecto con una regla configurada, **cuando** se captura, cambia de etapa en otro flujo o se registra una interacción, **entonces** se ejecuta la acción configurada y la ejecución queda en su historial (FR-070).
 4. **Dado** un prospecto que avanza a la etapa de Cliente, **cuando** se consulta su ficha, **entonces** conserva su identificador, sus documentos y sus campos personalizados (FR-068).
-5. **Dado** el resumen del apartado de Marketing, **cuando** se consulta tras un cambio de etapa, **entonces** el embudo muestra los conteos por etapa y las tasas de conversión derivadas de los estados almacenados, sin requerir recarga (FR-072).
-6. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** se muestran los contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual» con la misma presentación de las tarjetas del panel principal, y se actualizan al cambiar el estado de un prospecto (FR-073).
-7. **Dado** el apartado de Marketing, **cuando** se consulta el gráfico «Estado comercial de la cartera», **entonces** se muestran las cinco categorías con la cantidad de entidades correspondiente y cada entidad se contabiliza una sola vez (FR-074).
+ 5. **Dado** el apartado de Marketing, **cuando** se consulta tras crear, editar o eliminar un documento, **entonces** el embudo muestra los mismos estados y conteos que el embudo del panel principal, sin requerir recarga (FR-072).
+ 6. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** se muestran las mismas cinco tarjetas de estadísticas que en el panel principal —entidades, documentos, cerrado ganado, tasa de conversión y pipeline— con idénticos valores y presentación, y se actualizan con los registros almacenados (FR-073).
+ 7. **Dado** el apartado de Marketing, **cuando** se comparan sus cifras con las del panel principal, **entonces** coinciden y cada documento se contabiliza como máximo una vez en su estado según las reglas del panel (FR-074).
+ 8. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** no se muestran la torta «Estado comercial de la cartera» ni el selector de etapas, y se presenta la misma lista de «Últimas Interacciones / Próximos Seguimientos» del panel con acceso a las fichas (FR-075).
+
+---
+
+### Historia de Usuario 17 - Consultar el Equipo de ventas y logros (Prioridad: P2)
+
+Como gerente comercial, quiero abrir desde Marketing un apartado de «Equipo de ventas y logros» con los equipos de trabajo, sus integrantes, cargos, estados, objetivo mensual y real mensual calculados por el sistema, para seguir el desempeño comercial del equipo.
+
+**Por qué esta prioridad**: Complementa los indicadores de Marketing con la información de las personas que realizan las ventas; depende de los clientes, documentos y accesos de Marketing ya definidos en las Historias de Usuario 2, 14, 15 y 16.
+
+**Prueba Independiente**: Un usuario abre Marketing, activa el acceso «Equipo de ventas y logros», crea un equipo y un integrante con nombre, cargo y estado, y comprueba que el objetivo mensual y el real mensual se muestran calculados por el sistema según las ventas del ejecutivo, sin casillas para capturarlos manualmente.
+
+**Escenarios de Aceptación**:
+
+ 1. **Dado** el apartado de Marketing, **cuando** el usuario activa el acceso «Equipo de ventas y logros», **entonces** se muestra la lista de equipos de trabajo con sus integrantes (FR-076).
+ 2. **Dado** un equipo existente, **cuando** el usuario crea, edita o elimina integrantes, **entonces** se guardan su nombre, cargo y estado «Activo» o «Inactivo» (FR-077).
+ 3. **Dado** un integrante vinculado a un ejecutivo con ventas registradas, **cuando** se consulta el apartado, **entonces** su real mensual muestra la suma de los importes de sus documentos «Cerrado ganado» del mes y su objetivo mensual muestra la proyección de esas ventas al cierre del mes, sin captura manual (FR-078, FR-079).
+ 4. **Dado** que cambian las ventas del ejecutivo, **cuando** se vuelve a consultar el apartado, **entonces** el real mensual y el objetivo mensual del integrante se actualizan sin recarga (FR-078, FR-079).
+ 5. **Dado** que no hay equipos ni integrantes registrados, **cuando** se abre el apartado, **entonces** se muestra un estado vacío claro que permite crear el primer equipo (FR-076).
+
+---
+
+### Historia de Usuario 18 - Registrar interacciones en redes sociales (Prioridad: P2)
+
+Como ejecutivo de marketing, quiero registrar y consultar las interacciones de los prospectos en Twitter, Instagram, YouTube y otras redes, para atenderlos en su canal preferido.
+
+**Por qué esta prioridad**: Permite concentrar en Marketing el seguimiento de los canales donde los clientes potenciales están activos, aprovechando los prospectos y clientes ya registrados en las Historias de Usuario 2 y 16.
+
+**Prueba Independiente**: Un ejecutivo abre el apartado «Redes sociales» desde Marketing, registra una interacción de Instagram vinculada a un prospecto con plataforma, fecha, tipo, nota y enlace, y comprueba que queda guardada, visible y vinculada a ese prospecto.
+
+**Escenarios de Aceptación**:
+
+ 1. **Dado** el apartado de Marketing, **cuando** el usuario abre «Redes sociales», **entonces** se muestran las interacciones registradas o un estado vacío claro si no hay ninguna (FR-080).
+ 2. **Dado** un prospecto o cliente existente, **cuando** se registra una interacción con plataforma, fecha, tipo, nota y enlace, **entonces** queda guardada como Documento vinculado a ese registro (FR-080, FR-081).
+ 3. **Dada** una interacción registrada, **cuando** el usuario la edita o elimina, **entonces** los cambios se reflejan en el apartado y en la ficha de la entidad sin perder la relación con el prospecto o cliente (FR-080, FR-081).
+ 4. **Dado** un prospecto con interacciones en varias plataformas, **cuando** se consulta su ficha, **entonces** aparecen ordenadas por fecha junto al resto de sus documentos (FR-080, FR-081).
+
+---
+
+### Historia de Usuario 19 - Ofrecer chat con respuestas rápidas (Prioridad: P2)
+
+Como visitante del sitio web, quiero hacer preguntas en un chat integrado y recibir respuestas rápidas, para obtener información sin esperar la atención de un ejecutivo.
+
+**Por qué esta prioridad**: Permite atender consultas en el canal preferido del cliente potencial dentro del sitio, aprovechando las preguntas frecuentes configuradas y registrando las consultas que requieren seguimiento (Historias de Usuario 16 y 18).
+
+**Prueba Independiente**: Un visitante escribe una pregunta que coincide con una pregunta frecuente y recibe la respuesta configurada de inmediato; después escribe una pregunta sin coincidencia y comprueba que recibe un acuse de recibo y que la consulta queda guardada como Documento para seguimiento.
+
+**Escenarios de Aceptación**:
+
+ 1. **Dado** el chat integrado disponible, **cuando** el visitante escribe una pregunta configurada, **entonces** se muestra la respuesta rápida correspondiente sin recarga (FR-082).
+ 2. **Dado** el chat integrado, **cuando** la pregunta no coincide con ninguna respuesta configurada, **entonces** se muestra un acuse de recibo claro y la consulta queda registrada como Documento para seguimiento (FR-083).
+ 3. **Dado** un visitante identificado como prospecto o cliente, **cuando** conversa en el chat, **entonces** cada mensaje y respuesta quedan vinculados a su entidad (FR-081).
+ 4. **Dado** que no hay preguntas frecuentes configuradas, **cuando** se abre el chat, **entonces** se muestra un estado vacío claro y el visitante puede dejar su consulta para seguimiento (FR-082, FR-083).
+ 5. **Dado** el formulario público de captura y el apartado de Marketing, **cuando** se abre el chat en cualquiera de ellos, **entonces** se muestran los mismos mensajes y documentos vinculados a la entidad (FR-084).
+ 6. **Dado** un visitante que no marca la casilla de consentimiento, **cuando** intenta enviar el primer mensaje del chat, **entonces** el envío se bloquea, se explica el motivo y no se registra ningún mensaje (FR-085).
+
+---
+
+### Historia de Usuario 20 - Programar campañas de marketing internas (Prioridad: P2)
+
+Como ejecutivo de marketing, quiero programar campañas por etapa del prospecto y ejecutar las reglas automáticas existentes, para mantener el seguimiento sin depender de servicios externos.
+
+**Por qué esta prioridad**: Ordena la automatización ya definida en Marketing en campañas programadas, aprovechando los prospectos, documentos, interacciones y reglas por evento de las Historias de Usuario 16, 18 y 19.
+
+**Prueba Independiente**: Un ejecutivo crea una campaña con nombre, etapa objetivo «En proceso» y fechas de inicio y fin, y comprueba que los prospectos de esa etapa reciben la acción automática configurada, que cada ejecución queda en el historial y que no se envían correos ni se publica en redes.
+
+**Escenarios de Aceptación**:
+
+ 1. **Dado** el apartado de Marketing, **cuando** el usuario abre la vista de campañas, **entonces** se muestran las campañas programadas o un estado vacío claro (FR-086).
+ 2. **Dado** un usuario de Marketing, **cuando** crea una campaña con nombre, etapa objetivo y fechas de inicio y fin, **entonces** la campaña queda guardada y lista para ejecutarse (FR-086).
+ 3. **Dado** un prospecto en la etapa objetivo de una campaña activa, **cuando** ocurre un evento de captura, cambio de etapa o interacción, **entonces** se ejecuta la regla configurada sobre ese prospecto creando un documento de seguimiento, asignando un ejecutivo o actualizando su estado comercial interno (FR-070, FR-086, FR-089).
+ 4. **Dada** una ejecución automática, **cuando** se consulta la campaña, **entonces** el historial muestra la fecha, el prospecto y la acción realizada (FR-070, FR-086).
+ 5. **Dada** una campaña activa, **cuando** termina su fecha fin o se detiene manualmente, **entonces** deja de ejecutar acciones nuevas y conserva su historial (FR-086).
+ 6. **Dado** dos campañas activas para el mismo prospecto y evento, **cuando** se evalúan las reglas, **entonces** solo se ejecuta la más reciente y la otra queda registrada como «omitida por solapamiento» sin acciones duplicadas (FR-090).
+
+---
+
+### Historia de Usuario 21 - Medir el rendimiento de Marketing (Prioridad: P2)
+
+Como ejecutivo de marketing, quiero consultar indicadores derivados de los registros de Marketing, para evaluar el resultado de las campañas sin capturar ni importar datos manualmente.
+
+**Por qué esta prioridad**: Convierte la información ya registrada de prospectos, interacciones, chat y ventas en una lectura accionable del rendimiento, junto a las campañas y al equipo de ventas.
+
+**Prueba Independiente**: Un ejecutivo abre «Rendimiento de campañas», selecciona una campaña activa y comprueba que los indicadores de prospectos, conversión, interacciones, consultas respondidas y ventas ganadas coinciden con los registros almacenados y se actualizan sin recarga tras un cambio.
+
+**Escenarios de Aceptación**:
+
+ 1. **Dado** el apartado de Marketing, **cuando** el usuario abre «Rendimiento de campañas», **entonces** se muestran los indicadores globales o un estado vacío claro si no hay registros (FR-087).
+ 2. **Dado** un usuario de Marketing, **cuando** selecciona una campaña, **entonces** los indicadores se filtran a los registros vinculados a esa campaña (FR-086, FR-087, FR-088).
+ 3. **Dado** un cambio en entidades, documentos, interacciones, mensajes de chat o ejecuciones de campaña, **cuando** se consulta nuevamente el rendimiento, **entonces** los indicadores se actualizan sin recarga (FR-087).
+ 4. **Dado** que una campaña no tiene registros vinculados, **cuando** se consulta su rendimiento, **entonces** los indicadores muestran cero con una explicación clara (FR-087).
+ 5. **Dado** que los indicadores coinciden con el panel y las tarjetas cuando aplica, **cuando** se comparan ambas vistas, **entonces** no hay discrepancias en los valores derivados de los mismos registros (FR-074, FR-087).
+ 6. **Dado** un prospecto, una interacción o una venta sin campaña seleccionada, **cuando** se consulta el filtro de campañas, **entonces** aparece agrupado bajo «Sin campaña» (FR-088).
 
 ---
 
@@ -387,7 +497,12 @@ Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automa
 - ¿Qué ocurre cuando varios documentos pendientes comparten la misma fecha objetivo en el resumen de indicadores?
 - ¿Qué ocurre si una sesión del perfil de clientes permanece abierta al cruzar la medianoche? → El límite máximo de "Fecha de nacimiento" se actualiza automáticamente al nuevo día (FR-048).
 - ¿Qué ocurre si el visitante envía el formulario público sin marcar el consentimiento explícito? → El prospecto no se crea y el formulario explica que falta el consentimiento (FR-071).
-- ¿Qué ocurre cuando el apartado de Marketing no tiene prospectos registrados? → Los contadores muestran cero y el gráfico de torta muestra un estado vacío claro con las cinco categorías en cero (FR-073, FR-074).
+- ¿Qué ocurre si el visitante del chat no marca el consentimiento explícito? → El primer mensaje se bloquea, se explica el motivo y no se registra ningún mensaje (FR-085).
+- ¿Qué ocurre cuando el apartado de Marketing no tiene entidades ni documentos registrados? → Las tarjetas y el embudo muestran cero con un estado vacío claro, igual que en el panel principal (FR-072, FR-073, FR-074).
+- ¿Qué ocurre con los valores de «Estado comercial» ya guardados en prospectos? → Se conservan internamente y siguen alimentando la automatización, sin mostrarse en Marketing (FR-068, FR-070, FR-075).
+- ¿Qué ocurre cuando un ejecutivo no tiene ventas registradas en el mes? → El real mensual y el objetivo mensual muestran cero, sin captura manual (FR-078, FR-079).
+- ¿Qué ocurre si un prospecto, una interacción o una venta no tiene campaña asignada? → Se agrupa bajo «Sin campaña» en el filtro de rendimiento (FR-088).
+- ¿Qué ocurre si dos campañas activas aplican al mismo prospecto y evento? → Se ejecuta la más reciente y la otra se registra como «omitida por solapamiento», sin acciones duplicadas (FR-090).
 
 ## Requisitos *(obligatorio)*
 
@@ -404,7 +519,7 @@ Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automa
 - **FR-009**: El sistema DEBE asociar cada documento exactamente a una entidad y eliminar los documentos asociados cuando la entidad se elimina.
 - **FR-010**: El sistema DEBE mostrar un panel de inicio como vista inicial, con botones de acción rápida claramente etiquetados para las tareas ERP clave.
 - **FR-011**: El sistema DEBE envolver cada pantalla en un marco de espacio de trabajo persistente compuesto por una barra superior con marca y una barra lateral de navegación de módulos.
-- **FR-012**: La barra lateral DEBE proporcionar botones de módulo para Panel, Buscar y Resumen, etiquetados desde la configuración del módulo, y NO DEBE incluir botones para «Clientes» (entidades) ni «Interacciones» (documentos).
+- **FR-012**: La barra lateral DEBE proporcionar botones de módulo para Panel, Buscar, Resumen y Marketing —este último con la etiqueta «Marketing»—, etiquetados desde la configuración del módulo cuando exista una etiqueta configurada, y NO DEBE incluir botones para «Clientes» (entidades) ni «Interacciones» (documentos).
 - **FR-013**: El acceso a entidades desde el panel principal DEBE mostrar el contenido de gestión de entidades.
 - **FR-014**: El acceso a documentos desde el panel principal DEBE mostrar el contenido de gestión de documentos en la pantalla de gestión.
 - **FR-015**: El botón de módulo Panel DEBE devolver al usuario al panel de inicio.
@@ -425,7 +540,7 @@ Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automa
 - **FR-030**: El sistema DEBE aplicar las transiciones de estado configuradas en los documentos independientemente de cómo se envíe un cambio.
 - **FR-031**: El sistema DEBE mantener el estado del documento como texto libre cuando no hay ciclo de vida configurado.
 - **FR-032**: El sistema DEBE mantener el renderizado de listas y la búsqueda ágiles y correctos para conjuntos de datos de al menos 500 registros de entidad.
-- **FR-033**: El panel DEBE ofrecer al menos cinco botones de acción rápida: nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos y buscar registros; estos accesos DEBEN ser el único punto de entrada a los apartados «Clientes» (entidades) e «Interacciones» (documentos).
+- **FR-033**: El panel DEBE ofrecer al menos cinco botones de acción rápida: nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos y buscar registros; estos accesos DEBEN ser el único punto de entrada a los apartados «Clientes» (entidades) e «Interacciones» (documentos). El panel NO DEBE mostrar el botón «Abrir Marketing», cuyo acceso se traslada a la barra lateral (FR-012).
 - **FR-034**: Activar la acción rápida de nueva entidad o nuevo documento DEBE abrir el área de gestión correspondiente con un formulario vacío listo para introducir datos.
 - **FR-035**: El panel DEBE mostrar tarjetas de estadísticas con el número de entidades y documentos almacenados, actualizadas cada vez que se muestra el panel.
 - **FR-036**: La barra superior DEBE mostrar un logotipo derivado del nombre del módulo junto con el nombre del módulo configurado en cada pantalla.
@@ -460,13 +575,29 @@ Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automa
 - **FR-065**: En el perfil de clientes, el formulario de registro y edición DEBE mostrar las casillas en este orden: 1) «Nombre de Cliente», 2) «RUT», 3) «Fecha de nacimiento», 4) «Canal de Contacto» seguido inmediatamente de su casilla adicional correspondiente según el canal (FR-060), 5) «Tipo de actividad» y 6) «Ejecutivo Asignado».
 - **FR-066**: En el perfil de clientes, la casilla antes denominada «Rubro» DEBE mostrarse con la etiqueta «Tipo de actividad» y como lista desplegable con exactamente estas opciones: «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante». La clave de almacenamiento `rubro` se conserva sin cambios.
 - **FR-067**: En el perfil de clientes, la casilla adicional que aparece según el «Canal de Contacto» DEBE mostrar en color gris una pista acorde al formato del canal: «Ej: +56 9 1234 5678» para «Llamada» y «WhatsApp», «Ej: nombre@ejemplo.cl» para «Correo» y «Ej: Sala 2 o enlace» para «Reunión». La pista NO DEBE considerarse un valor capturado ni usarse en la validación o el guardado (FR-061).
-- **FR-068**: En el apartado de Marketing, un prospecto DEBE registrarse como una Entidad con el estado inicial «Prospecto» y DEBE convertirse en Cliente al avanzar a la etapa correspondiente, conservando su identificador, su historial de documentos y sus campos personalizados.
+- **FR-068**: En el apartado de Marketing, un prospecto DEBE registrarse como una Entidad con el estado inicial «Prospecto» y DEBE convertirse en Cliente al avanzar a la etapa correspondiente, conservando su identificador, su historial de documentos y sus campos personalizados. El campo `estado_comercial` y sus valores DEBEN conservarse internamente sin mostrarse en la vista de Marketing (FR-075).
 - **FR-069**: El apartado de Marketing DEBE ofrecer un formulario web público embebible que capture cada visita y cree automáticamente una Entidad en estado «Prospecto»; DEBE validar los campos obligatorios antes de crear el registro y DEBE mostrar una confirmación clara al visitante.
-- **FR-070**: La automatización del apartado de Marketing DEBE ejecutarse mediante reglas configurables por evento —captura del prospecto, cambio de etapa o registro de una interacción— que producen una acción sobre el prospecto, y DEBE registrar cada ejecución en su historial.
+- **FR-070**: La automatización del apartado de Marketing DEBE ejecutarse mediante reglas configurables por evento —captura del prospecto, cambio de etapa ocurrido en otros flujos o registro de una interacción— que producen una acción sobre el prospecto, y DEBE registrar cada ejecución en su historial. Las reglas y el campo `estado_comercial` DEBEN conservarse sin mostrarse en la vista de Marketing (FR-075).
 - **FR-071**: El formulario público de captura DEBE exigir una casilla de consentimiento explícito marcada por el visitante; sin ella el guardado DEBE rechazarse, y el sistema DEBE conservar en el prospecto la fecha del consentimiento y la versión del aviso de privacidad aceptado.
-- **FR-072**: El resumen del apartado de Marketing DEBE mostrar un embudo con el número de prospectos por etapa y la tasa de conversión entre etapas, calculados a partir de los estados almacenados de las Entidades y actualizados cuando cambia el estado de un prospecto.
-- **FR-073**: El apartado de Marketing DEBE mostrar tarjetas de contadores con la misma presentación que las del panel principal (FR-035): «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual». Los contadores DEBEN calcularse sobre las entidades almacenadas y actualizarse cada vez que se muestra el apartado o cambia el estado de un prospecto. «Leads analizados» DEBE ser el total de entidades del apartado; «Oportunidades abiertas» DEBE contar las entidades en «En proceso» o «En recontacto»; «Tasa de pérdida» DEBE ser el porcentaje de entidades en «Perdidos» sobre «Leads analizados»; y «Conversión actual» DEBE ser el porcentaje de «Clientes ganados» sobre «Leads analizados».
-- **FR-074**: El apartado de Marketing DEBE mostrar un gráfico de torta titulado «Estado comercial de la cartera» con exactamente cinco categorías: «Clientes ganados», «En recontacto», «En proceso», «Perdidos» y «Sin resultados definitivos». Cada entidad DEBE contabilizarse en una sola categoría según su estado comercial almacenado; un prospecto en estado inicial «Prospecto» sin resultado registrado DEBE contabilizarse en «Sin resultados definitivos» y una entidad convertida en Cliente DEBE contabilizarse en «Clientes ganados».
+- **FR-072**: El apartado de Marketing DEBE mostrar el mismo «Embudo Comercial por Estado» que el panel principal, con los mismos estados, conteos y barras porcentuales derivados de los documentos almacenados; DEBE actualizarse sin recarga cuando se crea, edita o elimina un documento (FR-035).
+- **FR-073**: El apartado de Marketing DEBE mostrar las cinco tarjetas de estadísticas del panel principal (FR-035) —total de entidades, total de documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— con la misma presentación y los mismos valores que en el panel, calculados sobre las mismas entidades y documentos almacenados.
+- **FR-074**: Los valores de las tarjetas y del embudo del apartado de Marketing DEBEN coincidir exactamente con los del panel principal en cada consulta; cada documento DEBE contabilizarse como máximo una vez en el estado que le corresponda según las mismas reglas del panel.
+- **FR-075**: El apartado de Marketing NO DEBE mostrar el gráfico «Estado comercial de la cartera» ni el selector de etapas comerciales; DEBE mostrar la lista «Últimas Interacciones / Próximos Seguimientos» del panel principal con las mismas entradas, estados y acción «Ver ficha».
+- **FR-076**: El apartado de Marketing DEBE ofrecer un acceso «Equipo de ventas y logros» que abra una vista con una lista editable de uno o varios equipos de trabajo; cada equipo DEBE mostrar su nombre y sus integrantes, y la vista DEBE ofrecer un estado vacío claro cuando no haya equipos registrados.
+- **FR-077**: Cada integrante de un equipo DEBE mostrar nombre, cargo y estado «Activo» o «Inactivo», valores que el usuario DEBE poder crear y editar; el usuario NO DEBE capturar el objetivo mensual ni el real mensual.
+- **FR-078**: El real mensual de cada integrante DEBE ser la suma de los importes de los documentos en estado «Cerrado ganado» vinculados a entidades cuyo campo «Ejecutivo Asignado» coincide con el integrante, considerando solo los documentos del mes actual; DEBE actualizarse sin recarga cuando cambian esos documentos.
+- **FR-079**: El objetivo mensual de cada integrante DEBE calcularse automáticamente como la proyección del ritmo de ventas del mes: la suma de importes de sus documentos «Cerrado ganado» del mes actual dividida por los días transcurridos del mes y multiplicada por el total de días de ese mes; sin ventas o sin días transcurridos, DEBE ser cero. DEBE actualizarse sin recarga cuando cambien esas ventas.
+- **FR-080**: El apartado de Marketing DEBE ofrecer un apartado «Redes sociales» que permita registrar, consultar, editar y eliminar interacciones con plataformas como Twitter, Instagram y YouTube; cada interacción DEBE capturar plataforma, fecha, tipo, nota y enlace, DEBE vincularse al prospecto o cliente correspondiente y DEBE mostrarse ordenada por fecha (FR-081).
+- **FR-081**: Las interacciones de redes sociales y los mensajes del chat DEBEN persistirse como Documentos vinculados a la entidad correspondiente, con campos personalizados declarados para plataforma o canal y tipo de interacción; DEBEN mostrarse en la ficha de la entidad junto al resto de documentos y permanecer intactos al navegar entre vistas.
+- **FR-082**: El chat integrado DEBE responder automáticamente con el texto configurado cuando el visitante escribe una pregunta que coincide con una pregunta frecuente declarada en la configuración del módulo; sin coincidencia, DEBE ofrecer la opción de dejar la consulta (FR-083).
+- **FR-083**: Si no hay coincidencia con una pregunta frecuente, el chat DEBE registrar la consulta como Documento vinculado al prospecto o cliente identificado, mostrar al visitante un acuse de recibo claro y permitir al ejecutivo dar seguimiento desde la ficha de la entidad.
+- **FR-084**: El chat integrado DEBE estar disponible en el formulario público de captura del sitio web para los visitantes y en el apartado de Marketing para que los ejecutivos revisen y continúen las conversaciones; ambas superficies DEBEN usar los mismos mensajes y documentos vinculados a la entidad.
+- **FR-085**: El chat integrado DEBE exigir una casilla de consentimiento explícito marcada por el visitante antes de permitir el primer mensaje y DEBE conservar en la entidad la fecha y la versión del aviso aceptado, conforme a FR-071. Las interacciones de redes sociales DEBEN asociarse al consentimiento ya guardado del prospecto o cliente.
+- **FR-086**: El apartado de Marketing DEBE permitir crear, editar, detener y consultar campañas programadas con nombre, etapa objetivo y fechas de inicio y fin; durante el periodo activo, DEBE ejecutar las reglas por evento de FR-070 sobre los prospectos de esa etapa, con las acciones internas de FR-089, y DEBE registrar cada ejecución en un historial con fecha, prospecto y acción. La campaña NO DEBE enviar correos, mensajes externos ni publicaciones en redes.
+- **FR-087**: El apartado de Marketing DEBE ofrecer la vista «Rendimiento de campañas» con prospectos capturados, conversiones por etapa, tasa de conversión, interacciones registradas, consultas de chat respondidas y ventas «Cerrado ganado»; los valores DEBEN derivarse de los registros ya almacenados, filtrarse por campaña cuando se seleccione una (FR-088), actualizarse sin recarga tras cambios y coincidir con el panel y las tarjetas cuando aplique (FR-074).
+- **FR-088**: El sistema DEBE permitir asignar una campaña existente al prospecto capturado, a las interacciones de redes, a las consultas de chat y a los documentos de venta mediante un campo «Campaña» opcional; si no se selecciona, DEBE agruparlos bajo «Sin campaña». El filtro de FR-087 DEBE usar esa relación y DEBE mostrar también el grupo «Sin campaña».
+- **FR-089**: Las acciones internas disponibles para una campaña DEBEN ser crear un Documento de seguimiento vinculado al prospecto, asignar un «Ejecutivo Asignado» y actualizar el campo interno `estado_comercial`; cada ejecución DEBE quedar registrada en el historial de FR-086 con fecha, prospecto y acción. Estas acciones NO DEBEN mostrar ni permitir cambiar etapas en la vista de Marketing (FR-075).
+- **FR-090**: Si dos o más campañas activas aplican al mismo prospecto y al mismo evento, el sistema DEBE ejecutar solo la campaña creada más recientemente y DEBE registrar las demás en sus historiales como «omitida por solapamiento» con fecha, prospecto, campaña y motivo, sin generar acciones duplicadas sobre el prospecto.
 
 ### Requisitos de Extensibilidad *(obligaciones del módulo base)*
 
@@ -482,8 +613,14 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 - **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). En el apartado de Marketing, una Entidad con estado inicial «Prospecto» representa una visita capturada que puede convertirse en Cliente conservando su identidad e historial (FR-068). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
 - **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
-- **Estado comercial**: Clasificación de cada entidad del apartado de Marketing en una de cinco categorías —«Clientes ganados», «En recontacto», «En proceso», «Perdidos» y «Sin resultados definitivos»— utilizada por los contadores y el gráfico de torta (FR-073, FR-074). El estado inicial «Prospecto» (FR-068) se clasifica como «Sin resultados definitivos» hasta registrar un resultado.
-- **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados y el ciclo de vida de estados de documentos. Consulte data-model.md para su forma completa.
+- **Estado comercial**: Clasificación de cada prospecto en «Prospecto», «En proceso», «En recontacto», «Ganado» o «Perdido» para la captura y la automatización (FR-068 a FR-071); ya NO ES la fuente de las tarjetas ni del embudo del apartado de Marketing, que se derivan de los documentos del panel principal (FR-072 a FR-074), y NO se ofrece como selector en esa vista (FR-075).
+- **Equipo de ventas**: Agrupación editable de integrantes creada desde el acceso «Equipo de ventas y logros» de Marketing; contiene un nombre y la lista de integrantes (FR-076).
+- **Integrante del equipo**: Registro editable con nombre, cargo y estado «Activo» o «Inactivo», vinculado al ejecutivo cuyas ventas se usan para el cálculo de su objetivo mensual y su real mensual; ambos importes los genera el sistema y no se capturan manualmente. El real mensual es la suma de importes de sus documentos «Cerrado ganado» del mes y el objetivo mensual es la proyección de esa suma al cierre del mes (FR-077, FR-078, FR-079).
+- **Interacción en redes sociales**: Documento vinculado a un prospecto o cliente con plataforma, fecha, tipo de interacción, nota y enlace declarados como campos personalizados, mostrado en orden cronológico en el apartado «Redes sociales» y en la ficha de la entidad, y asociado al consentimiento guardado del prospecto o cliente (FR-071, FR-080, FR-081, FR-085).
+- **Pregunta frecuente**: Par declarado en la configuración del módulo formado por una pregunta y su texto de respuesta rápida, usado por el chat integrado para responder sin intervención de un ejecutivo (FR-082).
+- **Campaña de marketing**: Programación interna creada en Marketing con nombre, etapa objetivo y fechas de inicio y fin; ejecuta las reglas por evento sobre los prospectos de esa etapa creando documentos de seguimiento, asignando ejecutivos o actualizando el estado comercial interno, registra cada acción en un historial y no usa servicios externos (FR-070, FR-086, FR-089).
+- **Indicador de rendimiento de marketing**: Valor calculado por el sistema —prospectos capturados, conversiones por etapa, tasa de conversión, interacciones, consultas respondidas o ventas «Cerrado ganado»— derivado de entidades, documentos y ejecuciones ya almacenadas, sin captura manual ni fuentes externas (FR-087).
+- **ModuleConfig**: El objeto de adaptación cargado al arrancar que define el nombre del módulo, las etiquetas de terminología, las definiciones de campos personalizados, el ciclo de vida de estados de documentos y las preguntas frecuentes del chat integrado. Consulte data-model.md para su forma completa.
 
 ## Criterios de Éxito *(obligatorio)*
 
@@ -506,9 +643,15 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-015**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris `Ej: 11.111.111-1` en «RUT», las opciones «Llamada», «Correo», «Reunión» y «WhatsApp» con mayúscula inicial y el texto «Nuevo Cliente» en el formulario y la acción de creación.
 - **SC-016**: En el perfil de clientes, el 100% de las verificaciones de interfaz confirman el orden de casillas «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado», y que «Tipo de actividad» ofrece solo las diez opciones definidas en FR-066.
 - **SC-017**: En el perfil de clientes, el 100% de las verificaciones de interfaz muestran la pista gris correcta en la casilla adicional de contacto para cada uno de los cuatro canales, conforme a FR-067.
-- **SC-018**: En el apartado de Marketing, el 100% de las verificaciones confirman que el embudo coincide con los estados almacenados de las entidades, que cada cambio de etapa se refleja sin recarga y que los prospectos sin consentimiento explícito no se crean.
-- **SC-019**: En el apartado de Marketing, el 100% de las verificaciones confirman que los cinco contadores y las cinco categorías del gráfico «Estado comercial de la cartera» coinciden con las entidades almacenadas, que cada entidad se contabiliza una sola vez y que todo cambio de estado se refleja sin recarga.
-- **SC-020**: El 100% de las verificaciones de interfaz confirman que «Clientes» e «Interacciones» no aparecen en la barra lateral, que solo se acceden desde el panel principal y que el resto de la navegación sigue funcionando.
+- **SC-018**: En el apartado de Marketing, el 100% de las verificaciones confirman que el embudo coincide con el del panel principal y con los estados almacenados de los documentos, que cada cambio se refleja sin recarga y que los prospectos sin consentimiento explícito no se crean.
+- **SC-019**: En el apartado de Marketing, el 100% de las verificaciones confirman que las cinco tarjetas coinciden con las del panel principal y con los registros almacenados, que cada documento se contabiliza una sola vez y que todo cambio en entidades o documentos se refleja sin recarga.
+- **SC-020**: El 100% de las verificaciones de interfaz confirman que «Clientes» e «Interacciones» no aparecen en la barra lateral, que «Marketing» aparece allí y no como «Abrir Marketing» en el panel, y que el resto de la navegación sigue funcionando.
+- **SC-021**: El 100% de las verificaciones de interfaz confirman que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas y que su lista de interacciones coincide con la del panel principal.
+- **SC-022**: El 100% de las verificaciones confirman que el acceso «Equipo de ventas y logros» permite crear equipos e integrantes con nombre, cargo y estado, que el real mensual equivale a la suma de importes de los documentos «Cerrado ganado» del mes del ejecutivo y que el objetivo mensual equivale a la proyección de esa suma al cierre del mes conforme a FR-079, sin captura manual.
+- **SC-023**: El 100% de las verificaciones confirman que el apartado «Redes sociales» permite registrar, editar y eliminar interacciones con plataforma, fecha, tipo, nota y enlace, y que cada interacción se guarda como Documento vinculado al prospecto o cliente correcto, ordenado por fecha y visible en su ficha.
+- **SC-024**: El 100% de las verificaciones del chat confirman que el chat está disponible en el formulario público y en Marketing, que las preguntas configuradas reciben su respuesta rápida sin recarga, que las consultas sin coincidencia quedan registradas como Documentos con acuse de recibo, que los mensajes aparecen en la ficha de la entidad vinculada y que sin consentimiento explícito no se registra ningún mensaje.
+- **SC-025**: El 100% de las verificaciones de campañas confirman que una campaña activa ejecuta las reglas por evento solo sobre prospectos de su etapa objetivo dentro del periodo de fechas, que las acciones se limitan a crear documentos de seguimiento, asignar ejecutivos y actualizar el estado comercial interno, que cada ejecución queda registrada con fecha, prospecto y acción, que los solapamientos ejecutan solo la campaña más reciente y registran las omitidas, y que al detenerse o finalizar deja de generar ejecuciones nuevas sin borrar el historial.
+- **SC-026**: El 100% de las verificaciones de rendimiento confirman que los indicadores globales y por campaña coinciden con los registros almacenados, que se actualizan sin recarga tras cambios, que una campaña sin registros muestra cero con una explicación clara y que los registros sin campaña aparecen bajo «Sin campaña».
 
 ## Suposiciones
 
@@ -518,7 +661,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - La versión inicial se centra en la gestión central de datos maestros y documentos en lugar de capacidades ERP avanzadas como flujos de aprobación, períodos de contabilización o informes.
 - La búsqueda se realiza sobre los registros de entidad almacenados.
 - La pantalla de gestión consolida los formularios de añadir/editar entidad y añadir/editar documento en una sola pantalla de gestión.
-- La navegación entre Panel, Buscar y Resumen ocurre mediante una barra lateral persistente, mientras que Clientes e Interacciones solo se acceden desde el panel principal; la pantalla de gestión aloja ambos paneles de gestión y no muestra la lista de entidades.
+- La navegación entre Panel, Buscar, Resumen y Marketing ocurre mediante una barra lateral persistente, mientras que Clientes e Interacciones solo se acceden desde el panel principal; la pantalla de gestión aloja ambos paneles de gestión y no muestra la lista de entidades.
 - El logotipo se genera como un monograma SVG en línea derivado del nombre del módulo; no se requieren recursos de imagen externos.
 - Se puede configurar un color de acento opcional para la marca; el resto de la paleta base permanece fija.
 - Solo se muestra una pantalla a la vez; no hay diseño lado a lado del contenido de gestión y búsqueda.
@@ -526,5 +669,6 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - Los datos siguen persistiéndose en el localStorage del navegador y no se ven afectados por la navegación entre pantallas.
 - La fecha actual para el límite de "Fecha de nacimiento" en el perfil de clientes se determina con la hora local del dispositivo del usuario.
 - La pantalla de búsqueda se centra en encontrar y ver entidades; la edición permanece en la pantalla de gestión.
+- El seguimiento en redes sociales, el chat integrado y las campañas programadas funcionan sin servicios externos: las interacciones se registran dentro del módulo, las respuestas rápidas se derivan de la configuración y las campañas ejecutan solo reglas internas.
 - El contenido del usuario introducido por el usuario (nombres, descripciones, notas de documentos) DEBE sanitizarse antes de renderizarse en el DOM para prevenir ataques de inyección de scripts (XSS). El módulo base DEBE escapar HTML y atributos de eventos al mostrar datos de localStorage.
 

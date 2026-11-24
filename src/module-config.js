@@ -41,10 +41,18 @@ export const MODULE_CONFIG = {
       { key: 'consentimiento', type: 'boolean', label: 'Consentimiento' },
       { key: 'consentimiento_fecha', type: 'text', label: 'Fecha del consentimiento' },
       { key: 'consentimiento_version', type: 'text', label: 'Versión del aviso' },
+      { key: 'campaña', type: 'select', label: 'Campaña', options: [] },
     ],
     document: [
       { key: 'importe', type: 'number', label: 'Importe (USD)' },
       { key: 'automation_key', type: 'text', label: 'Clave de automatización' },
+      { key: 'plataforma', type: 'select', label: 'Plataforma', options: ['Twitter', 'Instagram', 'YouTube', 'Otra'] },
+      { key: 'tipo_interaccion', type: 'text', label: 'Tipo de interacción' },
+      { key: 'enlace', type: 'text', label: 'Enlace' },
+      { key: 'canal', type: 'text', label: 'Canal' },
+      { key: 'mensaje', type: 'text', label: 'Mensaje' },
+      { key: 'respuesta', type: 'text', label: 'Respuesta' },
+      { key: 'campaña', type: 'select', label: 'Campaña', options: [] },
     ],
   },
   statusLifecycle: {
@@ -73,6 +81,12 @@ export const MODULE_CONFIG = {
         label: 'Prospecto en seguimiento',
       },
     ],
+    salesTeams: [],
+    faq: [
+      { pregunta: '¿Cómo puedo agendar una reunión?', respuesta: 'Déjanos tus datos y un ejecutivo te contactará para coordinarla.' },
+      { pregunta: '¿Dónde veo mis interacciones?', respuesta: 'Todas tus interacciones quedan registradas en tu ficha dentro del CRM.' },
+    ],
+    campaigns: [],
   },
   theme: {
     accentColor: '#0f766e',
@@ -178,8 +192,14 @@ export const MODULE_CONFIG = {
       consentimiento: { hidden: true, searchable: false },
       consentimiento_fecha: { hidden: true, searchable: false },
       consentimiento_version: { hidden: true, searchable: false },
+      campaña: { hidden: true, searchable: true, options: [] },
     },
-    document: { automation_key: { hidden: true, searchable: false } },
+    document: {
+      automation_key: { hidden: true, searchable: false },
+      canal: { hidden: true, searchable: false },
+      mensaje: { hidden: true, searchable: false },
+      respuesta: { hidden: true, searchable: false },
+    },
   },
   detailPolicy: {
     entity: { blockWhenInvalid: true, offerEditAction: true },

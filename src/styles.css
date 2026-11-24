@@ -319,6 +319,13 @@ body {
   #app {
     grid-template-columns: 64px 1fr;
   }
+  .sidebar-button {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+  .sidebar-icon {
+    font-size: 1.2rem;
+  }
   .sidebar-label {
     position: absolute;
     width: 1px;
@@ -499,4 +506,127 @@ body {
     padding: var(--space-1);
     font-size: 0.9rem;
   }
+}
+
+.marketing-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.marketing-sections button {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.marketing-sections button.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.marketing-panel {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.marketing-form {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.marketing-form label {
+  display: grid;
+  gap: var(--space-1);
+  font-weight: 600;
+}
+
+.marketing-form input,
+.marketing-form select,
+.marketing-form textarea {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-weight: 400;
+}
+
+.marketing-form .checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.marketing-form .checkbox-field input {
+  width: auto;
+}
+
+.team-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.team-list,
+.member-list,
+.social-list,
+.campaign-list,
+.campaign-history,
+.stage-conversions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.team-item,
+.social-list li,
+.campaign-list li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.member-list {
+  margin-top: var(--space-2);
+}
+
+.member-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) 0;
+}
+
+.chat-messages {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-2);
+}
+
+.chat-message {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+}
+
+.chat-response {
+  padding: var(--space-2);
+  border-left: 3px solid var(--accent-color);
+  background: var(--bg);
+}
+
+.performance-cards {
+  margin-top: var(--space-3);
 }

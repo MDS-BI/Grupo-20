@@ -23,40 +23,32 @@ Nuestro proyecto tiene como propósito diseñar y desarrollar un módulo de Cust
 Para lograrlo, nos proponemos construir un producto mínimo viable (MVP) como prototipo funcional de frontend, a partir del template del curso y mediante desarrollo guiado por especificaciones (Spec Driven Development). Definiremos un modelo entidad-relación coherente con los datos compartidos entre los módulos del ERP y una interfaz que permita demostrar las funciones básicas de nuestro CRM. Este prototipo servirá para evaluar la utilidad de la propuesta y sentar las bases para futuras mejoras, considerando la facilidad de uso, la posibilidad de integración con otros módulos y el manejo responsable de la información de los clientes.
 # ERP Software Base Module (Vite + Vanilla JS)
 
-Minimal single-page app serving as an Enterprise Resource Planning (ERP) software base module. It provides the common foundation for building custom ERP modules: master data management (Entities) and linked transactional documents (Documents) with create/edit/delete/search, validation, and browser localStorage persistence — using Vite and vanilla HTML, CSS, and JavaScript. See `specs/001-erp-base-module/` for the full specification (15 user stories, functional requirements, data model).
+Aplicación de una sola página construida con Vite y JavaScript vanilla. Sirve de base para módulos ERP: entidades (datos maestros), documentos vinculados, búsqueda, validación y persistencia en `localStorage`. La especificación completa está en `specs/001-erp-base-module/`.
 
-The user interface is fully in **Spanish**. The active profile is **CRM Comercial** (Cliente / Interacción), while the base defaults remain Entidad / Documento when no configuration is provided.
+La interfaz está en español. El perfil activo es **CRM Comercial** (Cliente / Interacción); sin configuración se usan Entidad / Documento. Los campos propios de cada dominio se declaran en `customFields` (ver `specs/001-erp-base-module/data-model.md`).
 
-Entities carry base master-data fields (name, code, category, description, entity date). Documents link to exactly one entity and carry base fields (start/end date, notes, status). Any domain-specific field (tax ID, credit limit, interaction type, invoice folio, etc.) is added by a custom module through `customFields`, without changing the storage layer (see `specs/001-erp-base-module/data-model.md`).
+La aplicación se presenta como un espacio de trabajo ERP coherente:
 
-The app presents itself as a coherent ERP workspace:
+- **Marco** (`src/components/shell.js`): barra superior con logotipo y nombre del módulo, y barra lateral persistente con **Panel, Buscar, Resumen y Marketing**. El módulo activo queda resaltado; en pantallas estrechas (≤640 px) la barra se reduce a iconos. «Clientes» e «Interacciones» no figuran en la barra lateral: se gestionan desde el panel o mediante `?view=manage-entity` y `?view=manage-document`.
+- **Panel** (`src/components/dashboard.js`): cinco acciones rápidas (nueva entidad, nuevo documento, gestionar entidades, gestionar documentos y buscar registros) y tarjetas con conteos en vivo. No incluye «Abrir Marketing».
+- **Marketing** (`src/components/marketing.js`): el formulario público de captura (`?view=capture`) crea prospectos solo con consentimiento explícito. La vista comparte con el panel las cinco tarjetas, el embudo por estados de documento y la lista «Últimas Interacciones / Próximos Seguimientos». No muestra la torta «Estado comercial de la cartera» ni el selector de etapas; `estado_comercial` se conserva solo de forma interna para las reglas automáticas.
+- **Gestión** (`src/app.js`): pantalla con pestañas Entidades/Documentos para crear, editar y eliminar registros; la lista completa de entidades está en Buscar.
+- **Buscar**: consulta los campos declarados como `searchable` en `fieldRules` y abre la ficha (`src/components/entity-detail.js`) con el historial ordenado por fecha.
+- **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`): totales y pendientes por entidad.
+- **Estilos**: variables CSS en `src/styles.css`, incluido `theme.accentColor`.
 
-- **Workspace shell** (`src/components/shell.js`) — every screen lives inside a branded chrome: a top bar with a logo (an SVG monogram derived from the module name) and module name, plus a persistent sidebar with buttons for Panel, Buscar and Resumen. Clientes e Interacciones se gestionan desde el panel; sus enlaces profundos siguen disponibles. The active module is highlighted (`aria-current="page"`), and the sidebar collapses to an icon rail on narrow viewports (≤640px).
-- **Home dashboard** (`src/components/dashboard.js`) — the entry screen offers six quick-action buttons (new entity, new document, open entity management, find records, abrir Marketing and gestionar documentos) and live statistic cards showing record counts.
-- **Marketing** (`src/components/marketing.js`) — the capture form (`?view=capture`) creates prospects with explicit consent, and the summary shows commercial stages, funnel rates, five counters and an accessible SVG pie chart.
-- **Management screen** (`src/app.js`, `manage-entity` / `manage-document`) — a dedicated screen with an Entidades/Documentos tab to create, edit and delete records; it does not show the full entity list (that lives in Search), per the base module's navigation model.
-- **Search screen** — finds entities by the fields declared as searchable in `fieldRules`; the base profile searches name, code, category, description, the configured entity date and custom fields, while the CRM profile excludes the hidden `code`, `category` and `description`. Results open the **ficha** (`src/components/entity-detail.js`) with its document history sorted by date.
-- **Resumen de Gestión Comercial** (`src/components/commercial-summary.js`) — totals of entities/documents and documents in the states marked as `pendingStates` (or `pendiente` when no lifecycle is configured), grouped by entity.
-- **Design tokens** — styling is driven by CSS custom properties in `src/styles.css`, so branding (including `theme.accentColor`) applies globally.
-
-## Setup
-
-Install dependencies and run the dev server:
+## Puesta en marcha y verificación
 
 ```bash
 npm install
 npm run dev
-```
-
-Open http://localhost:5173 (or the URL Vite prints).
-
-## Tests
-
-Run the full test suite (unit + integration, Vitest + jsdom) with:
-
-```bash
 npm test
+npm run lint
 ```
+
+`npm install` instala dependencias; `npm run dev` inicia Vite (http://localhost:5173 o la URL que indique); `npm test` ejecuta la suite unitaria y de integración (Vitest + jsdom); `npm run lint` comprueba el código con ESLint.
+
+**Limitación de `?view=capture`**: no hay backend, por lo que la captura pública y el chat embebido requieren el **mismo origen** (host y puerto) que la aplicación; no se pueden incrustar en otro dominio ni resolverse añadiendo dependencias. Los registros quedan en el `localStorage` de esa aplicación, como describe `specs/001-erp-base-module/contracts/marketing.md`.
 
 ## Building Custom Modules
 
@@ -116,15 +108,15 @@ If the rest of the configuration is invalid (unknown field types, custom field k
 - Both `12.345.678-9` and `12345678-9` are accepted for RUT and compared normalized for uniqueness. The creation heading and dashboard quick action read «Nuevo Cliente».
 - This project intentionally uses vanilla HTML, CSS, and JavaScript for simplicity.
 
-## Validación del Apartado de Marketing
+## Validación del apartado de Marketing
 
-1. Abra `?view=capture` y envíe el formulario sin consentimiento: debe mostrar un error y no crear la entidad.
+1. Abra `?view=capture` en el mismo origen de la aplicación y envíe el formulario sin consentimiento: debe mostrar un error y no crear la entidad.
 2. Envíe el formulario con consentimiento: se crea una entidad en estado `prospecto` y se registra la ejecución automática de captura en su historial.
-3. Desde «Abrir Marketing», verifique los contadores «Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida» y «Conversión actual», el embudo por etapas y el gráfico «Estado comercial de la cartera» con leyenda accesible.
-4. Cambie el estado comercial de un prospecto: los contadores, el embudo y el gráfico se actualizan sin recargar, y la regla de cambio de etapa añade una ejecución al historial.
+3. Acceda a **Marketing** desde la barra lateral: las cinco tarjetas del panel (entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)») y el embudo por estados de documento coinciden con el panel, junto a «Últimas Interacciones / Próximos Seguimientos». No aparecen la torta «Estado comercial de la cartera» ni el selector de etapas.
+4. Tras crear o editar un documento, las tarjetas y el embudo se actualizan sin recargar; las reglas automáticas dejan constancia en el historial de la entidad.
 
-## Validación de la Navegación Lateral
+## Validación de la navegación lateral
 
-1. La barra lateral solo ofrece Panel, Buscar y Resumen; no aparecen Clientes ni Interacciones.
-2. El panel ofrece seis acciones rápidas, incluidas «Abrir Marketing» y «Gestionar documentos».
-3. Los enlaces profundos `?view=manage-entity` y `?view=manage-document` siguen abriendo las vistas de gestión aunque no estén en el menú lateral.
+1. La barra lateral ofrece Panel, Buscar, Resumen y Marketing, con el módulo activo resaltado; no aparecen Clientes ni Interacciones.
+2. El panel ofrece cinco acciones rápidas, sin «Abrir Marketing».
+3. Los enlaces profundos `?view=manage-entity` y `?view=manage-document` siguen abriendo las vistas de gestión aunque no estén en la barra lateral.

@@ -11,15 +11,16 @@ function monogramSvg(moduleName) {
   `;
 }
 
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { key: 'dashboard', labelKey: 'dashboard', icon: '⌂', id: 'nav-dashboard' },
   { key: 'search', labelKey: 'search', icon: '🔍', id: 'nav-search' },
   { key: 'summary', labelKey: 'summary', icon: '📊', id: 'nav-summary' },
+  { key: 'marketing', label: 'Marketing', icon: '📣', id: 'nav-marketing' },
 ];
 
 export function renderShellHtml(config, activeNavKey) {
   const navButtons = NAV_ITEMS.map((item) => {
-    const label = getLabel(config, item.labelKey);
+    const label = item.label || getLabel(config, item.labelKey);
     const isActive = item.key === activeNavKey;
     return `
       <button
@@ -30,6 +31,7 @@ export function renderShellHtml(config, activeNavKey) {
         data-view="${item.key}"
         aria-current="${isActive ? 'page' : 'false'}"
         aria-label="${escapeHtml(label)}"
+        title="${escapeHtml(label)}"
       >
         <span class="sidebar-icon" aria-hidden="true">${item.icon}</span>
         <span id="${item.id}-label" class="sidebar-label">${escapeHtml(label)}</span>

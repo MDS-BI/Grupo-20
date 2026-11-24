@@ -3,7 +3,7 @@
 **Rama**: `001-erp-base-module` | **Creado**: 2026-07-08 | **Actualizado**: 2026-11-23 | **Especificación**: [spec.md](spec.md)
 **Entrada**: Especificación de la funcionalidad desde `/specs/001-erp-base-module/spec.md`
 
-**Incremento actual (2026-11-23, cuarta tanda)**: añadir el apartado de Marketing —captura pública de prospectos con consentimiento, automatización por eventos, seguimiento comercial, contadores, embudo y gráfico de torta «Estado comercial de la cartera»— y retirar «Clientes» e «Interacciones» de la barra lateral, dejando esos accesos únicamente en el panel principal.
+**Incremento actual (2026-11-23, séptima tanda)**: completar Marketing con los datos del panel principal (cinco tarjetas y embudo por estados de documento), acceso desde la barra lateral, equipo de ventas con objetivo y real calculados, registro manual de redes sociales, chat con respuestas rápidas, campañas internas programadas y seguimiento del rendimiento derivado de los registros existentes.
 
 ## Resumen
 
@@ -13,7 +13,7 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 
 **Lenguaje/Versión**: JavaScript (ES2022), HTML, CSS  
 **Dependencias Principales**: Vite, sin framework de interfaz pesado  
-**Almacenamiento**: localStorage del navegador para una instancia del módulo de espacio único  
+**Almacenamiento**: localStorage del navegador para una instancia del módulo de espacio único: `erp_entities`, `erp_documents` y `erp_marketing_config` para definiciones editables de Marketing  
 **Pruebas**: Vitest con jsdom para pruebas unitarias y de interacción (`npm test`); lint con `npm run lint`; no hay script `typecheck`  
 **Utilidades de Fecha**: `Date` nativo y cadenas ISO `YYYY-MM-DD`, sin librerías de fechas; resolución del límite superior mediante componentes locales y temporizador hasta la medianoche local  
 **Plataforma Objetivo**: Navegadores modernos de escritorio y móviles  
@@ -29,14 +29,14 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 
 ### Contexto Técnico del incremento de Marketing
 
-**Vista de Marketing**: Vista adicional (`state.view = 'marketing'`) alcanzable desde una acción rápida del panel; el marco de espacio de trabajo permanece igual
-**Captura pública**: Vista autónoma seleccionada por `?view=capture`, embebible por `iframe` del mismo origen; sin backend, escribe en el mismo `localStorage`
-**Estado comercial**: Campo personalizado de entidad `estado_comercial` con valores `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`; sin nueva estructura de almacenamiento
-**Agregaciones**: Utilidad pura `src/utils/marketing-stats.js` que deriva contadores, tasas, embudo y categorías de la torta desde las entidades almacenadas
-**Gráfico**: SVG generado en `src/components/marketing.js` con cinco sectores y leyenda accesible; sin librerías de gráficos ni dependencias nuevas
-**Automatización**: Reglas declarativas `marketing.automationRules` evaluadas tras las mutaciones de almacenamiento; cada ejecución se registra como un `Documento` en el historial de la entidad
-**Consentimiento**: Campos `consentimiento`, `consentimiento_fecha` y `consentimiento_version` en la entidad creada desde la captura; versión declarada en `marketing.privacyNoticeVersion`
-**Navegación lateral**: `NAV_ITEMS` conserva Panel, Buscar y Resumen; se eliminan Clientes e Interacciones y se añade la quinta acción rápida de gestión de documentos
+**Vista de Marketing**: Vista adicional (`state.view = 'marketing'`) alcanzable desde la barra lateral como cuarta opción; el panel ya no muestra «Abrir Marketing»
+**Captura pública y chat**: Vistas autónomas/`?view=capture` y controles embebidos en Marketing; responden desde preguntas frecuentes configuradas y registran consultas sin coincidencia como `Documento`
+**Estado comercial**: Campo personalizado de entidad `estado_comercial` con valores `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`; se conserva oculto para la automatización y ya no alimenta tarjetas ni embudo
+**Agregaciones**: Utilidad pura `src/utils/marketing-stats.js` que deriva las cinco tarjetas del panel y el embudo por estados de `Documento`, con `computeMarketingPerformance()` para indicadores por campaña; sin escribir resultados derivados
+**Automatización**: Reglas declarativas `marketing.automationRules` y campañas programadas evaluadas tras las mutaciones de almacenamiento; cada ejecución se registra como un `Documento` en el historial de la entidad
+**Atribución**: Campo opcional `campaña` en entidades, interacciones y documentos; los registros sin campaña se agrupan bajo «Sin campaña»
+**Consentimiento**: Campos `consentimiento`, `consentimiento_fecha` y `consentimiento_version` en la entidad creada desde la captura y en el chat; versión declarada en `marketing.privacyNoticeVersion`
+**Navegación lateral**: `NAV_ITEMS` ofrece Panel, Buscar, Resumen y Marketing; Clientes e Interacciones solo se acceden desde el panel o enlaces profundos
 
 ### Aclaraciones integradas (sesión 2026-11-01)
 
@@ -86,9 +86,32 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - La captación principal es un formulario web público embebible que crea el prospecto automáticamente.
 - La automatización se desencadena por eventos configurables (captura, cambio de etapa o interacción) y ejecuta una acción sobre el prospecto.
 - El consentimiento es explícito, obligatorio y se registra con fecha y versión del aviso aceptado.
-- La conversión se mide con un embudo por etapas: conteo por etapa y tasa entre etapas derivada del estado de la entidad.
-- El apartado muestra cinco contadores («Leads analizados», «Oportunidades abiertas», «Clientes ganados», «Tasa de pérdida», «Conversión actual») y un gráfico de torta «Estado comercial de la cartera» con «Clientes ganados», «En recontacto», «En proceso», «Perdidos» y «Sin resultados definitivos».
+- La conversión se mide con el embudo del panel: conteo y porcentajes por estado de documento, sin duplicar el cálculo en Marketing.
+- El apartado muestra las cinco tarjetas del panel (entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)») y el mismo embudo por estados de documento; la torta «Estado comercial de la cartera» y el selector de etapas se eliminan.
 - «Clientes» e «Interacciones» se eliminan de la barra lateral; solo se acceden desde el panel principal. Panel, Buscar y Resumen permanecen en la barra lateral.
+
+### Aclaraciones integradas (sesión 2026-11-23, quinta tanda: datos y navegación de Marketing)
+
+- Marketing muestra las mismas cinco tarjetas y el mismo embudo del panel, derivados de entidades y documentos; se eliminan la torta «Estado comercial de la cartera» y el selector de etapas.
+- `estado_comercial` y las reglas automáticas se conservan internamente sin mostrarse en Marketing.
+- «Abrir Marketing» desaparece del panel y «Marketing» se añade como cuarta opción de la barra lateral.
+- El acceso «Equipo de ventas y logros» permite equipos e integrantes capturados por el usuario, mientras que el real mensual y el objetivo mensual los calcula el sistema.
+- El real mensual suma documentos «Cerrado ganado» del mes por «Ejecutivo Asignado»; el objetivo mensual es la proyección `ventas ÷ días transcurridos × días del mes`, o cero sin ventas o sin días transcurridos.
+
+### Aclaraciones integradas (sesión 2026-11-23, sexta tanda: canales y chat)
+
+- Las interacciones en redes se registran manualmente con plataforma, fecha, tipo, nota y enlace, vinculadas al prospecto o cliente.
+- Las interacciones de redes y los mensajes del chat se guardan como `Documento` con campos personalizados de plataforma/canal y tipo de interacción.
+- El chat responde desde preguntas frecuentes configuradas; sin coincidencia registra la consulta para seguimiento.
+- El chat está disponible en el formulario público de captura y en Marketing, con consentimiento explícito antes del primer mensaje.
+
+### Aclaraciones integradas (sesión 2026-11-23, séptima tanda: campañas y rendimiento)
+
+- La automatización se organiza en campañas internas por etapa, sin servicios externos.
+- El rendimiento se mide con prospectos, conversión por etapa, interacciones, consultas respondidas y ventas ganadas, derivados de registros ya almacenados.
+- El campo opcional `campaña` atribuye prospectos, interacciones y ventas; sin valor se agrupa bajo «Sin campaña».
+- Las acciones internas de campaña son crear documento de seguimiento, asignar ejecutivo y actualizar `estado_comercial`.
+- Si dos campañas activas aplican al mismo prospecto y evento, se ejecuta la más reciente y la otra se registra como «omitida por solapamiento».
 
 ## Verificación de la Constitución
 
@@ -99,13 +122,18 @@ Construir una aplicación web ligera con Vite que sirva como módulo base de sof
 - Experiencia de Usuario: La interfaz proporcionará mensajes de validación claros, estados vacíos y comportamiento de formulario consistente, presentados dentro de un marco de espacio de trabajo ERP con marca (barra superior + barra lateral) que se ve y se comporta idénticamente en todas las pantallas.
 - Rendimiento: La búsqueda y el renderizado de listas se optimizarán para colecciones de hasta 500 registros usando actualizaciones ligeras del DOM.
 - Calidad (Marketing): Las agregaciones, reglas de automatización y validación de consentimiento se implementarán como funciones puras en módulos pequeños, con la configuración como único punto de declaración, reutilizando `Entidad` y `Documento` sin nuevas estructuras de almacenamiento.
-- Pruebas (Marketing): Se cubrirán con pruebas unitarias las agregaciones y reglas, y con pruebas de integración la vista, la captura con consentimiento, el gráfico accesible y la ausencia de Clientes/Interacciones en la barra lateral.
-- Experiencia de Usuario (Marketing): Los contadores y el gráfico usarán los mismos patrones visuales que el panel principal, con estados vacíos claros y leyenda textual accesible; el formulario público mostrará errores comprensibles sin el marco ERP.
+- Pruebas (Marketing): Se cubrirán con pruebas unitarias las agregaciones y reglas, y con pruebas de integración la vista, la captura con consentimiento, el embudo accesible y la presencia de Marketing en la barra lateral.
+- Experiencia de Usuario (Marketing): Los contadores y el embudo usarán los mismos patrones visuales que el panel principal, con estados vacíos claros y leyenda textual accesible; el formulario público mostrará errores comprensibles sin el marco ERP.
 - Rendimiento (Marketing): Las agregaciones se calcularán en memoria sobre el arreglo ya cargado en `state`, con una sola pasada por entidad y sin almacenar resultados derivados.
+- Calidad (Campañas): Las campañas, la atribución, las acciones internas y la resolución de solapamientos se implementarán como utilidades puras y reglas declarativas reutilizando `Entidad`, `Documento` y `marketing.automationRules`, sin estructura de almacenamiento ni dependencias nuevas.
+- Pruebas (Campañas): Se cubrirán con pruebas unitarias el cálculo de indicadores, la atribución «Sin campaña», las acciones permitidas y el desempate por campaña más reciente, y con pruebas de integración las vistas de campañas y rendimiento.
+- Seguridad y UX (Campañas): El chat exigirá consentimiento previo, todo contenido persistido se sanitizará al renderizarse y las vistas nuevas mostrarán estados vacíos y mensajes claros antes de cualquier ejecución.
 
 **Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. La tercera tanda añade presentación declarativa (`order`, `placeholder` y opciones con `{ value, label }`) reutilizando el mismo `module-config.js` y el registro de formatos existente: los valores almacenados, las condiciones `when` y la clave `rubro` no cambian, las pistas grises son solo atributos de ejemplo y la unicidad del RUT sigue una sola regla normalizada. No se introducen dependencias ni violaciones de la constitución.
 
-**Reverificación post-diseño del incremento de Marketing**: APROBADA. El marketing reutiliza `Entidad` y `Documento` con un campo `estado_comercial` declarado y reglas `marketing.automationRules`, sin esquema nuevo ni dependencias: la torta se genera en SVG y las agregaciones en una utilidad pura. La captura pública se resuelve como vista autónoma en la misma aplicación sin backend, documentando la limitación de mismo origen. La barra lateral conserva Panel, Buscar y Resumen; solo se retiran Clientes e Interacciones y se compensa con una quinta acción rápida, de modo que la navegación y el marco siguen siendo consistentes. Las pruebas unitarias y de integración cubren contadores, categorías, consentimiento, automatización y navegación; los estados vacíos y la leyenda accesible cumplen el Principio III.
+**Reverificación post-diseño del incremento de Marketing**: APROBADA. El marketing reutiliza `Entidad` y `Documento` con un campo `estado_comercial` declarado y reglas `marketing.automationRules`, sin esquema nuevo ni dependencias: las agregaciones se calculan en una utilidad pura y el embudo se reutiliza del panel. La captura pública se resuelve como vista autónoma en la misma aplicación sin backend, documentando la limitación de mismo origen. La barra lateral incluye Marketing; solo se retiran Clientes e Interacciones y se compensa con acciones rápidas, de modo que la navegación y el marco siguen siendo consistentes. Las pruebas unitarias y de integración cubren contadores, embudo, consentimiento, automatización y navegación; los estados vacíos y la leyenda accesible del embudo cumplen el Principio III.
+
+**Reverificación post-diseño del incremento actual**: APROBADA. Marketing reutiliza el panel y sus reglas de cálculo en lugar de duplicarlas, traslada su acceso a la barra lateral y mantiene `estado_comercial` como dato interno. Equipos, redes, chat, campañas y rendimiento se modelan con campos personalizados, `Documento` y reglas declarativas sobre la configuración existente; no se añaden dependencias, backend ni esquemas nuevos. La atribución opcional y el grupo «Sin campaña» evitan migraciones, el desempate por campaña más reciente previene acciones duplicadas y el consentimiento del chat reutiliza la versión del aviso ya registrada. Los artefactos de Phase 1 documentan contratos, estados y escenarios de validación suficientes para `/speckit.tasks`.
 
 ## Estructura del Proyecto
 
@@ -133,7 +161,19 @@ src/
 ├── utils/
 │   ├── entity-date.js   (regla `entityDate`, fecha local y temporizador de medianoche)
 │   ├── field-formats.js (formatos declarativos: `cl-rut`, `phone`, `email`, `nonEmpty`)
-│   └── marketing-stats.js (agregaciones puras: contadores, tasas, embudo y categorías de la torta)
+│   ├── field-rules.js (reglas declarativas por campo, visibilidad, búsqueda y grupos)
+│   ├── sanitize.js (escape de texto y atributos para contenido persistido)
+│   ├── search.js (normalización y coincidencias sobre campos visibles)
+│   ├── marketing-stats.js (agregaciones puras: tarjetas del panel, embudo por estados de documento)
+│   ├── marketing-config.js (validación del bloque `marketing` y sus definiciones)
+│   ├── capture-prospect.js (captura pública con consentimiento y versión del aviso)
+│   ├── marketing-automation.js (reglas por evento, campañas y ejecuciones)
+│   ├── marketing-stage.js (transiciones internas de `estado_comercial`)
+│   ├── marketing-social.js (interacciones de redes como `Documento`)
+│   ├── marketing-chat.js (FAQ, respuestas rápidas y consultas de seguimiento)
+│   ├── sales-team-metrics.js (real mensual y objetivo mensual derivados)
+│   ├── marketing-campaigns.js (campañas, atribución, acciones y solapamientos)
+│   └── marketing-performance.js (indicadores globales y por campaña)
 └── components/
     ├── shell.js        (marco del espacio de trabajo: barra superior, logotipo SVG, barra lateral, estado de módulo activo)
     ├── dashboard.js    (vista de inicio: acciones rápidas + tarjetas de estadísticas en vivo)
@@ -141,8 +181,10 @@ src/
     ├── document-form.js (formulario de creación/edición de documentos con campos personalizados y ciclo de vida de estados)
     ├── entity-detail.js (ficha de entidad: datos de la entidad + sus documentos asociados ordenados por fecha; Historia de Usuario 3)
     ├── commercial-summary.js (resumen de indicadores: totales de entidades/documentos y documentos pendientes por entidad; Historia de Usuario 6)
-    ├── marketing.js    (vista de Marketing: cinco contadores, embudo, torta SVG y leyenda; Historia de Usuario 16)
-    └── capture-form.js (formulario público autónomo con consentimiento, estado inicial y creación de prospecto)
+    ├── marketing.js    (vista de Marketing: datos del panel, accesos a redes, chat, campañas, equipo y rendimiento; Historias de Usuario 16-21)
+    ├── capture-form.js (formulario público autónomo con consentimiento, chat y creación de prospecto)
+    ├── marketing-social.js (registro y consulta de interacciones en redes)
+    └── marketing-chat.js   (preguntas frecuentes, respuestas rápidas y consultas de seguimiento)
 
 tests/
 ├── unit/          (incluye entity-date, validación de rango y marketing-stats)
@@ -156,10 +198,14 @@ tests/
 
 **Decisión adicional (sesión 2026-11-23, tercera tanda)**: La presentación también se declara en la configuración. Un `order` numérico opcional ordena las casillas del formulario sin acoplar el componente al perfil CRM; `placeholder` proporciona pistas grises por campo y las opciones `select` aceptan `{ value, label }` para mostrar «Llamada» y seguir guardando `llamada`. El título «Nuevo Cliente» se deriva del término configurado sin género gramatical fijo. `rubro` conserva su clave y pasa a `select` con las diez opciones definidas; `rut` reutiliza `normalizeClRut` para formato y unicidad. Ninguna de estas decisiones introduce almacenamiento nuevo ni cambia las condiciones `when` existentes.
 
-**Decisión adicional (cuarta tanda)**: Marketing se implementa como una vista más despachada por `renderCurrentView()` en `app.js`, con dos componentes nuevos (`marketing.js` y `capture-form.js`) y una utilidad pura de agregación. El campo `estado_comercial` se declara en `customFields.entity` y `fieldRules.entity`, y las reglas de automatización en un bloque `marketing` opcional validado por `validateConfig`; sin ese bloque el comportamiento base no cambia. La barra lateral se reduce en `NAV_ITEMS` y el panel gana una acción rápida para gestión de documentos. Ninguna de estas decisiones añade dependencias ni modifica la forma persistida de entidades y documentos.
+**Decisión adicional (cuarta tanda)**: Marketing se implementa como una vista más despachada por `renderCurrentView()` en `app.js`, con dos componentes nuevos (`marketing.js` y `capture-form.js`) y una utilidad pura de agregación. El campo `estado_comercial` se declara en `customFields.entity` y `fieldRules.entity`, y las reglas de automatización en un bloque `marketing` opcional validado por `validateConfig`; sin ese bloque el comportamiento base no cambia. Clientes e Interacciones salen de `NAV_ITEMS`, el panel gana una acción rápida para gestión de documentos y Marketing pasa a ser una entrada de la barra lateral. Ninguna de estas decisiones añade dependencias ni modifica la forma persistida de entidades y documentos.
+
+**Decisión adicional (séptima tanda)**: Marketing reutiliza `computeDashboardStats()`/`marketing-stats.js` para mostrar las mismas tarjetas y el mismo embudo del panel, sin duplicar fórmulas. Equipos, redes, chat y campañas se añaden como vistas y utilidades dentro del mismo bloque `marketing` de configuración: `salesTeams`, `faq` y `campaigns`; el rendimiento se calcula a partir de los registros existentes. El campo opcional `campaña` se declara como personalizado de entidad y documento; los documentos de redes, chat, seguimiento y ejecución ya son `Documento`, por lo que no hay esquema nuevo. `runAutomationRules()` incorpora `campaignId`, acciones internas y desempate por fecha de creación, manteniendo un único historial por entidad.
 
 ## Seguimiento de Complejidad
 
 Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente, la lógica de RUT ya presente en la semilla y el mismo patrón de pruebas Vitest/jsdom. Las contrapartidas registradas son un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado, y una capa declarativa adicional (`fieldRules`/`detailPolicy`) que se resuelve en un único punto y no modifica el comportamiento de los módulos que no la declaran. El bloqueo de ficha reutiliza el validador de guardado, por lo que no añade una segunda fuente de verdad. La tercera tanda tampoco añade dependencias: `order`, `placeholder` y `options` con valor y etiqueta se resuelven en el mismo punto de configuración, las pistas son texto de ejemplo sin persistencia, y la aceptación de dos formatos de RUT aprovecha el normalizador ya existente en `field-formats.js`.
 
-La cuarta tanda mantiene la huella de dependencias en cero: la torta se dibuja con SVG en lugar de incorporar una librería de gráficos; las agregaciones se calculan en una sola pasada sobre los registros ya cargados en memoria; la captura pública reutiliza el mismo `localStorage` y no requiere backend (contrapartida: el `iframe` debe ser del mismo origen); y las reglas de automatización se ejecutan en un único punto de la capa de almacenamiento, registrando cada acción como un `Documento` para no introducir un segundo historial. La retirada de dos entradas de `NAV_ITEMS` exige actualizar las pruebas de integración que navegaban por sus selectores, compensadas con acciones rápidas y con la API `app.navigate()`.
+La cuarta tanda mantiene la huella de dependencias en cero: las agregaciones se calculan en una sola pasada sobre los registros ya cargados en memoria; la captura pública reutiliza el mismo `localStorage` y no requiere backend (contrapartida: el `iframe` debe ser del mismo origen); y las reglas de automatización se ejecutan en un único punto de la capa de almacenamiento, registrando cada acción como un `Documento` para no introducir un segundo historial. La retirada de dos entradas de `NAV_ITEMS` exige actualizar las pruebas de integración que navegaban por sus selectores, compensadas con acciones rápidas y con la API `app.navigate()`.
+
+La séptima tanda no añade dependencias: reutiliza el panel como fuente de datos, `Documento` como historial de interacciones y ejecuciones, y reglas declarativas para campañas y respuestas rápidas. La contrapartida principal es que las campañas y el chat siguen siendo locales al navegador y no envían mensajes externos, decisión ya registrada en la especificación. El desempate entre campañas solapadas añade una regla determinista para evitar acciones duplicadas sin crear un motor de reglas nuevo.
