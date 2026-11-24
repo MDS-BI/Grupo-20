@@ -56,7 +56,7 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `detailPolicy.entity` | object | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058). |
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067). |
 | `options` (en campos `select`) | array | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063). |
-| `marketing` | object \| null | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-090). |
+| `marketing` | object \| null | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-093). |
 | `theme.accentColor` | string | Color de acento opcional (FR-038). |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
@@ -157,9 +157,11 @@ Cada ejecución se persiste como un `Documento` con `notes = label`, `status = '
 
 ### 3.5 Navegación
 
-Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cuarta opción de `NAV_ITEMS` en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la captura pública se selecciona con `?view=capture` y no altera datos hasta que se envía el formulario. El chat aparece tanto en la captura pública como en Marketing usando los mismos documentos.
+Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cuarta opción de `NAV_ITEMS` en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la captura pública se selecciona con `?view=capture` y no altera datos hasta que se envía el formulario. «Dudas y consultas» aparece tanto en la captura pública como en Marketing usando los mismos documentos.
 
-## 4. Equipo de ventas y logros
+Marketing no renderiza los botones de acción rápida del panel: solo ofrece cinco atajos de sección en este orden —«Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales»—, derivados de claves internas estables `team`, `campaigns`, `performance`, `chat` y `social` (FR-091 a FR-093, SC-027 a SC-029). El panel conserva sus cinco acciones rápidas como único punto de creación y gestión.
+
+## 4. Equipos de ventas y logros
 
 `marketing.salesTeams` es un arreglo opcional de equipos y sirve de semilla. Cada equipo y sus integrantes se capturan en la interfaz y las definiciones editadas se guardan en `erp_marketing_config`; las métricas se calculan, no se persisten.
 
@@ -175,14 +177,14 @@ Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cua
 
 La relación se resuelve por el valor de texto de `ejecutivo_asignado`, sin crear una entidad separada para el ejecutivo. Un equipo sin integrantes muestra un estado vacío.
 
-## 5. Redes sociales y chat
+## 5. Redes sociales y «Dudas y consultas»
 
 | Concepto | Se implementa como | Campos/ reglas |
 |---|---|---|
 | Interacción en redes | `Documento` vinculado al prospecto o cliente | `plataforma`, `tipo_interaccion`, `nota`, `enlace`, `campaña` opcional, `startDate = fecha` (FR-080, FR-081). |
-| Mensaje o consulta de chat | `Documento` vinculado al prospecto o cliente | `canal = 'chat'`, `mensaje`, `tipo_interaccion`, `campaña` opcional y marcas de tiempo (FR-081, FR-083). |
+| Mensaje o consulta de «Dudas y consultas» | `Documento` vinculado al prospecto o cliente | `canal = 'chat'`, `mensaje`, `tipo_interaccion`, `campaña` opcional y marcas de tiempo (FR-081, FR-083). El valor interno `chat` no cambia. |
 | Pregunta frecuente | Entrada de configuración `marketing.faq` | `{ pregunta, respuesta }`; la coincidencia se resuelve sobre texto normalizado (FR-082). |
-| Consentimiento del chat | Campos de la entidad | Reutiliza `consentimiento`, `consentimiento_fecha` y `consentimiento_version`; sin consentimiento no se registra el primer mensaje (FR-085). |
+| Consentimiento de «Dudas y consultas» | Campos de la entidad | Reutiliza `consentimiento`, `consentimiento_fecha` y `consentimiento_version`; sin consentimiento no se registra el primer mensaje (FR-085). La etiqueta visible usa el nuevo nombre (FR-092). |
 
 Las interacciones se ordenan por fecha en el apartado «Redes sociales» y en la ficha de la entidad. Las consultas sin coincidencia se registran como `Documento` con un acuse visible para el visitante.
 
@@ -211,7 +213,7 @@ Acciones internas permitidas (FR-089): crear un `Documento` de seguimiento, asig
 | `conversionesPorEtapa` | Conteo de entidades por estado comercial objetivo de campaña. |
 | `tasaDeConversion` | Proporción de entidades que alcanzaron `ganado`. |
 | `interaccionesRegistradas` | Documentos de redes y otras interacciones vinculados a entidades. |
-| `consultasRespondidas` | Mensajes de chat que recibieron respuesta rápida. |
+| `consultasRespondidas` | Mensajes de «Dudas y consultas» que recibieron respuesta rápida. |
 | `ventasGanadas` | Cantidad de documentos «Cerrado ganado», coincidente con la tarjeta del panel. |
 
 Cuando se selecciona una campaña, los indicadores se filtran por el campo `campaña` o `campaignId`. Los registros sin campaña aparecen bajo el grupo «Sin campaña» (FR-088). Una campaña sin registros muestra cero con una explicación clara (SC-026).

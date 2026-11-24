@@ -234,15 +234,15 @@
 
 ## Decisiones de diseño (equipo, canales, campañas y rendimiento)
 
-### Decisión: Equipo de ventas con métricas calculadas, no capturadas
+### Decisión: Equipos de ventas y logros con métricas calculadas, no capturadas
 
 - **Decisión**: `marketing.salesTeams` contiene equipos con `name` e `integrantes`; cada integrante guarda `name`, `role`/`cargo` y `active`. El real mensual se calcula sumando importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al integrante. El objetivo mensual es `ventasAcumuladas / díasTranscurridos * díasDelMes`, o cero sin ventas o sin días transcurridos.
 - **Justificación**: La especificación exige que el usuario capture solo datos del equipo y que el sistema derive ambas cifras (FR-076 a FR-079). Reutilizar documentos y el campo existente evita una nueva estructura y mantiene una sola fuente de verdad.
 - **Alternativas consideradas**: Capturar objetivo y real manualmente (contradice FR-077); crear un almacén de ventas separado (rompe XR-001 y duplica el historial).
 
-### Decisión: Redes y chat como `Documento` con tipos declarados
+### Decisión: Redes y «Dudas y consultas» como `Documento` con tipos declarados
 
-- **Decisión**: Las interacciones de redes y los mensajes/consultas del chat se persisten como `Documento` con campos personalizados `plataforma`/`canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace` y `campaña`. Las respuestas rápidas se declaran en `marketing.faq` como pares pregunta/respuesta. El chat bloquea el primer mensaje sin consentimiento y reutiliza `privacyNoticeVersion`.
+- **Decisión**: Las interacciones de redes y los mensajes/consultas de «Dudas y consultas» se persisten como `Documento` con campos personalizados `plataforma`/`canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace` y `campaña`. Las respuestas rápidas se declaran en `marketing.faq` como pares pregunta/respuesta. «Dudas y consultas» bloquea el primer mensaje sin consentimiento y reutiliza `privacyNoticeVersion`.
 - **Justificación**: FR-080 a FR-085 exigen trazabilidad en la ficha de la entidad, consentimiento y respuestas configurables; `Documento` ya aporta vinculación, historial y sanitización al renderizar. No se introducen APIs de redes ni proveedores de mensajería.
 - **Alternativas consideradas**: Nueva entidad «Interacción social» (duplica identidad e historial); integración con plataformas externas (contradice la decisión de registro manual y añade dependencias).
 
@@ -263,3 +263,29 @@
 - **Decisión**: `computeMarketingPerformance()` deriva prospectos capturados, conversiones por etapa, tasa de conversión, interacciones, consultas respondidas y ventas «Cerrado ganado» desde entidades, documentos y ejecuciones ya almacenadas, globalmente y por campaña. Si dos campañas activas aplican al mismo prospecto y evento, se ejecuta la creada más recientemente y las demás se registran como «omitida por solapamiento» con motivo.
 - **Justificación**: Cumple SC-025 y SC-026 con valores verificables y evita acciones duplicadas o contradictorias en la ficha del prospecto sin crear un sistema de prioridades configurable.
 - **Alternativas consideradas**: Ejecutar todas las campañas (duplica acciones); rechazar la segunda campaña (reduce flexibilidad y no registra el conflicto); integración con analítica externa (contradice la decisión de una sola fuente de datos local).
+
+## Decisiones de aclaración (sesión 2026-11-24: atajos y terminología de Marketing)
+
+### Decisión: Marketing sustituye los atajos del panel por sus propias secciones
+
+- **Decisión**: `renderDashboardHtml()` recibe una opción para omitir únicamente el bloque `.quick-actions`; `renderMarketingHtml()` la activa y conserva las tarjetas, el embudo y la lista de seguimientos. Los cinco atajos de Marketing se derivan de una tabla local de secciones con claves internas estables (`team`, `campaigns`, `performance`, `chat`, `social`).
+- **Justificación**: El usuario pidió que los atajos de creación y gestión aparezcan solo en el panel principal. Una opción en el renderizador compartido evita duplicar la lógica de tarjetas y mantiene una sola fuente de cálculo (FR-091, FR-073).
+- **Alternativas consideradas**: Crear un componente de Marketing separado sin reutilizar el panel (duplica tarjetas y cálculos); ocultar los botones con CSS (deja el marcado accesible y no cumple «solo en el panel»); eliminar las tarjetas de Marketing (contradice FR-073).
+
+### Decisión: Cinco atajos exactos y en orden explícito
+
+- **Decisión**: El orden visible es «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales». La etiqueta del equipo pasa de singular a plural en todo texto visible.
+- **Justificación**: El usuario enumeró las etiquetas en ese orden; hacerlo explícito en la tabla de secciones permite verificarlo con una sola prueba de interfaz y evita que el orden heredado (`team`, `social`, `chat`, `campaigns`, `performance`) se considere correcto (FR-093, SC-029).
+- **Alternativas consideradas**: Conservar el orden actual del componente (no respeta la enumeración); dejar el orden sin definir (genera pruebas ambiguas); añadir atajos adicionales del panel (contradice FR-091).
+
+### Decisión: «Dudas y consultas» renombra solo la capa visible
+
+- **Decisión**: El encabezado del componente compartido, la pestaña de Marketing, las etiquetas de consentimiento y el mensaje de error de consentimiento muestran «Dudas y consultas». Se conservan `data-section="chat"`, `#chat-form`, `.chat-*`, `canal: 'chat'`, `ChatConsentError`, nombres de archivo, funciones y datos ya persistidos.
+- **Justificación**: El usuario pidió un nuevo nombre para el apartado, no una migración de esquema. Un cambio exclusivamente visible satisface FR-092 y SC-028 sin romper selectores, historiales ni reglas de atribución existentes.
+- **Alternativas consideradas**: Renombrar claves y archivos (migración innecesaria y riesgo de perder documentos); mantener «Chat» solo en la captura pública (deja dos nombres para el mismo apartado); mostrar ambos nombres juntos (no es un renombramiento).
+
+### Decisión: Cobertura de integración para la nueva presentación
+
+- **Decisión**: Las pruebas de integración comprueban que el panel conserva cinco `.quick-actions button`, que Marketing no contiene `.quick-actions`, que `.marketing-sections [data-action="marketing-section"]` devuelve cinco elementos con el texto y orden exactos, y que «Dudas y consultas» aparece como encabezado y en el texto de consentimiento de la captura pública y de Marketing.
+- **Justificación**: Los cambios son visibles y susceptibles de regresión por compartir componentes entre panel, Marketing y captura; la verificación debe hacerse sobre marcado real, no solo sobre cadenas de código.
+- **Alternativas consideradas**: Solo pruebas unitarias de las listas de etiquetas (no detectan que el panel sigue renderizando los botones en Marketing); snapshots completos de HTML (frágiles ante cambios de estilo no relacionados).
