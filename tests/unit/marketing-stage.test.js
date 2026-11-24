@@ -17,7 +17,12 @@ describe('Transiciones del estado comercial (T087)', () => {
   });
 
   it('devuelve solo el cambio de estado sin tocar la identidad de la entidad', () => {
-    const entity = { id: 'rec_1', entity_id: 'ent_1', name: 'Prospecto', estado_comercial: 'prospecto' };
+    const entity = {
+      id: 'rec_1',
+      entity_id: 'ent_1',
+      name: 'Prospecto',
+      estado_comercial: 'prospecto',
+    };
     const result = transitionStage(entity, 'ganado');
     expect(result.valid).toBe(true);
     expect(result.data).toEqual({ estado_comercial: 'ganado' });

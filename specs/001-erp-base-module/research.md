@@ -136,7 +136,7 @@
 
 - **Decisión**: `matchesQuery()` construye el "haystack" solo con campos base y personalizados cuyo `searchable` no sea `false`; `renderSearchBarHtml()` toma el texto de ayuda de la configuración en lugar de texto fijo que menciona código/categoría.
 - **Rationale**: Evita que un dato oculto influya en resultados que el usuario no puede explicar (FR-055) y mantiene el comportamiento base intacto cuando no hay reglas (todos los campos siguen siendo buscables).
- - **Alternativas consideradas**: Mantener todos los campos en la búsqueda (contradice FR-055); quitar código/categoría del buscador global (rompería otros módulos).
+- **Alternativas consideradas**: Mantener todos los campos en la búsqueda (contradice FR-055); quitar código/categoría del buscador global (rompería otros módulos).
 
 ## Decisiones de aclaración (sesión 2026-11-23, tercera tanda: presentación del formulario de clientes)
 
@@ -172,15 +172,15 @@
 
 ### Decisión: Título «Nuevo Cliente» sin género codificado
 
- - **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
- - **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
- - **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).
+- **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
+- **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
+- **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).
 
 ## Decisiones de diseño (apartado de Marketing)
 
 ### Decisión: El prospecto reutiliza `Entidad` con un campo `estado_comercial` declarado
 
-- **Decisión**: Añadir un campo personalizado de entidad `estado_comercial` (`select`) con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`, etiquetas «Prospecto», «En proceso», «En recontacto», «Cliente ganado» y «Perdido», y valor inicial `prospecto`. El estado inicial «Prospecto» de FR-068 queda representado sin crear un tipo de registro nuevo (XR-001).
+- **Decisión**: Añadir un campo personalizado de entidad `estado_comercial` (`select`) con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`, etiquetas «Prospecto», «En proceso», «En recontacto», «Cliente ganado» y «Perdido», y valor inicial `prospecto`. `ganado` es la conversión interna de la entidad a Cliente y «Cliente ganado» su etiqueta visible; «Cerrado ganado» queda reservado al estado de `Documento`. El estado inicial «Prospecto» de FR-068 queda representado sin crear un tipo de registro nuevo (XR-001).
 - **Justificación**: El módulo base ya persiste entidades, documentos, campos personalizados y reglas `fieldRules`; un campo declarado mantiene la adaptación por configuración y evita una segunda estructura de almacenamiento. Los cinco valores permiten gobernar la automatización y el rendimiento por etapa sin duplicar datos.
 - **Alternativas consideradas**: Crear una entidad `Prospecto` separada (contradice la aclaración del usuario y duplica identidad/historial); usar `Documento.status` (en el módulo base gobierna documentos, no entidades, y no permite convertir la entidad en cliente); guardar una categoría calculada sin campo (no se puede editar el avance comercial).
 
@@ -263,3 +263,59 @@
 - **Decisión**: `computeMarketingPerformance()` deriva prospectos capturados, conversiones por etapa, tasa de conversión, interacciones, consultas respondidas y ventas «Cerrado ganado» desde entidades, documentos y ejecuciones ya almacenadas, globalmente y por campaña. Si dos campañas activas aplican al mismo prospecto y evento, se ejecuta la creada más recientemente y las demás se registran como «omitida por solapamiento» con motivo.
 - **Justificación**: Cumple SC-025 y SC-026 con valores verificables y evita acciones duplicadas o contradictorias en la ficha del prospecto sin crear un sistema de prioridades configurable.
 - **Alternativas consideradas**: Ejecutar todas las campañas (duplica acciones); rechazar la segunda campaña (reduce flexibilidad y no registra el conflicto); integración con analítica externa (contradice la decisión de una sola fuente de datos local).
+
+## Decisiones de diseño (autenticación, sesión y permisos)
+
+### Decisión: `src/auth.js` concentra sesión, hash, bloqueo y expiración
+
+- **Decisión**: Crear `src/auth.js` con operaciones `login`, `logout`, `getCurrentUser`, `getCurrentSession`, `createUser`, `updateUser`, `deactivateUser`, `normalizeUsername`, `hashPassword` y `verifyPassword`. La sesión se guarda en `erp_session` con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`; los usuarios se guardan en `erp_users` con `id`, `username`, `usernameKey`, `passwordHash`, `salt`, `rank`, `active`, `failedAttempts`, `lockedUntil`, `createdAt` y `updatedAt`.
+- **Justificación**: El usuario pidió explícitamente sesión, hash, bloqueo y expiración. Un solo módulo evita que esas reglas se repartan entre `app.js`, `storage.js` y los componentes, y permite probar la lógica sin DOM. Guardar solo `userId` en la sesión permite resolver rango y estado activo desde `erp_users` en cada verificación.
+- **Alternativas consideradas**: Guardar rango y nombre en la sesión (deja permisos obsoletos tras un cambio); dividir sesión/hash/usuarios en tres módulos sin una fachada común (más superficie de importación); almacenar contraseñas en texto plano (inaceptable incluso en la demo).
+
+### Decisión: Hash PBKDF2-SHA-256 con sal por usuario y Web Crypto API
+
+- **Decisión**: Derivar cada contraseña con `crypto.subtle.deriveBits` usando PBKDF2-SHA-256, sal aleatoria de 16 bytes, 100 000 iteraciones y codificación hexadecimal para `salt` y `passwordHash`. No se añade dependencia criptográfica; las pruebas inyectan o simulan la API cuando el entorno no expone `crypto.subtle`.
+- **Justificación**: Cumple la petición de «hash» sin ampliar la huella de librerías y evita el error frecuente de guardar contraseñas legibles en `localStorage`. La sal individual impide que dos usuarios con la misma contraseña compartan el mismo digest.
+- **Alternativas consideradas**: Almacenar contraseña en texto plano (rechazado); hash simple sin sal ni iteraciones (débil); añadir bcrypt/argon2 como dependencia (contradice la restricción de huella mínima y no aporta seguridad real sin backend).
+
+### Decisión: Bloqueo temporal y expiración por inactividad con valores demostrativos
+
+- **Decisión**: Bloquear el usuario durante 15 minutos después de 5 intentos fallidos; un inicio de sesión correcto reinicia `failedAttempts` y `lockedUntil`. La sesión expira tras 8 horas de inactividad, actualizando `lastActivityAt` en cada acción verificada; «Cerrar sesión», la desactivación y la expiración eliminan `erp_session`.
+- **Justificación**: El usuario pidió bloqueo y expiración sin dar umbrales. Estos valores son suficientes para probar el comportamiento sin convertir la demo en un sistema de seguridad productivo, y se documentan como constantes de `src/auth.js`.
+- **Alternativas consideradas**: Sin bloqueo ni expiración (no cumple la petición); expiración absoluta desde el login sin renovación (cierra sesiones activas de forma sorpresiva); umbrales configurables desde la interfaz (amplían el alcance y permitirían debilitar la política).
+
+### Decisión: Matriz de permisos única en `src/auth/permissions.js`
+
+- **Decisión**: Exportar `ROLES`, `PERMISSION_MATRIX`, `can(role, action, context)` y `assertPermission(role, action, context)` desde `src/auth/permissions.js`. La tabla replica la sección «Matriz de permisos» de la especificación; las acciones no declaradas devuelven `false`; `assertPermission()` lanza un error cuyo mensaje es exactamente `No tienes permiso para realizar esta acción`.
+- **Justificación**: FR-091 exige una sola fuente para botones, navegación, vistas y capa de datos, y la aclaración 2026-11-24 impidió editarla desde la interfaz. Un módulo separado de `src/auth.js` mantiene la identidad separada de la autorización, sin añadir dependencias.
+- **Alternativas consideradas**: Mantener permisos en cada componente (divergencia y aumento de pruebas frágiles); guardar la matriz en `localStorage` editable (contradice la aclaración); permitir que el Gerente modifique la tabla (contradice FR-091 y SC-027).
+
+### Decisión: `Sistema` como identidad de auditoría, no como rango
+
+- **Decisión**: Las automatizaciones siguen ejecutándose como `Sistema` sin consultar el rango del usuario conectado; cada ejecución conserva `createdBy: 'Sistema'` y el historial de campaña mantiene el usuario creador real. `Sistema` no aparece en `ROLES` ni en el `select` de «Ejecutivo Asignado».
+- **Justificación**: FR-098 exige independencia del usuario conectado y la matriz debe seguir teniendo una fila por rango interactivo más el visitante. Mezclar `Sistema` como rango permitiría iniciar sesión con una identidad sin permisos definidos.
+- **Alternativas consideradas**: Usar el rango del usuario que disparó la regla (contradice FR-098); crear un rango «Sistema» con todos los permisos (amplía la matriz y la superficie de login); no registrar creador de campaña (rompe trazabilidad).
+
+### Decisión: Vistas `login.js` y `users-admin.js` con límites distintos
+
+- **Decisión**: `src/components/login.js` renderiza «Usuario» y «Contraseña» sin barra superior ni lateral, conserva enlaces públicos a captura/chat y redirige a la vista solicitada tras autenticarse. `src/components/users-admin.js` se monta solo desde el menú del usuario de la barra superior y solo para Nivel 4; no se añade a `NAV_ITEMS`.
+- **Justificación**: US22 exige que sin sesión solo se vea el login excepto las rutas públicas, y FR-095 exige que la administración de usuarios no esté en la barra lateral. Separar ambos componentes permite probar sus flujos sin acoplarlos al marco ERP.
+- **Alternativas consideradas**: Mostrar login dentro del shell (filtra vistas protegidas); añadir «Usuarios» a la barra lateral (contradice FR-095); combinar login y administración en un único componente (acopla una vista pública con una privada).
+
+### Decisión: Integración en almacenamiento y configuración existente
+
+- **Decisión**: `src/storage.js` llama a `assertPermission()` antes de `addEntity`, `updateEntity`, `deleteEntity`, altas/ediciones/bajas de documentos, cambios de estado y escrituras directas de las listas; `app.js` controla el acceso a vistas y `shell.js`/`dashboard.js` filtran navegación y acciones rápidas con la misma matriz. El campo `ejecutivo_asignado` pasa de texto libre a un `select` poblado con usuarios activos de rango Nivel 2 o Nivel 4, y los integrantes del equipo se vinculan al `userId` correspondiente.
+- **Justificación**: FR-092 exige validar en la capa de datos y SC-029 comprueba una llamada directa a `storage.js`; FR-096 y FR-097 exigen que ejecutivo e integrante provengan de usuarios activos válidos. Reutilizar la configuración evita crear un esquema paralelo.
+- **Alternativas consideradas**: Confiar solo en botones ocultos (falla SC-029); dejar `ejecutivo_asignado` como texto libre (contradice FR-096); vincular integrantes por nombre visible (rompe FR-097 al renombrar usuarios).
+
+### Decisión: Autenticación local simulada con limitación explícita
+
+- **Decisión**: Los usuarios semilla se inicializan solo si `erp_users` no existe y representan los cuatro rangos de la demostración. El aviso de configuración inválida y la nota de suposiciones siguen indicando que una implementación productiva requiere autenticación en servidor; el bloqueo y la expiración locales son medidas de demostración.
+- **Justificación**: La especificación ya declara autenticación local y simulada, sin backend. Documentar el límite evita que el hash local se interprete como una garantía de seguridad de producción.
+- **Alternativas consideradas**: Introducir backend y base de datos (cambia la arquitectura aprobada); omitir usuarios semilla (impide probar rangos sin configuración manual); ocultar la limitación (riesgo de malinterpretar la demo).
+
+### Decisión: Seis rutas relativas en un único documento HTML
+
+- **Decisión**: La vista se resuelve desde `location.search` en carga, recarga y Back/Forward con `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`; sin parámetro `view` se abre el Panel y no existe `?view=panel`. La construcción de URLs usa solo `window.location.pathname`, sin host ni ruta de servidor, y cada resolución aplica la matriz de permisos.
+- **Justificación**: I1 exige rutas relativas verificables en un despliegue estático; una resolución única evita que el estado de la vista y la barra de direcciones divergan al recargar o usar el historial.
+- **Alternativas consideradas**: Rutas absolutas con prefijo de servidor (rompen el despliegue estático); estado solo en memoria (se pierde al recargar); hash propio (duplica el mecanismo de `location.search` ya usado por `?view=capture`).

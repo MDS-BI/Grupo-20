@@ -1,6 +1,7 @@
 import { escapeHtml } from '../utils/sanitize.js';
 import { getEntityFieldDefs } from './entity-form.js';
 import { collectFormData, renderFieldHtml } from './form-fields.js';
+import { MESSAGES } from '../utils/messages.js';
 
 function consentField(config) {
   const version = config?.marketing?.privacyNoticeVersion || 'sin versión';
@@ -35,7 +36,7 @@ export function renderCaptureFormHtml(config, values = {}, errors = {}, submitte
       <p class="capture-intro">Completa tus datos para que podamos contactarte. El formulario es embebible y solo requiere tu consentimiento explícito.</p>
       ${
         submitted
-          ? '<p id="capture-confirmation" class="capture-confirmation" role="status">Gracias. Hemos registrado tu interés y te contactaremos pronto.</p>'
+          ? `<p id="capture-confirmation" class="capture-confirmation" role="status">${MESSAGES.prospectRegistered}</p>`
           : ''
       }
       <form id="capture-form" novalidate aria-label="Formulario público de captura">

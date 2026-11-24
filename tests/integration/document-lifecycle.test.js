@@ -20,7 +20,9 @@ function createEntityAndSelectForDocuments() {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = 'Acme';
   document.getElementById('field-code').value = 'AC-1';
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   app.navigate('manage-document');
   const select = document.getElementById('document-entity-select');
   select.value = select.querySelector('option:not([value=""])').value;
@@ -34,16 +36,22 @@ describe('Ciclo de vida de estados de documentos (H13)', () => {
     const statusInput = document.getElementById('field-status');
     expect(statusInput.tagName).toBe('INPUT');
     expect(statusInput.getAttribute('list')).toBe('options-status');
-    const optionValues = Array.from(document.querySelectorAll('#options-status option')).map((o) => o.value);
+    const optionValues = Array.from(document.querySelectorAll('#options-status option')).map(
+      (o) => o.value
+    );
     expect(optionValues).toEqual(['cotizacion', 'pedido', 'facturado']);
 
     statusInput.value = 'cotizacion';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.status-badge').textContent).toBe('cotizacion');
 
     document.querySelector('[data-action="edit-document"]').click();
     document.getElementById('field-status').value = 'facturado';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.field-error').textContent).toMatch(/transición/i);
   });
 

@@ -31,7 +31,9 @@ describe('Formatos declarativos de campo (T027)', () => {
     expect(isValidRut('12.345.678-5')).toBe(true);
     expect(isValidRut('12345678-5')).toBe(true);
     expect(normalizeClRut('12.345.678-5')).toBe(normalizeClRut('12345678-5'));
-    expect(normalizeFieldValue('12.345.678-k', 'cl-rut')).toBe(normalizeFieldValue('12345678-K', 'cl-rut'));
+    expect(normalizeFieldValue('12.345.678-k', 'cl-rut')).toBe(
+      normalizeFieldValue('12345678-K', 'cl-rut')
+    );
   });
 
   it('valida teléfono, correo y texto no vacío sin efectos secundarios', () => {

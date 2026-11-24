@@ -1,13 +1,14 @@
 import { addDocument, updateDocument, ValidationError } from '../storage.js';
 import { localTodayISO } from './entity-date.js';
 import { normalizeText } from './search.js';
+import { MESSAGES } from './messages.js';
 
 export class ChatConsentError extends Error {
   constructor() {
     super('El chat requiere consentimiento explícito');
     this.name = 'ChatConsentError';
     this.errors = {
-      consentimiento: 'Debes marcar el consentimiento explícito antes de enviar un mensaje.',
+      consentimiento: MESSAGES.required,
     };
   }
 }
@@ -25,8 +26,12 @@ export function answerFaq(question, config) {
     const normalizedFaqQuestion = normalizeText(item?.pregunta);
     if (!normalizedFaqQuestion) continue;
     const answer = item?.respuesta ?? null;
-    if (normalizedFaqQuestion === normalizedQuestion && exactAnswer === undefined) exactAnswer = answer;
-    if (normalizedQuestion.includes(normalizedFaqQuestion) && normalizedFaqQuestion.length > longestLength) {
+    if (normalizedFaqQuestion === normalizedQuestion && exactAnswer === undefined)
+      exactAnswer = answer;
+    if (
+      normalizedQuestion.includes(normalizedFaqQuestion) &&
+      normalizedFaqQuestion.length > longestLength
+    ) {
       includedAnswer = answer;
       longestLength = normalizedFaqQuestion.length;
     }

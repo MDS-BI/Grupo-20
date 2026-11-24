@@ -41,8 +41,14 @@ const config = {
   marketing: {
     privacyNoticeVersion: '2026-11-23',
     faq: [
-      { pregunta: 'cómo capturo prospectos', respuesta: 'Use el formulario público con consentimiento.' },
-      { pregunta: 'cómo capturo prospectos con consentimiento', respuesta: 'Marque la casilla de privacidad.' },
+      {
+        pregunta: 'cómo capturo prospectos',
+        respuesta: 'Use el formulario público con consentimiento.',
+      },
+      {
+        pregunta: 'cómo capturo prospectos con consentimiento',
+        respuesta: 'Marque la casilla de privacidad.',
+      },
     ],
   },
 };
@@ -66,13 +72,13 @@ afterEach(() => {
 describe('answerFaq (T104)', () => {
   it('devuelve la respuesta con coincidencia exacta normalizada', () => {
     expect(answerFaq('CÓMO CAPTURO PROSPECTOS', config)).toBe(
-      'Use el formulario público con consentimiento.',
+      'Use el formulario público con consentimiento.'
     );
   });
 
   it('resuelve inclusiones priorizando la pregunta más larga', () => {
     expect(answerFaq('Necesito saber cómo capturo prospectos con consentimiento hoy', config)).toBe(
-      'Marque la casilla de privacidad.',
+      'Marque la casilla de privacidad.'
     );
   });
 
@@ -90,7 +96,7 @@ describe('registerChatMessage (T104/T106)', () => {
     const documento = registerChatMessage(
       { mensaje: 'Hola, tengo una consulta', startDate: '2026-11-20', campaña: 'Lanzamiento' },
       entity,
-      config,
+      config
     );
 
     expect(documento).toMatchObject({
@@ -112,7 +118,7 @@ describe('registerChatMessage (T104/T106)', () => {
     const documento = registerChatMessage(
       { consentimiento: true, mensaje: 'Tengo una duda' },
       createEntity(false),
-      config,
+      config
     );
 
     expect(documento.mensaje).toBe('Tengo una duda');
@@ -125,7 +131,7 @@ describe('registerChatMessage (T104/T106)', () => {
 
   it('bloquea el registro sin consentimiento y no guarda documento', () => {
     expect(() =>
-      registerChatMessage({ consentimiento: 'true', mensaje: 'Hola' }, createEntity(false), config),
+      registerChatMessage({ consentimiento: 'true', mensaje: 'Hola' }, createEntity(false), config)
     ).toThrow(ChatConsentError);
 
     try {
@@ -139,9 +145,9 @@ describe('registerChatMessage (T104/T106)', () => {
   });
 
   it('rechaza la ausencia de entidad o de mensaje con errores', () => {
-    expect(() => registerChatMessage({ consentimiento: true, mensaje: 'Hola' }, null, config)).toThrow(
-      ValidationError,
-    );
+    expect(() =>
+      registerChatMessage({ consentimiento: true, mensaje: 'Hola' }, null, config)
+    ).toThrow(ValidationError);
     try {
       registerChatMessage({ consentimiento: true, mensaje: 'Hola' }, null, config);
     } catch (error) {

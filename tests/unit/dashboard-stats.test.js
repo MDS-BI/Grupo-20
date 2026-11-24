@@ -61,9 +61,9 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
       { value: '$0', label: 'Pipeline (USD)' },
     ]);
     expect(document.querySelector('.demo-note')).toBeNull();
-    expect([...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)).toEqual([
-      '0', '0', '0', '0', '0', '0',
-    ]);
+    expect(
+      [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
+    ).toEqual(['0', '0', '0', '0', '0', '0']);
     app.destroy();
   });
 
@@ -71,7 +71,12 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     const app = initApp(document.getElementById('app'));
     const client = createClient();
     addDocument({ entity_id: client.entity_id, status: 'cerrado ganado', startDate: '2026-10-01' });
-    addDocument({ entity_id: client.entity_id, status: 'en negociacion', startDate: '2026-10-02', importe: 250 });
+    addDocument({
+      entity_id: client.entity_id,
+      status: 'en negociacion',
+      startDate: '2026-10-02',
+      importe: 250,
+    });
     app.navigate('dashboard');
 
     expect(cards()).toEqual([
@@ -81,9 +86,9 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
       { value: '100%', label: 'Tasa de conversión' },
       { value: '$250', label: 'Pipeline (USD)' },
     ]);
-    expect([...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)).toEqual([
-      '0', '0', '1', '1', '0', '0',
-    ]);
+    expect(
+      [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
+    ).toEqual(['0', '0', '1', '1', '0', '0']);
 
     deleteEntity(client.id);
     app.navigate('dashboard');

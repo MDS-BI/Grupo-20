@@ -70,7 +70,9 @@ describe('Solapamiento de campañas internas (T111)', () => {
     expect(result.selected).toBe(newest);
     expect(result.skipped).toHaveLength(2);
     expect(result.skipped.map((campaign) => campaign.campaignId)).toEqual(['camp-2', 'camp-1']);
-    expect(result.skipped.every((campaign) => campaign.notes === 'omitida por solapamiento')).toBe(true);
+    expect(result.skipped.every((campaign) => campaign.notes === 'omitida por solapamiento')).toBe(
+      true
+    );
   });
 
   it('excluye campañas detenidas, fuera de periodo, de otra etapa o de otro evento', () => {

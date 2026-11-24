@@ -3,15 +3,19 @@ import { matchesAny, matchesQuery, normalizeText } from './utils/search.js';
 import { isValidISODate, resolveEntityDateRule } from './utils/entity-date.js';
 import { isValidFormat, normalizeFieldValue } from './utils/field-formats.js';
 import {
+  canonicalSearchKeys,
   isConditionActive,
   isFieldSearchable,
   pruneInactiveGroupValues,
   resolveFieldRules,
 } from './utils/field-rules.js';
+import { MESSAGES, exactFormatMessage } from './utils/messages.js';
 import { getConfig } from './module-config.js';
 import { transitionStage } from './utils/marketing-stage.js';
 import { runAutomationRules } from './utils/marketing-automation.js';
 import { normalizeMarketingConfig } from './utils/marketing-config.js';
+import { getCurrentUser, listUsers, resolveExecutive } from './auth.js';
+import { assertPermission } from './auth/permissions.js';
 
 const ENTITIES_KEY = 'erp_entities';
 const DOCUMENTS_KEY = 'erp_documents';
@@ -40,12 +44,93 @@ function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+let storageAuthEnforced = false;
+
+export function setStorageAuthEnforced(value) {
+  storageAuthEnforced = Boolean(value);
+}
+
+function currentUser() {
+  try {
+    return getCurrentUser();
+  } catch {
+    return null;
+  }
+}
+
+const PUBLIC_ACTIONS = new Set(['entity:create', 'document:create', 'document:edit_own']);
+
+function authorize(action, context = {}, { actor = '' } = {}) {
+  const user = currentUser();
+  if (!user && !storageAuthEnforced) return;
+  if (!user && actor === 'public' && PUBLIC_ACTIONS.has(action)) return;
+  assertPermission(user?.rank || 'visitor', action, {
+    ...context,
+    ...(user ? { userId: user.id } : {}),
+    ...(!user && actor ? { actor } : {}),
+  });
+}
+
+function authorizeOwnOrAny(record, ownAction, anyAction, options = {}) {
+  const user = currentUser();
+  if (!user && !storageAuthEnforced) return;
+  if (!user && options.actor === 'public' && PUBLIC_ACTIONS.has(ownAction)) {
+    authorize(ownAction, { ownerId: record?.ownerId }, options);
+    return;
+  }
+  const assigned = record?.ejecutivo_asignado;
+  const hasAssignment = Boolean(assigned) && assigned !== 'Sin asignar';
+  const ownerId = hasAssignment ? assigned : record?.ownerId || null;
+  const owns = Boolean(ownerId) && ownerId === user?.id;
+  authorize(owns ? ownAction : anyAction, { ownerId }, options);
+}
+
+function writeEntities(entities) {
+  writeJson(ENTITIES_KEY, entities);
+}
+
+function writeDocuments(documents) {
+  writeJson(DOCUMENTS_KEY, documents);
+}
+
+function isCapturePayload(data) {
+  return data?.estado_comercial === 'prospecto' && data?.consentimiento === true;
+}
+
+function isChatQueryPayload(data, entity) {
+  return Boolean(
+    data?.canal === 'chat' && data?.tipo_interaccion === 'consulta' && entity?.consentimiento
+  );
+}
+
+function isChatAnswerUpdate(existing, updates) {
+  return Boolean(
+    existing?.canal === 'chat' &&
+    (updates?.respondida === true ||
+      updates?.status === 'respondida' ||
+      updates?.respuesta !== undefined)
+  );
+}
+
+function publicActorFor(action, payload = {}, options = {}) {
+  if (options.actor === 'public') return 'public';
+  if (currentUser() || !storageAuthEnforced) return '';
+  if (action === 'entity:create' && isCapturePayload(payload)) return 'public';
+  if (action === 'document:create' && isChatQueryPayload(payload, payload._linkedEntity))
+    return 'public';
+  if (action === 'document:edit_own' && isChatAnswerUpdate(payload.existing, payload.updates)) {
+    return 'public';
+  }
+  return '';
+}
+
 export function loadEntities() {
   return readJson(ENTITIES_KEY);
 }
 
 export function saveEntities(entities) {
-  writeJson(ENTITIES_KEY, entities);
+  authorize('entity:edit_any');
+  writeEntities(entities);
 }
 
 export function loadDocuments() {
@@ -53,8 +138,17 @@ export function loadDocuments() {
 }
 
 export function saveDocuments(documents) {
-  writeJson(DOCUMENTS_KEY, documents);
+  authorize('document:edit_any');
+  writeDocuments(documents);
 }
+
+export function savePermissions() {
+  assertPermission(currentUser()?.rank || 'visitor', 'permissions:edit');
+}
+
+export const savePermissionMatrix = savePermissions;
+export const updatePermissionMatrix = savePermissions;
+export const setPermissions = savePermissions;
 
 function marketingSeed() {
   const { config } = normalizeMarketingConfig(getConfig()?.marketing);
@@ -81,8 +175,32 @@ export function loadMarketingConfig() {
   };
 }
 
+function sanitizeSalesTeamUsers(value) {
+  if (!value || !Array.isArray(value.salesTeams)) return value;
+  const inactiveIds = new Set(
+    listUsers()
+      .filter((user) => user.active === false)
+      .map((user) => user.id)
+  );
+  return {
+    ...value,
+    salesTeams: value.salesTeams.map((team) => ({
+      ...team,
+      members: Array.isArray(team?.members)
+        ? team.members.map((member) => {
+            if (!inactiveIds.has(member?.userId)) return member;
+            const safeMember = { ...member };
+            delete safeMember.userId;
+            return safeMember;
+          })
+        : team?.members,
+    })),
+  };
+}
+
 export function saveMarketingConfig(value) {
-  writeJson(MARKETING_CONFIG_KEY, value);
+  authorize('marketing:manage');
+  writeJson(MARKETING_CONFIG_KEY, sanitizeSalesTeamUsers(value));
 }
 
 let idCounter = 0;
@@ -110,6 +228,7 @@ function persistAutomation(event, entity, context = {}) {
   });
   if (!pending.length) return [];
   const now = new Date().toISOString();
+  const assignedUser = resolveExecutive(entity.ejecutivo_asignado);
   const created = pending.map((item) => ({
     id: generateRecordId(),
     entity_id: item.entity_id,
@@ -118,31 +237,45 @@ function persistAutomation(event, entity, context = {}) {
     notes: item.notes,
     status: item.status,
     automation_key: item.automation_key,
+    ...(assignedUser ? { assignedUserIdAtSale: assignedUser.id } : {}),
     ...(item.campaignId ? { campaignId: item.campaignId } : {}),
     ...(item.campaña ? { campaña: item.campaña } : {}),
     ...(item.skipReason ? { skipReason: item.skipReason } : {}),
     ...(item.fecha ? { fecha: item.fecha } : {}),
+    createdBy: 'Sistema',
+    actor: 'Sistema',
+    ownerId: 'Sistema',
     createdAt: now,
     updatedAt: now,
   }));
-  saveDocuments([...documents, ...created]);
+  writeDocuments([...documents, ...created]);
   let currentEntities = loadEntities();
   for (const item of pending) {
-    if (!item.campaignAction || !currentEntities.some((candidate) => candidate.entity_id === entity.entity_id)) continue;
+    if (
+      !item.campaignAction ||
+      !currentEntities.some((candidate) => candidate.entity_id === entity.entity_id)
+    )
+      continue;
     currentEntities = currentEntities.map((candidate) => {
       if (candidate.entity_id !== entity.entity_id) return candidate;
       const updated = { ...candidate, updatedAt: now };
-      if (item.campaignAction === 'assign_executive') updated.ejecutivo_asignado = item.executive || '';
-      if (item.campaignAction === 'update_stage' && item.targetStage) updated.estado_comercial = item.targetStage;
+      if (item.campaignAction === 'assign_executive')
+        updated.ejecutivo_asignado = item.executive || '';
+      if (item.campaignAction === 'update_stage' && item.targetStage)
+        updated.estado_comercial = item.targetStage;
       return updated;
     });
   }
-  if (currentEntities.some((candidate) => candidate.updatedAt === now)) saveEntities(currentEntities);
+  if (currentEntities.some((candidate) => candidate.updatedAt === now))
+    writeEntities(currentEntities);
   return created;
 }
 
 function normalizeCode(code) {
-  return String(code || '').trim().toLowerCase().replace(/\s+/g, '');
+  return String(code || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
 }
 
 function isEmptyValue(value) {
@@ -166,27 +299,26 @@ function normalizeForUniqueness(value, rule, key) {
   return normalizeFieldValue(value, rule.normalize);
 }
 
-function validateFieldRules(rules, data, { entities, editingId, customFieldDefs }, errors) {
-  const labels = new Map((customFieldDefs || []).map((def) => [def.key, def.label || def.key]));
+function validateFieldRules(rules, data, { entities, editingId }, errors) {
   for (const [key, rule] of Object.entries(rules || {})) {
     if (!isConditionActive(rule, data)) continue;
     const value = data[key];
-    const label = rule.label || labels.get(key) || key;
     if (rule.required && isEmptyValue(value)) {
-      errors[key] = `${label} es obligatorio.`;
+      errors[key] = MESSAGES.required;
       continue;
     }
     if (isEmptyValue(value)) continue;
     if (rule.format && !isValidFormat(rule.format, value)) {
-      errors[key] = `${label} no tiene un formato válido.`;
+      errors[key] = exactFormatMessage(key);
       continue;
     }
     if (rule.unique) {
       const normalized = normalizeForUniqueness(value, rule, key);
       const duplicate = entities.some(
-        (entity) => entity.id !== editingId && normalizeForUniqueness(entity[key], rule, key) === normalized,
+        (entity) =>
+          entity.id !== editingId && normalizeForUniqueness(entity[key], rule, key) === normalized
       );
-      if (duplicate) errors[key] = `Ya existe un registro con ese ${label.toLowerCase()}.`;
+      if (duplicate) errors[key] = key === 'rut' ? MESSAGES.duplicateRut : MESSAGES.required;
     }
   }
 }
@@ -255,7 +387,10 @@ function pickCustomFieldValues(definitions, data) {
 // Entities
 // ---------------------------------------------------------------------------
 
-export function validateEntityData(data, { entities = [], editingId = null, customFieldDefs = null } = {}) {
+export function validateEntityData(
+  data,
+  { entities = [], editingId = null, customFieldDefs = null } = {}
+) {
   const errors = {};
   const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
   const name = sanitizeText(data.name);
@@ -265,7 +400,9 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
     errors.code = 'El código es obligatorio.';
   } else {
     const normalized = normalizeCode(code);
-    const duplicate = entities.some((e) => e.id !== editingId && normalizeCode(e.code) === normalized);
+    const duplicate = entities.some(
+      (e) => e.id !== editingId && normalizeCode(e.code) === normalized
+    );
     if (duplicate) errors.code = 'Ya existe una entidad con ese código.';
   }
   const entityDateRule = resolveEntityDateRule(getConfig());
@@ -285,11 +422,16 @@ export function validateEntityData(data, { entities = [], editingId = null, cust
     }
   }
   validateCustomFields(customFieldDefinitions, data, errors);
-  validateFieldRules(resolveFieldRules(getConfig(), 'entity'), data, {
-    entities,
-    editingId,
-    customFieldDefs: customFieldDefinitions,
-  }, errors);
+  validateFieldRules(
+    resolveFieldRules(getConfig(), 'entity'),
+    data,
+    {
+      entities,
+      editingId,
+      customFieldDefs: customFieldDefinitions,
+    },
+    errors
+  );
   return errors;
 }
 
@@ -302,7 +444,9 @@ export function validateEntity(entity, { entities = loadEntities(), customFieldD
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-export function addEntity(data, { customFieldDefs = null } = {}) {
+export function addEntity(data, { customFieldDefs = null, actor = '' } = {}) {
+  const publicActor = publicActorFor('entity:create', data, { actor });
+  authorize('entity:create', {}, { actor: publicActor });
   const entities = loadEntities();
   const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
   const rules = resolveFieldRules(getConfig(), 'entity');
@@ -324,10 +468,11 @@ export function addEntity(data, { customFieldDefs = null } = {}) {
     targetDate: pruned.targetDate || '',
     createdAt: now,
     updatedAt: now,
+    ownerId: data.ownerId || currentUser()?.id || null,
     ...pickCustomFieldValues(customFieldDefinitions, pruned),
   };
   entities.push(entity);
-  saveEntities(entities);
+  writeEntities(entities);
   if (entity.estado_comercial) persistAutomation('entity_created', entity);
   return entity;
 }
@@ -335,6 +480,7 @@ export function addEntity(data, { customFieldDefs = null } = {}) {
 export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   const entities = loadEntities();
   const existing = entities.find((e) => e.id === id);
+  authorizeOwnOrAny(existing || {}, 'entity:edit_own', 'entity:edit_any');
   if (!existing) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
   const customFieldDefinitions = resolveCustomFieldDefs('entity', customFieldDefs);
   const rules = resolveFieldRules(getConfig(), 'entity');
@@ -362,26 +508,41 @@ export function updateEntity(id, updates, { customFieldDefs = null } = {}) {
   };
   const index = entities.findIndex((e) => e.id === id);
   entities[index] = updated;
-  saveEntities(entities);
+  writeEntities(entities);
   return updated;
 }
 
 export function updateEntityStage(id, toStage) {
   const entity = loadEntities().find((e) => e.id === id);
   if (!entity) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
-  const result = transitionStage(entity, toStage);
+  authorizeOwnOrAny(entity, 'document:transition_own', 'document:edit_any');
+  const result = transitionStage(
+    { ...entity, estado_comercial: entity.estado_comercial || 'prospecto' },
+    toStage
+  );
   if (!result.valid) throw new ValidationError(result.errors);
-  const updated = updateEntity(id, result.data, { customFieldDefs: getConfig()?.customFields?.entity || [] });
+  const updated = updateEntity(id, result.data, {
+    customFieldDefs: getConfig()?.customFields?.entity || [],
+  });
   persistAutomation('stage_changed', updated, { from: entity.estado_comercial, to: toStage });
   return updated;
 }
 
+function removeDocumentsForEntity(entityId) {
+  const documents = loadDocuments();
+  const remaining = documents.filter((d) => d.entity_id !== entityId);
+  const deletedCount = documents.length - remaining.length;
+  writeDocuments(remaining);
+  return deletedCount;
+}
+
 export function deleteEntity(id) {
+  authorize('entity:delete');
   const entities = loadEntities();
   const entity = entities.find((e) => e.id === id);
   if (!entity) return { deletedDocumentCount: 0 };
-  saveEntities(entities.filter((e) => e.id !== id));
-  const deletedDocumentCount = deleteDocumentsForEntity(entity.entity_id);
+  writeEntities(entities.filter((e) => e.id !== id));
+  const deletedDocumentCount = removeDocumentsForEntity(entity.entity_id);
   return { deletedDocumentCount };
 }
 
@@ -397,13 +558,21 @@ export function isValidTransition(lifecycle, fromStatus, toStatus) {
   if (!lifecycle || !Array.isArray(lifecycle.states)) return true;
   if (!fromStatus) return lifecycle.states.includes(toStatus);
   if (fromStatus === toStatus) return true;
-  const allowed = (lifecycle.transitions && lifecycle.transitions[fromStatus]) || [];
+  const transitions = lifecycle.transitions;
+  if (!transitions || !Object.keys(transitions).length) return true;
+  const allowed = transitions[fromStatus] || [];
   return allowed.includes(toStatus);
 }
 
 export function validateDocumentData(
   data,
-  { entities = [], documents = [], editingId = null, customFieldDefs = null, statusLifecycle = null } = {},
+  {
+    entities = [],
+    documents = [],
+    editingId = null,
+    customFieldDefs = null,
+    statusLifecycle = null,
+  } = {}
 ) {
   const errors = {};
   const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
@@ -435,14 +604,26 @@ export function validateDocumentData(
       errors.status = 'Transición de estado inválida.';
     }
   }
-  if (data.subtotal !== undefined && data.discount !== undefined && Number(data.discount) > Number(data.subtotal)) {
+  if (
+    data.subtotal !== undefined &&
+    data.discount !== undefined &&
+    Number(data.discount) > Number(data.subtotal)
+  ) {
     errors.discount = 'El descuento no puede superar el subtotal.';
   }
   validateCustomFields(customFieldDefinitions, data, errors);
   return errors;
 }
 
-export function validateDocument(document, { entities = loadEntities(), documents = loadDocuments(), customFieldDefs = null, statusLifecycle = null } = {}) {
+export function validateDocument(
+  document,
+  {
+    entities = loadEntities(),
+    documents = loadDocuments(),
+    customFieldDefs = null,
+    statusLifecycle = null,
+  } = {}
+) {
   const errors = validateDocumentData(document || {}, {
     entities,
     documents,
@@ -453,8 +634,23 @@ export function validateDocument(document, { entities = loadEntities(), document
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-export function addDocument(data, { customFieldDefs = null, statusLifecycle = null } = {}) {
+function defaultDocumentStatus() {
+  const lifecycle = getConfig()?.statusLifecycle;
+  return lifecycle?.defaultStatus || lifecycle?.initialStatus || 'pendiente';
+}
+
+export function addDocument(
+  data,
+  { customFieldDefs = null, statusLifecycle = null, actor = '' } = {}
+) {
   const entities = loadEntities();
+  const linkedEntity = entities.find((e) => e.entity_id === documentEntityId(data));
+  const publicActor = publicActorFor(
+    'document:create',
+    { ...data, _linkedEntity: linkedEntity },
+    { actor }
+  );
+  authorize('document:create', {}, { actor: publicActor });
   const documents = loadDocuments();
   const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
   const errors = validateDocumentData(data, {
@@ -465,28 +661,39 @@ export function addDocument(data, { customFieldDefs = null, statusLifecycle = nu
   });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
+  const assignedUser = resolveExecutive(linkedEntity?.ejecutivo_asignado);
+  const assignedUserIdAtSale = data.assignedUserIdAtSale || assignedUser?.id || '';
   const document = {
     id: generateRecordId(),
     entity_id: documentEntityId(data),
     startDate: data.startDate || '',
     endDate: data.endDate || '',
     notes: sanitizeText(data.notes || ''),
-    status: data.status || '',
+    status: data.status || defaultDocumentStatus(),
+    ...(assignedUserIdAtSale ? { assignedUserIdAtSale } : {}),
     createdAt: now,
     updatedAt: now,
+    ownerId: data.ownerId || currentUser()?.id || null,
     ...pickCustomFieldValues(customFieldDefinitions, data),
   };
   documents.push(document);
-  saveDocuments(documents);
-  const linkedEntity = entities.find((e) => e.entity_id === document.entity_id);
+  writeDocuments(documents);
   if (linkedEntity?.estado_comercial) persistAutomation('document_created', linkedEntity);
   return document;
 }
 
-export function updateDocument(id, updates, { customFieldDefs = null, statusLifecycle = null } = {}) {
+export function updateDocument(
+  id,
+  updates,
+  { customFieldDefs = null, statusLifecycle = null, actor = '' } = {}
+) {
   const entities = loadEntities();
   const documents = loadDocuments();
   const existing = documents.find((d) => d.id === id);
+  const publicActor = publicActorFor('document:edit_own', { existing, updates }, { actor });
+  authorizeOwnOrAny(existing || {}, 'document:edit_own', 'document:edit_any', {
+    actor: publicActor,
+  });
   if (!existing) throw new ValidationError({ _document: 'El documento ya no existe.' });
   const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
   const merged = { ...existing, ...updates };
@@ -511,13 +718,14 @@ export function updateDocument(id, updates, { customFieldDefs = null, statusLife
   };
   const index = documents.findIndex((d) => d.id === id);
   documents[index] = updated;
-  saveDocuments(documents);
+  writeDocuments(documents);
   return updated;
 }
 
 export function deleteDocument(id) {
+  authorize('document:delete');
   const documents = loadDocuments();
-  saveDocuments(documents.filter((d) => d.id !== id));
+  writeDocuments(documents.filter((d) => d.id !== id));
 }
 
 export function clearAll() {
@@ -530,11 +738,8 @@ export function clearAll() {
 }
 
 export function deleteDocumentsForEntity(entityId) {
-  const documents = loadDocuments();
-  const remaining = documents.filter((d) => d.entity_id !== entityId);
-  const deletedCount = documents.length - remaining.length;
-  saveDocuments(remaining);
-  return deletedCount;
+  authorize('document:delete');
+  return removeDocumentsForEntity(entityId);
 }
 
 export function documentsForEntity(entityId) {
@@ -566,57 +771,83 @@ function searchableValues(record, keys, rules) {
   return haystacks;
 }
 
-function entityMatchesQuery(entity, query, documents, customFieldKeys) {
+function entityMatchesQuery(entity, query, documents, customFieldKeys, documentCustomFieldKeys) {
   const entityRules = resolveFieldRules(getConfig(), 'entity');
   const documentRules = resolveFieldRules(getConfig(), 'document');
-  const entityKeys = new Set([
-    'name', 'code', 'category', 'description', 'targetDate',
-    ...Object.keys(entity),
-    ...customFieldKeys,
-  ]);
+  const entityKeys = canonicalSearchKeys('entity', customFieldKeys);
   const haystacks = searchableValues(entity, entityKeys, entityRules);
   if (haystacks.some((value) => matchesQuery(value, query))) return true;
+  const documentKeys = canonicalSearchKeys('document', documentCustomFieldKeys);
   const docs = documents.filter((d) => d.entity_id === entity.entity_id);
-  return docs.some((d) => {
-    const documentKeys = new Set(['notes', 'status', ...Object.keys(d), ...customFieldKeys]);
-    return matchesAny(searchableValues(d, documentKeys, documentRules), query);
-  });
+  return docs.some((d) => matchesAny(searchableValues(d, documentKeys, documentRules), query));
 }
 
 export function searchEntities(
   query,
-  { entities = loadEntities(), documents = loadDocuments(), customFieldKeys = [] } = {},
+  {
+    entities = loadEntities(),
+    documents = loadDocuments(),
+    customFieldKeys = [],
+    documentCustomFieldKeys = customFieldKeys,
+  } = {}
 ) {
   if (!normalizeText(query)) return entities.slice();
-  return entities.filter((e) => entityMatchesQuery(e, query, documents, customFieldKeys));
+  return entities.filter((e) =>
+    entityMatchesQuery(e, query, documents, customFieldKeys, documentCustomFieldKeys)
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Resumen de Gestión Comercial (Historia de Usuario 6)
 // ---------------------------------------------------------------------------
 
-export function computeSummary({ entities = loadEntities(), documents = loadDocuments(), statusLifecycle = null } = {}) {
-  const pendingStates = Array.isArray(statusLifecycle?.pendingStates) && statusLifecycle.pendingStates.length
-    ? statusLifecycle.pendingStates.map((state) => normalizeText(state))
-    : null;
+function belongsToOwner(record, ownerId) {
+  if (!ownerId) return true;
+  const assigned = record?.ejecutivo_asignado;
+  if (
+    assigned !== undefined &&
+    assigned !== null &&
+    assigned !== '' &&
+    assigned !== 'Sin asignar'
+  ) {
+    return assigned === ownerId;
+  }
+  return record?.ownerId === ownerId;
+}
+
+export function computeSummary({
+  entities = loadEntities(),
+  documents = loadDocuments(),
+  statusLifecycle = null,
+  ownerId = null,
+} = {}) {
+  const visibleEntities = ownerId ? entities.filter((e) => belongsToOwner(e, ownerId)) : entities;
+  const visibleEntityIds = new Set(visibleEntities.map((e) => e.entity_id));
+  const visibleDocuments = ownerId
+    ? documents.filter((doc) => visibleEntityIds.has(doc.entity_id))
+    : documents;
+  const pendingStates =
+    Array.isArray(statusLifecycle?.pendingStates) && statusLifecycle.pendingStates.length
+      ? statusLifecycle.pendingStates.map((state) => normalizeText(state))
+      : null;
   const pendingStatus = normalizeText(
-    statusLifecycle?.states?.find((state) => normalizeText(state) === 'pendiente') || 'pendiente',
+    statusLifecycle?.states?.find((state) => normalizeText(state) === 'pendiente') || 'pendiente'
   );
   const pendingDocuments = pendingStates
-    ? documents.filter((d) => pendingStates.includes(normalizeText(d.status)))
-    : documents.filter((d) => normalizeText(d.status) === pendingStatus);
+    ? visibleDocuments.filter((d) => pendingStates.includes(normalizeText(d.status)))
+    : visibleDocuments.filter((d) => normalizeText(d.status) === pendingStatus);
   const pendingByEntityMap = new Map();
   for (const doc of pendingDocuments) {
     pendingByEntityMap.set(doc.entity_id, (pendingByEntityMap.get(doc.entity_id) || 0) + 1);
   }
   const pendingByEntity = Array.from(pendingByEntityMap.entries()).map(([entityId, count]) => ({
     entityId,
-    entity: entities.find((e) => e.entity_id === entityId) || null,
+    entity: visibleEntities.find((e) => e.entity_id === entityId) || null,
     count,
   }));
   return {
-    totalEntities: entities.length,
-    totalDocuments: documents.length,
+    totalEntities: visibleEntities.length,
+    totalDocuments: visibleDocuments.length,
     totalPending: pendingDocuments.length,
     pendingByEntity,
   };

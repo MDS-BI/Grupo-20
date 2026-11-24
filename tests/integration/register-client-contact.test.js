@@ -29,10 +29,34 @@ function submit() {
 }
 
 const CHANNELS = [
-  { channel: 'llamada', field: 'contacto_telefono', valid: '+56912345678', invalid: '123', placeholder: 'Ej: +56 9 1234 5678' },
-  { channel: 'correo', field: 'contacto_correo', valid: 'ana@example.com', invalid: 'no-correo', placeholder: 'Ej: nombre@ejemplo.cl' },
-  { channel: 'reunion', field: 'contacto_lugar', valid: 'Sala A', invalid: '', placeholder: 'Ej: Sala 2 o enlace' },
-  { channel: 'whatsapp', field: 'contacto_whatsapp', valid: '+56987654321', invalid: 'abc', placeholder: 'Ej: +56 9 1234 5678' },
+  {
+    channel: 'llamada',
+    field: 'contacto_telefono',
+    valid: '+56912345678',
+    invalid: '123',
+    placeholder: 'Ej: +56 9 1234 5678',
+  },
+  {
+    channel: 'correo',
+    field: 'contacto_correo',
+    valid: 'ana@example.com',
+    invalid: 'no-correo',
+    placeholder: 'Ej: nombre@ejemplo.cl',
+  },
+  {
+    channel: 'reunion',
+    field: 'contacto_lugar',
+    valid: 'Sala A',
+    invalid: '',
+    placeholder: 'Ej: Sala 2 o enlace',
+  },
+  {
+    channel: 'whatsapp',
+    field: 'contacto_whatsapp',
+    valid: '+56987654321',
+    invalid: 'abc',
+    placeholder: 'Ej: +56 9 1234 5678',
+  },
 ];
 
 const CONTACT_FIELDS = CHANNELS.map(({ field }) => field);
@@ -53,23 +77,26 @@ describe('Campos condicionales por canal (T041)', () => {
     }
   });
 
-  it.each(CHANNELS)('valida y guarda solo el contacto de $channel', ({ channel, field, valid, invalid, placeholder }) => {
-    openForm();
-    fillBase({ channel });
-    expect(qs(`field-${field}`)).toBeTruthy();
-    expect(qs(`field-${field}`).getAttribute('placeholder')).toBe(placeholder);
+  it.each(CHANNELS)(
+    'valida y guarda solo el contacto de $channel',
+    ({ channel, field, valid, invalid, placeholder }) => {
+      openForm();
+      fillBase({ channel });
+      expect(qs(`field-${field}`)).toBeTruthy();
+      expect(qs(`field-${field}`).getAttribute('placeholder')).toBe(placeholder);
 
-    qs(`field-${field}`).value = invalid;
-    submit();
-    expect(qs(`error-${field}`).textContent).toBeTruthy();
+      qs(`field-${field}`).value = invalid;
+      submit();
+      expect(qs(`error-${field}`).textContent).toBeTruthy();
 
-    qs(`field-${field}`).value = valid;
-    submit();
+      qs(`field-${field}`).value = valid;
+      submit();
 
-    const entity = loadEntities()[0];
-    expect(entity[field]).toBe(valid);
-    for (const key of CONTACT_FIELDS.filter((item) => item !== field)) {
-      expect(entity[key]).toBeUndefined();
+      const entity = loadEntities()[0];
+      expect(entity[field]).toBe(valid);
+      for (const key of CONTACT_FIELDS.filter((item) => item !== field)) {
+        expect(entity[key]).toBeUndefined();
+      }
     }
-  });
+  );
 });

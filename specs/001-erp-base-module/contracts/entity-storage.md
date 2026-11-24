@@ -18,7 +18,7 @@ Cada registro de entidad **base** (sin ningún módulo personalizado configurado
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8). El perfil de clientes declara `rubro` (mismo clave, etiqueta «Tipo de actividad» y `select` con diez opciones), `ejecutivo_asignado`, `canal_contacto` (selección obligatoria con valores `llamada`, `correo`, `reunion`, `whatsapp` y etiquetas «Llamada», «Correo», «Reunión», «WhatsApp»), `rut` (obligatorio, `format: "cl-rut"`, `unique: true`, pista gris `Ej: 11.111.111-1`) y los campos condicionales `contacto_telefono`, `contacto_correo`, `contacto_lugar` y `contacto_whatsapp` (obligatorios según el canal, con `group: "contactDetail"` y pista gris por canal). Otros módulos pueden declarar `taxId`, `email`, `phone`, `address`, `creditLimit` o `paymentTerms`. El perfil de Marketing declara `estado_comercial`, `consentimiento`, `consentimiento_fecha`, `consentimiento_version` y `campaña` opcional. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001). `pedidos` ya no se declara en el perfil de clientes; sus valores anteriores se conservan sin mostrarse.
+Un módulo personalizado (p. ej. el perfil CRM de las Historias de Usuario 2, 3, 5-8) declara campos adicionales mediante `module-config.js` (`customFields.entity`, Historia de Usuario 8). El perfil de clientes declara `rubro` (mismo clave, etiqueta «Tipo de actividad» y `select` con diez opciones), `ejecutivo_asignado` (`select` de usuarios activos Nivel 2 o Nivel 4, guarda `userId`), `canal_contacto` (selección obligatoria con valores `llamada`, `correo`, `reunion`, `whatsapp` y etiquetas «Llamada», «Correo», «Reunión», «WhatsApp»), `rut` (obligatorio, `format: "cl-rut"`, `unique: true`, pista gris `Ej: 11.111.111-1`) y los campos condicionales `contacto_telefono`, `contacto_correo`, `contacto_lugar` y `contacto_whatsapp` (obligatorios según el canal, con `group: "contactDetail"` y pista gris por canal). Otros módulos pueden declarar `taxId`, `email`, `phone`, `address`, `creditLimit` o `paymentTerms`. El perfil de Marketing declara `estado_comercial`, `consentimiento`, `consentimiento_fecha`, `consentimiento_version` y `campaña` opcional. Estos valores se persisten como propiedades adicionales del mismo registro, sin cambiar su estructura base (XR-001). `pedidos` ya no se declara en el perfil de clientes; sus valores anteriores se conservan sin mostrarse.
 
 ## Operaciones
 
@@ -138,3 +138,33 @@ detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
 - Los campos adicionales añadidos por módulos personalizados deben persistirse junto a los campos base sin manejo especial en la capa de almacenamiento.
 - Los valores de campos personalizados que ya no están declarados en la configuración deben conservarse en el almacenamiento y ocultarse de la interfaz; si el campo se vuelve a declarar, los valores reaparecen.
 - Las operaciones base anteriores permanecen estables para que los módulos personalizados puedan construir sobre ellas sin modificación.
+
+## Contrato de Autorización de Operaciones
+
+Desde la octava tanda, `src/storage.js` depende de `src/auth/permissions.js` antes de mutar datos. `loadEntities()` y `loadDocuments()` siguen siendo de solo lectura; `saveEntities()`, `saveDocuments()`, `addEntity()`, `updateEntity()`, `updateEntityStage()`, `deleteEntity()`, `addDocument()`, `updateDocument()`, `deleteDocument()` y `deleteDocumentsForEntity()` DEBEN resolver la sesión vigente y llamar a `assertPermission(rank, action, context)` con la acción correspondiente.
+
+- Las acciones son las del catálogo canónico de `spec.md` y [`auth.md`](auth.md): `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `campaign:create`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `team:manage` y `users:manage`, entre otras. No se introducen identificadores propios como `entity:edit` o `interaction:manage`.
+- `context.ownerId` se compara con el `id` del usuario resuelto para las reglas «solo mis clientes»; `context.campaignOwnerId` cumple la misma función para campañas.
+- Una operación denegada se rechaza con el mensaje exacto `No tienes permiso para realizar esta acción` y no escribe en `localStorage`; esto cubre también llamadas directas desde consola o enlaces profundos (FR-092, FR-093, SC-029).
+- `Sistema` está exento del rango del usuario conectado únicamente para las automatizaciones declaradas; cada ejecución conserva la identidad «Sistema» y el creador de la campaña.
+- La resolución del usuario se hace desde `erp_users`, no desde una copia caches en la sesión, para que desactivaciones y cambios de rango se apliquen de inmediato (FR-099).
+- Ocultar botones en `app.js`, `shell.js` o `dashboard.js` es una ayuda de experiencia de usuario, no el mecanismo de seguridad; la capa de datos sigue siendo la última barrera.
+
+## Contrato del Campo `ejecutivo_asignado`
+
+- En el perfil de clientes, `ejecutivo_asignado` deja de ser texto libre y se resuelve como un `select` con los usuarios activos cuyo rango es Nivel 2 o Nivel 4 (FR-096).
+- El valor persistido es el `id` del usuario; la interfaz muestra su `username`.
+- Usuarios inactivos o con otro rango no aparecen como opciones. Los clientes que quedaron con un ejecutivo desactivado se muestran como «Sin asignar» hasta que el Gerente los reasigne; sus ventas históricas siguen contando para el integrante vinculado al usuario (FR-097).
+- Cada integrante de `marketing.salesTeams` guarda `userId` apuntando al mismo usuario activo, y el real y objetivo mensuales se calculan desde los clientes asignados a ese identificador.
+
+## Contrato de Búsqueda Canónica (D1)
+
+FR-004 es la única lista de campos buscables: nombre, código, categoría, descripción, fecha objetivo y campos personalizados visibles declarados en la configuración activa. `searchEntities()` DEBE resolver los campos con `isFieldSearchable()`/`fieldRules`, sin ampliar la búsqueda con todas las claves presentes en el registro ni mantener listas paralelas en la barra de búsqueda. FR-020 y FR-055 solo aplican la anulación del perfil de clientes mediante `fieldRules`/perfil, sin crear una lista independiente ni declarar buscable un campo excluido en otro lugar sin esa anulación. Sin coincidencias se muestra exactamente `No se encontraron resultados.` (FR-005, FR-006).
+
+## Rutas relativas
+
+Las vistas se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor: sin parámetro `view` es Panel; las rutas relativas son `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`. No existe `?view=panel`. Carga, recarga y Back/Forward aplican la matriz de permisos en cada resolución.
+
+## Mensajes exactos de validación
+
+Los guardados rechazados usan `Completa los campos obligatorios.`, `El RUT es inválido.`, `El RUT ya está registrado.` y `Revisa el dato de contacto según el canal elegido.`; una operación denegada usa `No tienes permiso para realizar esta acción`. No se aceptan paráfrasis ni mensajes por campo que sustituyan estos textos (FR-006).

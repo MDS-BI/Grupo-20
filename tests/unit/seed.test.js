@@ -40,7 +40,7 @@ describe('utilidad de simulación CRM', () => {
     expect(clients).toHaveLength(SEED_COUNT);
     expect(new Set(clients.map((c) => c.code)).size).toBe(SEED_COUNT);
     expect(clients.map((c) => c.code)).toEqual(
-      Array.from({ length: SEED_COUNT }, (_, i) => `CLI-${String(i + 1).padStart(3, '0')}`),
+      Array.from({ length: SEED_COUNT }, (_, i) => `CLI-${String(i + 1).padStart(3, '0')}`)
     );
     expect(new Set(clients.map((c) => c.rut)).size).toBe(SEED_COUNT);
     for (const client of clients) {

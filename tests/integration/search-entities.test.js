@@ -15,7 +15,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Buscar y encontrar entidades (H3/H9)', () => {
@@ -83,9 +85,9 @@ describe('Búsqueda del perfil cliente (T048)', () => {
   }
 
   it('no encuentra clientes por campos ocultos', () => {
-    expect(search('CLI-777')).toContain('No hay');
-    expect(search('CategoriaSecreta')).toContain('No hay');
-    expect(search('DescripcionSecreta')).toContain('No hay');
+    expect(search('CLI-777')).toContain('No se encontraron resultados.');
+    expect(search('CategoriaSecreta')).toContain('No se encontraron resultados.');
+    expect(search('DescripcionSecreta')).toContain('No se encontraron resultados.');
   });
 
   it('encuentra clientes por campos visibles', () => {

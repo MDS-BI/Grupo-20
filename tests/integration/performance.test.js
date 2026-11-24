@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { addEntity, addDocument, searchEntities, computeSummary, loadEntities, loadDocuments } from '../../src/storage.js';
+import {
+  addEntity,
+  addDocument,
+  searchEntities,
+  computeSummary,
+  loadEntities,
+  loadDocuments,
+} from '../../src/storage.js';
 import { renderEntityListHtml } from '../../src/components/entity-list.js';
 import { getConfig } from '../../src/module-config.js';
 
@@ -7,7 +14,10 @@ describe('Rendimiento con 500 registros (FR-032, SC-004, T126)', () => {
   it('mantiene la búsqueda y el renderizado de listas correctos y rápidos con 500 entidades y 500 documentos', () => {
     for (let i = 0; i < 500; i += 1) {
       const entity = addEntity({ name: `Entidad ${i}`, code: `E-${i}` });
-      addDocument({ entity_id: entity.entity_id, status: i % 3 === 0 ? 'pendiente' : 'completado' });
+      addDocument({
+        entity_id: entity.entity_id,
+        status: i % 3 === 0 ? 'pendiente' : 'completado',
+      });
     }
 
     const entities = loadEntities();

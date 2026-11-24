@@ -51,9 +51,13 @@ describe('Fecha de nacimiento en el perfil de clientes (US10)', () => {
     document.querySelector('#field-name').value = 'Ana';
     document.querySelector('#field-code').value = 'ANA-1';
     document.querySelector('#field-targetDate').value = '1909-12-31';
-    document.querySelector('#entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .querySelector('#entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    expect(document.querySelector('#error-targetDate').textContent).toContain('Fecha de nacimiento');
+    expect(document.querySelector('#error-targetDate').textContent).toContain(
+      'Fecha de nacimiento'
+    );
     app.destroy();
   });
 });

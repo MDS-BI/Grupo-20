@@ -13,7 +13,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
@@ -28,8 +30,12 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
     document.getElementById('field-notes').value = 'Detalle del documento';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe('Detalle del documento');
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe(
+      'Detalle del documento'
+    );
   });
 
   it('elimina los documentos asociados cuando se elimina la entidad', () => {
@@ -38,7 +44,9 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
@@ -46,7 +54,9 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     document.querySelector('[data-action="delete-entity"]').click();
 
     app.navigate('manage-document');
-    expect(document.getElementById('document-entity-select').querySelectorAll('option').length).toBe(1);
+    expect(
+      document.getElementById('document-entity-select').querySelectorAll('option').length
+    ).toBe(1);
   });
 
   it('impide guardar un documento cuando falta información obligatoria y explica qué corregir', () => {
@@ -57,7 +67,9 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     select.dispatchEvent(new Event('change', { bubbles: true }));
     document.getElementById('field-startDate').value = '2026-05-10';
     document.getElementById('field-endDate').value = '2026-01-01';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.field-error').textContent).toBeTruthy();
   });
 });

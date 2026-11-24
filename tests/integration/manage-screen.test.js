@@ -19,16 +19,26 @@ describe('Pantalla de gestión dedicada (H4)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     expect(document.querySelector('.manage-view .entity-list')).toBeNull();
   });
 
   it('alterna entre la pestaña de entidades y la de documentos', () => {
     app.navigate('manage-entity');
-    expect(document.querySelector('[data-action="manage-tab"][data-tab="entity"]').classList.contains('active')).toBe(true);
+    expect(
+      document
+        .querySelector('[data-action="manage-tab"][data-tab="entity"]')
+        .classList.contains('active')
+    ).toBe(true);
 
     app.navigate('manage-document');
-    expect(document.querySelector('[data-action="manage-tab"][data-tab="document"]').classList.contains('active')).toBe(true);
+    expect(
+      document
+        .querySelector('[data-action="manage-tab"][data-tab="document"]')
+        .classList.contains('active')
+    ).toBe(true);
   });
 });

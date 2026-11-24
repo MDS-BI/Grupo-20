@@ -10,7 +10,7 @@ Definir la forma de los datos y las operaciones del apartado de Marketing (FR-06
 
 Una entidad incluye los campos base más estos campos personalizados declarados en la configuración:
 
-- `estado_comercial`: selección con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`. Valor inicial `prospecto` (FR-068). Se conserva internamente para la automatización; no se muestra en Marketing (FR-075).
+- `estado_comercial`: selección con valores internos `prospecto`, `en_proceso`, `en_recontacto`, `ganado` y `perdido`. Valor inicial `prospecto` (FR-068). `ganado` convierte la entidad en Cliente; su etiqueta visible es «Cliente ganado» y no equivale al estado de documento «Cerrado ganado». Se conserva internamente para la automatización; no se muestra en Marketing (FR-075).
 - `consentimiento`: booleano; `true` solo cuando el visitante marcó la casilla en la captura o en el chat (FR-071, FR-085).
 - `consentimiento_fecha`: marca de tiempo ISO de la aceptación.
 - `consentimiento_version`: copia de `marketing.privacyNoticeVersion` aceptada.
@@ -48,7 +48,7 @@ Un documento de campaña omitida por solapamiento conserva `campaignId`, entidad
 - Sin consentimiento explícito no se crea el prospecto ni se registra el primer mensaje del chat; se muestra una explicación (FR-071, FR-085, SC-018, SC-024).
 - La fecha y la versión del aviso se guardan con la entidad y no se derivan del reloj al mostrar la ficha.
 - Marketing muestra las mismas cinco tarjetas y el mismo embudo que el panel; no muestra la torta «Estado comercial de la cartera» ni el selector de etapas (FR-072 a FR-075, SC-020, SC-021).
-- Una transición a `ganado` conserva `id`, `entity_id`, documentos y campos personalizados de la entidad (FR-068).
+- Una transición a `ganado` conserva `id`, `entity_id`, documentos y campos personalizados de la entidad y produce «Cliente ganado» como resultado visible; no modifica el estado «Cerrado ganado» de los documentos (FR-068).
 - Las reglas y campañas activas se ejecutan una sola vez por evento; cada ejecución queda registrada en el historial de la entidad (FR-070, FR-086).
 - Las acciones internas se limitan a crear documento de seguimiento, asignar `ejecutivo_asignado` y actualizar `estado_comercial`; no hay envíos ni publicaciones externas (FR-089).
 - Entre campañas solapadas se ejecuta solo la más reciente y las demás quedan como «omitida por solapamiento», sin acciones duplicadas (FR-090, SC-025).
@@ -104,3 +104,16 @@ marketing: {
 - Un módulo sin `marketing` sigue funcionando con entidades, documentos, búsqueda y panel exactamente como antes.
 - La captura pública y el chat embebidos requieren mismo origen porque no existe backend; esa limitación se documenta, no se resuelve con dependencias nuevas.
 - Campañas, redes y rendimiento no invocan APIs externas ni proveedores de mensajería; todas las acciones se persisten como `Documento` en el `localStorage` de la aplicación.
+
+## Integración con Autenticación y Permisos
+
+- El acceso a Marketing requiere una sesión vigente y `can(rank, 'marketing:view')`. Nivel 4 y Nivel 3 pueden entrar; Nivel 2, Nivel 1 y visitantes no.
+- «Equipo de ventas y logros» usa `can(rank, 'team:view_all')`, `can(rank, 'team:view_own', { ownerId })` y `can(rank, 'team:manage')`: N4 edita equipos, N3 solo lee y N2 ve únicamente su propio real y objetivo. Cada integrante vincula `userId` de un usuario activo Nivel 2 o Nivel 4, y `computeSalesTeamMetrics()` filtra entidades por `ejecutivo_asignado = userId`.
+- Las campañas usan `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` y `campaign:stop_any` con `context.campaignOwnerId`: N3 crea, edita, detiene y consulta solo las suyas; N4 puede detener cualquier campaña.
+- Las reglas automáticas y las campañas ejecutan sus acciones internas como identidad «Sistema» con independencia del usuario conectado en ese momento (FR-098). El historial de cada campaña conserva además el `userId` de quien la creó, aunque cambie de rango o sea desactivado.
+- Los mensajes del chat y las interacciones de redes siguen sujetos a consentimiento; el seguimiento del chat por Nivel 1 usa `can(rank, 'chat:answer')` y no permite cambiar estados de documentos. Las consultas sin coincidencia se registran con `chat:create_query`.
+- Todas las operaciones que mutan entidades o documentos desde Marketing pasan por `assertPermission()` en `src/storage.js`; la interfaz oculta controles, pero la capa de datos es la fuente de denegación.
+
+## Mensajes exactos y rutas relativas
+
+La confirmación de captura es exactamente `Prospecto registrado correctamente.`, el acuse del chat sin coincidencia es `Consulta registrada; un ejecutivo hará seguimiento.` y una campaña sin registros muestra `Sin registros para esta campaña.` (FR-006, FR-069, FR-083, FR-087). Ninguna vista de Marketing sustituye estos textos por paráfrasis. Marketing se abre con `?view=marketing` y la captura con `?view=capture`, sin host ni ruta de servidor; la resolución por `location.search` se aplica también en recarga y Back/Forward.

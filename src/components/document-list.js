@@ -19,7 +19,7 @@ export function renderDocumentListHtml(documents, config) {
             .filter((def) => d[def.key] !== undefined && d[def.key] !== null && d[def.key] !== '')
             .map(
               (def) =>
-                `<span class="list-item-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(d[def.key])}</span>`,
+                `<span class="list-item-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(d[def.key])}</span>`
             )
             .join('')}
         </div>
@@ -27,7 +27,7 @@ export function renderDocumentListHtml(documents, config) {
           <button type="button" data-action="edit-document" data-id="${escapeHtml(d.id)}">Editar</button>
           <button type="button" data-action="delete-document" data-id="${escapeHtml(d.id)}">Eliminar</button>
         </div>
-      </li>`,
+      </li>`
     )
     .join('');
   return `<ul class="document-list">${items}</ul>`;

@@ -15,7 +15,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 function addDocumentToSelectedEntity(notes, startDate) {
@@ -25,7 +27,9 @@ function addDocumentToSelectedEntity(notes, startDate) {
   select.dispatchEvent(new Event('change', { bubbles: true }));
   document.getElementById('field-notes').value = notes;
   document.getElementById('field-startDate').value = startDate;
-  document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('document-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Ficha de entidad con historial ordenado (H3)', () => {
@@ -41,7 +45,9 @@ describe('Ficha de entidad con historial ordenado (H3)', () => {
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="view-entity"]').click();
 
-    const notesInOrder = Array.from(document.querySelectorAll('.list-item-notes')).map((el) => el.textContent);
+    const notesInOrder = Array.from(document.querySelectorAll('.list-item-notes')).map(
+      (el) => el.textContent
+    );
     expect(notesInOrder).toEqual(['Primera interacción', 'Segunda interacción']);
   });
 
@@ -54,11 +60,15 @@ describe('Ficha de entidad con historial ordenado (H3)', () => {
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="edit-entity"]').click();
     document.getElementById('field-name').value = 'Cliente Uno Renombrado';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="view-entity"]').click();
-    expect(document.querySelector('.entity-detail-header h2').textContent).toBe('Cliente Uno Renombrado');
+    expect(document.querySelector('.entity-detail-header h2').textContent).toBe(
+      'Cliente Uno Renombrado'
+    );
   });
 
   it('no muestra campos retirados en la ficha del perfil cliente', () => {
@@ -119,7 +129,9 @@ describe('Ficha de entidad con historial ordenado (H3)', () => {
     document.getElementById('search-input').dispatchEvent(new Event('input', { bubbles: true }));
     document.querySelector('[data-action="view-entity"]').click();
 
-    expect(document.querySelector('.entity-detail-header h2').textContent).toContain('Prospecto Convertido');
+    expect(document.querySelector('.entity-detail-header h2').textContent).toContain(
+      'Prospecto Convertido'
+    );
     const info = document.querySelector('#entity-detail-info').textContent;
     expect(info).toContain('convertido@example.com');
     expect(document.querySelector('#entity-history').textContent).toContain('Primer contacto');

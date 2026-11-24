@@ -19,7 +19,9 @@ function fillCommonFields() {
 }
 
 function submit() {
-  document.getElementById('capture-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('capture-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Captura pública sin marco ERP (T085)', () => {
@@ -38,7 +40,9 @@ describe('Captura pública sin marco ERP (T085)', () => {
     fillCommonFields();
     submit();
     expect(loadEntities()).toHaveLength(0);
-    expect(document.getElementById('error-consentimiento').textContent).toContain('consentimiento');
+    expect(document.getElementById('error-consentimiento').textContent).toContain(
+      'Completa los campos obligatorios.'
+    );
   });
 
   it('crea el prospecto con consentimiento y muestra confirmación clara sin marco ERP', () => {
@@ -48,7 +52,7 @@ describe('Captura pública sin marco ERP (T085)', () => {
     expect(loadEntities()).toHaveLength(1);
     expect(loadEntities()[0].estado_comercial).toBe('prospecto');
     const confirmation = document.getElementById('capture-confirmation');
-    expect(confirmation.textContent).toContain('Gracias');
+    expect(confirmation.textContent).toContain('Prospecto registrado correctamente.');
     expect(confirmation.getAttribute('role')).toBe('status');
     expect(document.querySelector('.sidebar')).toBeNull();
   });

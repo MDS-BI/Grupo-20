@@ -25,7 +25,9 @@ describe('Campos personalizados declarados en la configuración (H8)', () => {
 
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.field-error').textContent).toMatch(/crédito/i);
   });
 
@@ -35,7 +37,9 @@ describe('Campos personalizados declarados en la configuración (H8)', () => {
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('field-creditLimit').value = '5000';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="view-entity"]').click();
@@ -58,7 +62,9 @@ describe('Campos personalizados declarados en la configuración (H8)', () => {
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('field-creditLimit').value = '5000';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     // El campo se retira de la configuración del módulo.
     mount(null);

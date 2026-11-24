@@ -31,8 +31,15 @@ describe('Automatización de Marketing (T096)', () => {
   });
 
   it('solo ejecuta la regla de cambio de etapa cuando coinciden from y to', () => {
-    expect(runAutomationRules('stage_changed', entity, config, [], { from: 'prospecto', to: 'en_proceso' })).toHaveLength(1);
-    expect(runAutomationRules('stage_changed', entity, config, [], { from: 'ganado', to: 'perdido' })).toHaveLength(0);
+    expect(
+      runAutomationRules('stage_changed', entity, config, [], {
+        from: 'prospecto',
+        to: 'en_proceso',
+      })
+    ).toHaveLength(1);
+    expect(
+      runAutomationRules('stage_changed', entity, config, [], { from: 'ganado', to: 'perdido' })
+    ).toHaveLength(0);
   });
 
   it('no repite una ejecución ya registrada en el historial', () => {

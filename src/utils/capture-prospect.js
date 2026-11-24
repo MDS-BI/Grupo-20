@@ -1,5 +1,6 @@
 import { addEntity, ValidationError } from '../storage.js';
 import { MARKETING_STAGES } from './marketing-stages.js';
+import { MESSAGES } from './messages.js';
 
 export class CaptureError extends Error {
   constructor(errors) {
@@ -17,7 +18,7 @@ export function createProspectFromCapture(values = {}, config) {
   const errors = {};
   const consented = values.consentimiento === true || values.consentimiento === 'true';
   if (!consented) {
-    errors.consentimiento = 'Debes marcar el consentimiento explícito aceptando el aviso de privacidad.';
+    errors.consentimiento = MESSAGES.required;
   }
   if (Object.keys(errors).length) throw new CaptureError(errors);
 

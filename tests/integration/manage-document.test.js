@@ -13,7 +13,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 function selectEntityForDocuments() {
@@ -32,13 +34,21 @@ describe('CRUD de documentos en la pantalla de gestión (H4/H11)', () => {
     createEntity('Acme', 'AC-1');
     selectEntityForDocuments();
     document.getElementById('field-notes').value = 'Nota inicial';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe('Nota inicial');
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe(
+      'Nota inicial'
+    );
 
     document.querySelector('[data-action="edit-document"]').click();
     document.getElementById('field-notes').value = 'Nota editada';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe('Nota editada');
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(document.querySelector('.document-list .list-item-notes').textContent).toBe(
+      'Nota editada'
+    );
 
     document.querySelector('[data-action="delete-document"]').click();
     expect(document.querySelector('.document-list')).toBeNull();
@@ -49,7 +59,9 @@ describe('CRUD de documentos en la pantalla de gestión (H4/H11)', () => {
     selectEntityForDocuments();
     document.getElementById('field-startDate').value = '2026-05-10';
     document.getElementById('field-endDate').value = '2026-05-01';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.field-error')).toBeTruthy();
   });
 });

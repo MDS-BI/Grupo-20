@@ -1,4 +1,5 @@
 import { escapeHtml } from '../utils/sanitize.js';
+import { listExecutiveUsers } from '../auth.js';
 
 function optionValue(option) {
   return option !== null && typeof option === 'object' ? option.value : option;
@@ -6,6 +7,20 @@ function optionValue(option) {
 
 function optionLabel(option) {
   return option !== null && typeof option === 'object' ? option.label : option;
+}
+
+function resolveFieldOptions(def) {
+  if (
+    def.key === 'ejecutivo_asignado' ||
+    def.options === 'executiveUsers' ||
+    def.dynamic === 'executiveUsers'
+  ) {
+    return [
+      { value: '', label: def.emptyLabel || 'Sin asignar' },
+      ...listExecutiveUsers().map((user) => ({ value: user.id, label: user.username })),
+    ];
+  }
+  return def.options || [];
 }
 
 export function renderFieldHtml(def, value, error) {
@@ -17,13 +32,18 @@ export function renderFieldHtml(def, value, error) {
   const describedByAttr = hintId ? ` aria-describedby="${hintId}"` : '';
   let input;
   if (def.type === 'select') {
-    const options = (def.options || [])
+    const fieldOptions = resolveFieldOptions(def);
+    const options = fieldOptions
       .map((option) => {
         const optionVal = optionValue(option);
         return `<option value="${escapeHtml(optionVal)}" ${String(optionVal) === String(val) ? 'selected' : ''}>${escapeHtml(optionLabel(option))}</option>`;
       })
       .join('');
-    input = `<select id="${id}" name="${def.key}" ${requiredAttr}${describedByAttr}><option value="">-- Seleccionar --</option>${options}</select>`;
+    const hasEmptyOption = fieldOptions.some((option) => String(optionValue(option)) === '');
+    const emptyOption = hasEmptyOption
+      ? ''
+      : `<option value="">${escapeHtml(def.emptyLabel || '-- Seleccionar --')}</option>`;
+    input = `<select id="${id}" name="${def.key}" ${requiredAttr}${describedByAttr}>${emptyOption}${options}</select>`;
   } else if (def.type === 'datalist') {
     const listId = `options-${def.key}`;
     const options = (def.options || [])
@@ -80,5 +100,7 @@ export function buildFormBaseline(defs, values = {}) {
 export function isFormDirty(formEl, defs, baseline) {
   if (!formEl || !baseline) return false;
   const current = collectFormData(formEl, defs);
-  return Object.keys(baseline).some((key) => String(current[key] ?? '') !== String(baseline[key] ?? ''));
+  return Object.keys(baseline).some(
+    (key) => String(current[key] ?? '') !== String(baseline[key] ?? '')
+  );
 }

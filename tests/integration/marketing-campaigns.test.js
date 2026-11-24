@@ -13,7 +13,16 @@ import {
 import { formatRut } from '../../src/seed.js';
 
 const STAGE = 'en_recontacto';
-const FORM_FIELDS = ['name', 'stage', 'startDate', 'endDate', 'action', 'executive', 'targetStage', 'notes'];
+const FORM_FIELDS = [
+  'name',
+  'stage',
+  'startDate',
+  'endDate',
+  'action',
+  'executive',
+  'targetStage',
+  'notes',
+];
 const FORM_VALUES = {
   name: 'Campaña T112',
   stage: STAGE,
@@ -54,15 +63,19 @@ function mount() {
 function openCampaigns() {
   app.navigate('marketing');
   document.querySelector('[data-action="marketing-section"][data-section="campaigns"]').click();
-  expect(document.querySelector('[data-action="marketing-section"][data-section="campaigns"]').getAttribute('aria-selected')).toBe(
-    'true',
-  );
+  expect(
+    document
+      .querySelector('[data-action="marketing-section"][data-section="campaigns"]')
+      .getAttribute('aria-selected')
+  ).toBe('true');
   expect(document.querySelector('.marketing-campaigns')).toBeTruthy();
 }
 
 function openEntityDetail(entity) {
   app.navigate('search');
-  const button = document.querySelector(`[data-action="view-entity"][data-entity-id="${entity.entity_id}"]`);
+  const button = document.querySelector(
+    `[data-action="view-entity"][data-entity-id="${entity.entity_id}"]`
+  );
   expect(button).toBeTruthy();
   button.click();
   expect(document.querySelector('#entity-detail').dataset.entityId).toBe(entity.entity_id);
@@ -124,15 +137,16 @@ describe('Vista de campañas de Marketing (T112)', () => {
   it('abre la sección Campañas y muestra el estado vacío', () => {
     openCampaigns();
 
-    expect([...document.querySelectorAll('.marketing-campaigns .empty-state')].map((el) => el.textContent)).toEqual([
-      'Aún no hay campañas programadas.',
-      'Todavía no hay ejecuciones de campaña.',
-    ]);
+    expect(
+      [...document.querySelectorAll('.marketing-campaigns .empty-state')].map(
+        (el) => el.textContent
+      )
+    ).toEqual(['Aún no hay campañas programadas.', 'Todavía no hay ejecuciones de campaña.']);
     expect(document.querySelector('.campaign-list')).toBeNull();
     expect(document.querySelector('.campaign-history')).toBeNull();
-    expect([...document.querySelector('#campaign-form').querySelectorAll('[name]')].map((el) => el.name)).toEqual(
-      FORM_FIELDS,
-    );
+    expect(
+      [...document.querySelector('#campaign-form').querySelectorAll('[name]')].map((el) => el.name)
+    ).toEqual(FORM_FIELDS);
     expect(loadMarketingConfig().campaigns).toEqual([]);
   });
 
@@ -184,7 +198,9 @@ describe('Vista de campañas de Marketing (T112)', () => {
       createdAt: original.createdAt,
       status: 'activa',
     });
-    expect(document.querySelector('.campaign-list .list-item-title').textContent).toBe(changes.name);
+    expect(document.querySelector('.campaign-list .list-item-title').textContent).toBe(
+      changes.name
+    );
     expect(document.querySelector('[data-action="cancel-campaign-edit"]')).toBeNull();
   });
 
@@ -200,11 +216,18 @@ describe('Vista de campañas de Marketing (T112)', () => {
 
     document.querySelector('[data-action="stop-campaign"]').click();
 
-    expect(loadMarketingConfig().campaigns[0]).toMatchObject({ id: campaign.id, status: 'detenida' });
+    expect(loadMarketingConfig().campaigns[0]).toMatchObject({
+      id: campaign.id,
+      status: 'detenida',
+    });
     expect(document.querySelector('[data-action="stop-campaign"]').disabled).toBe(true);
     expect(document.querySelectorAll('.campaign-history li')).toHaveLength(1);
 
-    addDocument({ entity_id: entity.entity_id, status: 'pendiente', notes: 'Interacción posterior' });
+    addDocument({
+      entity_id: entity.entity_id,
+      status: 'pendiente',
+      notes: 'Interacción posterior',
+    });
     expect(campaignDocuments(campaign.id)).toHaveLength(1);
   });
 });
@@ -233,7 +256,9 @@ describe('Historial de ejecuciones de campañas (T112)', () => {
 
     openEntityDetail(entity);
     expect(document.querySelector('#entity-detail-title').textContent).toContain(entity.name);
-    const historyEntry = document.querySelector(`#entity-history [data-document-id="${docs[0].id}"]`);
+    const historyEntry = document.querySelector(
+      `#entity-history [data-document-id="${docs[0].id}"]`
+    );
     expect(historyEntry.textContent).toContain(docs[0].notes);
     expect(historyEntry.textContent).toContain('automatico');
   });
@@ -251,28 +276,44 @@ describe('Historial de ejecuciones de campañas (T112)', () => {
       entity_id: entity.entity_id,
       notes: 'Asignar ejecutivo: Ana',
     });
-    expect(loadEntities().find((item) => item.entity_id === entity.entity_id).ejecutivo_asignado).toBe('Ana');
+    expect(
+      loadEntities().find((item) => item.entity_id === entity.entity_id).ejecutivo_asignado
+    ).toBe('Ana');
 
     openCampaigns();
-    expect(document.querySelector('.campaign-history').textContent).toContain('Asignar ejecutivo: Ana');
+    expect(document.querySelector('.campaign-history').textContent).toContain(
+      'Asignar ejecutivo: Ana'
+    );
   });
 
   it('ejecuta update_stage al crear un documento y registra la acción', () => {
-    const campaign = seedCampaign({ action: 'update_stage', targetStage: 'ganado', event: 'document_created' });
+    const campaign = seedCampaign({
+      action: 'update_stage',
+      targetStage: 'ganado',
+      event: 'document_created',
+    });
     const entity = seedEntity('Prospecto T112 documento', STAGE);
     expect(campaignDocuments(campaign.id)).toEqual([]);
 
-    addDocument({ entity_id: entity.entity_id, status: 'pendiente', notes: 'Llamada de seguimiento' });
+    addDocument({
+      entity_id: entity.entity_id,
+      status: 'pendiente',
+      notes: 'Llamada de seguimiento',
+    });
 
     const docs = campaignDocuments(campaign.id);
     expect(docs).toHaveLength(1);
     expect(docs[0]).toMatchObject({
       notes: 'Actualizar estado comercial: ganado',
     });
-    expect(loadEntities().find((item) => item.entity_id === entity.entity_id).estado_comercial).toBe('ganado');
+    expect(
+      loadEntities().find((item) => item.entity_id === entity.entity_id).estado_comercial
+    ).toBe('ganado');
 
     openCampaigns();
-    expect(document.querySelector('.campaign-history').textContent).toContain('Actualizar estado comercial: ganado');
+    expect(document.querySelector('.campaign-history').textContent).toContain(
+      'Actualizar estado comercial: ganado'
+    );
   });
 
   it('no ejecuta la campaña sobre prospectos de otra etapa', () => {
@@ -282,6 +323,8 @@ describe('Historial de ejecuciones de campañas (T112)', () => {
 
     expect(campaignDocuments(campaign.id)).toEqual([]);
     openCampaigns();
-    expect(document.querySelector('.marketing-campaigns').textContent).toContain('Todavía no hay ejecuciones de campaña.');
+    expect(document.querySelector('.marketing-campaigns').textContent).toContain(
+      'Todavía no hay ejecuciones de campaña.'
+    );
   });
 });

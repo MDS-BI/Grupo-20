@@ -1,5 +1,7 @@
 import { resolveEntityDateRule } from './entity-date.js';
 import { isValidFormat } from './field-formats.js';
+import { MESSAGES, exactFormatMessage } from './messages.js';
+import { getConfig } from '../module-config.js';
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -23,6 +25,18 @@ export function isConditionActive(rule, values = {}) {
   const actual = values?.[condition.key];
   if (Array.isArray(condition.equals)) return condition.equals.includes(actual);
   return actual === condition.equals;
+}
+
+export const CANONICAL_SEARCH_KEYS = Object.freeze({
+  entity: Object.freeze(['name', 'code', 'category', 'description', 'targetDate']),
+  document: Object.freeze(['notes', 'status']),
+});
+
+export function canonicalSearchKeys(entityType = 'entity', customKeys = []) {
+  const base = CANONICAL_SEARCH_KEYS[entityType] || CANONICAL_SEARCH_KEYS.entity;
+  const rules = resolveFieldRules(getConfig(), entityType);
+  const isSearchable = (key) => !rules[key] || isFieldPotentiallySearchable(rules, key);
+  return [...new Set([...base, ...customKeys].filter(isSearchable))];
 }
 
 export function isFieldVisible(rules, key, values = {}) {
@@ -70,17 +84,16 @@ export function getReadinessErrors(entity = {}, config, entityType = 'entity') {
   const errors = {};
   for (const [key, rule] of Object.entries(rules)) {
     if (!isConditionActive(rule, entity)) continue;
-    const label = rule.label || key;
     const value = entity[key];
     const isEmpty = value === undefined || value === null || value === '';
-    if (rule.required && isEmpty) errors[key] = `${label} es obligatorio.`;
+    if (rule.required && isEmpty) errors[key] = MESSAGES.required;
     if (!isEmpty && rule.format && !isValidFormat(rule.format, value)) {
-      errors[key] = `${label} no tiene un formato válido.`;
+      errors[key] = exactFormatMessage(key);
     }
   }
   const dateRule = resolveEntityDateRule(config);
   if (dateRule?.required && !entity.targetDate) {
-    errors.targetDate = `${dateRule.label} es obligatoria.`;
+    errors.targetDate = MESSAGES.required;
   }
   return errors;
 }

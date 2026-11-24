@@ -42,7 +42,7 @@ describe('Configuración de Marketing (T075)', () => {
         ],
         captureFields: [],
       },
-      errors,
+      errors
     );
     expect(errors.length).toBeGreaterThanOrEqual(2);
   });
@@ -54,14 +54,18 @@ describe('Configuración de Marketing (T075)', () => {
         privacyNoticeVersion: '   ',
         automationRules: [{ event: 'entity_created', action: 'notify', label: '' }],
       },
-      errors,
+      errors
     );
     expect(errors.length).toBeGreaterThanOrEqual(2);
   });
 
   it('retrocede a valores seguros cuando la configuración no es un objeto', () => {
     const { config, errors } = normalizeMarketingConfig('invalido');
-    expect(config).toMatchObject({ privacyNoticeVersion: '2026-11-23', automationRules: [], captureFields: [] });
+    expect(config).toMatchObject({
+      privacyNoticeVersion: '2026-11-23',
+      automationRules: [],
+      captureFields: [],
+    });
     expect(errors.length).toBeGreaterThan(0);
   });
 });

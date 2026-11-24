@@ -1,5 +1,10 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { loadModuleConfig, MODULE_CONFIG, setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
+import {
+  loadModuleConfig,
+  MODULE_CONFIG,
+  setActiveConfig,
+  DEFAULT_CONFIG,
+} from '../../src/module-config.js';
 import { CaptureError, createProspectFromCapture } from '../../src/utils/capture-prospect.js';
 import { loadEntities } from '../../src/storage.js';
 
@@ -19,7 +24,9 @@ afterEach(() => setActiveConfig(DEFAULT_CONFIG));
 describe('Creación de prospectos desde captura (T082)', () => {
   it('rechaza el guardado sin consentimiento explícito', () => {
     setActiveConfig(config);
-    expect(() => createProspectFromCapture({ ...validValues, consentimiento: false }, config)).toThrow(CaptureError);
+    expect(() =>
+      createProspectFromCapture({ ...validValues, consentimiento: false }, config)
+    ).toThrow(CaptureError);
     expect(loadEntities()).toHaveLength(0);
   });
 

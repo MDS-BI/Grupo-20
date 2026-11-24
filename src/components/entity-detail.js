@@ -37,10 +37,16 @@ export function renderEntityDetailHtml(config, entity, documents) {
   const customFieldDefs = config?.customFields?.entity || [];
   const dateLabel = resolveEntityDateRule(config)?.label || 'Fecha objetivo';
   const customFieldsHtml = customFieldDefs
-    .filter((def) => isFieldVisible(rules, def.key, entity) && entity[def.key] !== undefined && entity[def.key] !== null && entity[def.key] !== '')
+    .filter(
+      (def) =>
+        isFieldVisible(rules, def.key, entity) &&
+        entity[def.key] !== undefined &&
+        entity[def.key] !== null &&
+        entity[def.key] !== ''
+    )
     .map(
       (def) =>
-        `<p class="entity-detail-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(entity[def.key])}</p>`,
+        `<p class="entity-detail-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(entity[def.key])}</p>`
     )
     .join('');
   return `

@@ -42,8 +42,22 @@ describe('User Story 3 - consult entity history', () => {
 
   it('opens the entity profile with its document history sorted by date', () => {
     const entity = addEntity({ name: 'Acme', code: 'AC-001', taxId: 'RFC800101AB1' });
-    addDocument({ entity_id: entity.entity_id, series: 'FAC', folio: 1, startDate: '2026-08-01', endDate: '2026-08-02', status: 'quote' });
-    addDocument({ entity_id: entity.entity_id, series: 'FAC', folio: 2, startDate: '2026-08-10', endDate: '2026-08-11', status: 'order' });
+    addDocument({
+      entity_id: entity.entity_id,
+      series: 'FAC',
+      folio: 1,
+      startDate: '2026-08-01',
+      endDate: '2026-08-02',
+      status: 'quote',
+    });
+    addDocument({
+      entity_id: entity.entity_id,
+      series: 'FAC',
+      folio: 2,
+      startDate: '2026-08-10',
+      endDate: '2026-08-11',
+      status: 'order',
+    });
 
     searchAndOpen('acme');
 
@@ -90,7 +104,11 @@ describe('User Story 3 - consult entity history', () => {
       contacto_telefono: '+56912345678',
       pedidos: 42,
     });
-    addDocument({ entity_id: entity.entity_id, notes: 'Historial visible', startDate: '2026-01-01' });
+    addDocument({
+      entity_id: entity.entity_id,
+      notes: 'Historial visible',
+      startDate: '2026-01-01',
+    });
 
     document.body.innerHTML = '<div id="app"></div>';
     app = initApp(document.getElementById('app'));

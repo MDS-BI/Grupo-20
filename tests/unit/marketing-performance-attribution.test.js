@@ -84,10 +84,38 @@ describe('Atribución por campaña del rendimiento de Marketing (T117/T119)', ()
     const result = computeMarketingPerformance(args());
 
     expect(result.byCampaign).toEqual([
-      { id: 'camp-a', name: 'Reactivación A', totalProspects: 2, interactions: 2, wonSales: 1, hasData: true },
-      { id: 'camp-b', name: 'Captación B', totalProspects: 1, interactions: 1, wonSales: 1, hasData: true },
-      { id: 'camp-c', name: 'Sin registros', totalProspects: 0, interactions: 0, wonSales: 0, hasData: false },
-      { id: 'none', name: 'Sin campaña', totalProspects: 2, interactions: 2, wonSales: 1, hasData: true },
+      {
+        id: 'camp-a',
+        name: 'Reactivación A',
+        totalProspects: 2,
+        interactions: 2,
+        wonSales: 1,
+        hasData: true,
+      },
+      {
+        id: 'camp-b',
+        name: 'Captación B',
+        totalProspects: 1,
+        interactions: 1,
+        wonSales: 1,
+        hasData: true,
+      },
+      {
+        id: 'camp-c',
+        name: 'Sin registros',
+        totalProspects: 0,
+        interactions: 0,
+        wonSales: 0,
+        hasData: false,
+      },
+      {
+        id: 'none',
+        name: 'Sin campaña',
+        totalProspects: 2,
+        interactions: 2,
+        wonSales: 1,
+        hasData: true,
+      },
     ]);
     expect(Object.keys(result.byCampaign[2]).sort()).toEqual([
       'hasData',

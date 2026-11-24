@@ -13,7 +13,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Editar y eliminar entidades con confirmación (H4)', () => {
@@ -26,7 +28,9 @@ describe('Editar y eliminar entidades con confirmación (H4)', () => {
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="edit-entity"]').click();
     document.getElementById('field-name').value = 'Acme Actualizado';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     expect(document.querySelector('#search-results').textContent).toContain('Acme Actualizado');
@@ -38,7 +42,9 @@ describe('Editar y eliminar entidades con confirmación (H4)', () => {
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);

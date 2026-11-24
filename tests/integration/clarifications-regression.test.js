@@ -15,12 +15,16 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Otra';
     document.getElementById('field-code').value = ' Ac-1 ';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(document.querySelector('.field-error').textContent).toMatch(/código/i);
   });
 
@@ -29,14 +33,20 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     let capturedMessage = null;
     window.confirm = (msg) => {
@@ -62,7 +72,9 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
     document.getElementById('field-vip').value = 'si';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     mount(null);
     app.navigate('manage-entity');
@@ -79,7 +91,9 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
     select.value = select.querySelector('option:not([value=""])').value;

@@ -7,20 +7,21 @@
 
 ## Integrantes
 
-| Nombre | Usuario de GitHub |
-| --- | --- |
-| Amira Paz Díaz Palma | amira-diaz |
-| Alfonso Esteban Innocenti Salgado | innoaeis |
-| Anthonella Ignacia Muñoz Cifuentes | anthonellamunoz |
-| Camelia Paz Barriga Acuña | cameliabarriga |
-| Gabriela Lisette Almonacid Vargas | Galmonacid19 |
-| Valentina Ignacia Pinela Navarro | valpinela |
+| Nombre                             | Usuario de GitHub |
+| ---------------------------------- | ----------------- |
+| Amira Paz Díaz Palma               | amira-diaz        |
+| Alfonso Esteban Innocenti Salgado  | innoaeis          |
+| Anthonella Ignacia Muñoz Cifuentes | anthonellamunoz   |
+| Camelia Paz Barriga Acuña          | cameliabarriga    |
+| Gabriela Lisette Almonacid Vargas  | Galmonacid19      |
+| Valentina Ignacia Pinela Navarro   | valpinela         |
 
 ## Propósito del proyecto
 
 Nuestro proyecto tiene como propósito diseñar y desarrollar un módulo de Customer Relationship Management (CRM) para un sistema ERP, orientado a facilitar la gestión de las relaciones entre una empresa y sus clientes. Buscamos reunir de forma organizada la información de los clientes y sus interacciones con la empresa, para que los equipos de ventas y atención al cliente puedan consultar antecedentes, dar seguimiento a sus contactos e identificar oportunidades de mejora en la atención. Con ello, queremos contribuir a una gestión comercial más ordenada, una atención más oportuna y una mejor experiencia para los clientes.
 
 Para lograrlo, nos proponemos construir un producto mínimo viable (MVP) como prototipo funcional de frontend, a partir del template del curso y mediante desarrollo guiado por especificaciones (Spec Driven Development). Definiremos un modelo entidad-relación coherente con los datos compartidos entre los módulos del ERP y una interfaz que permita demostrar las funciones básicas de nuestro CRM. Este prototipo servirá para evaluar la utilidad de la propuesta y sentar las bases para futuras mejoras, considerando la facilidad de uso, la posibilidad de integración con otros módulos y el manejo responsable de la información de los clientes.
+
 # ERP Software Base Module (Vite + Vanilla JS)
 
 Aplicación de una sola página construida con Vite y JavaScript vanilla. Sirve de base para módulos ERP: entidades (datos maestros), documentos vinculados, búsqueda, validación y persistencia en `localStorage`. La especificación completa está en `specs/001-erp-base-module/`.
@@ -67,7 +68,12 @@ All tailoring lives in one place: the `MODULE_CONFIG` export at the top of `src/
 ```js
 export const MODULE_CONFIG = {
   moduleName: 'Ventas',
-  labels: { entity: 'Cliente', entityPlural: 'Clientes', document: 'Pedido de Venta', documentPlural: 'Pedidos de Venta' },
+  labels: {
+    entity: 'Cliente',
+    entityPlural: 'Clientes',
+    document: 'Pedido de Venta',
+    documentPlural: 'Pedidos de Venta',
+  },
   customFields: {
     entity: [{ key: 'creditLimit', label: 'Límite de crédito', type: 'number', required: true }],
     document: [{ key: 'folio', label: 'Folio', type: 'number', required: true }],
@@ -78,7 +84,12 @@ export const MODULE_CONFIG = {
     transitions: { cotizacion: ['pedido'], pedido: ['facturado'] },
   },
   theme: { accentColor: '#1a73e8' },
-  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true },
+  entityDate: {
+    label: 'Fecha de nacimiento',
+    min: '1910-01-01',
+    max: 'localToday',
+    required: true,
+  },
 };
 ```
 

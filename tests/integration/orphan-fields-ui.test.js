@@ -150,9 +150,13 @@ describe('T129 - valores huérfanos de category, description y pedidos', () => {
     expect(qs('entity-detail-info')).not.toBeNull();
     expectNoOrphanValues(qs('entity-detail-info').textContent);
 
-    for (const term of [orphanValues.category, orphanValues.description, String(orphanValues.pedidos)]) {
+    for (const term of [
+      orphanValues.category,
+      orphanValues.description,
+      String(orphanValues.pedidos),
+    ]) {
       searchFor(term);
-      expect(qs('search-results').textContent).toContain('No hay');
+      expect(qs('search-results').textContent).toContain('No se encontraron resultados.');
     }
   });
 

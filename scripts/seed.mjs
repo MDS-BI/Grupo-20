@@ -40,20 +40,24 @@ if (args.includes('--clear')) {
   const result = clearSeedData();
   console.log(
     `Datos simulados eliminados: ${result.entitiesRemoved} clientes y ${result.documentsRemoved} interacciones. ` +
-      `Quedan ${result.totalEntities} clientes y ${result.totalDocuments} interacciones.`,
+      `Quedan ${result.totalEntities} clientes y ${result.totalDocuments} interacciones.`
   );
 } else if (args.includes('--preview')) {
   console.table(
     buildSeedClients().map(({ name, code, rut, targetDate, canal_contacto }) => ({
-      name, code, rut, targetDate, canal_contacto,
-    })),
+      name,
+      code,
+      rut,
+      targetDate,
+      canal_contacto,
+    }))
   );
 } else {
   const result = seedClients();
   console.log(
     `Clientes creados: ${result.clientsCreated} (omitidos: ${result.clientsSkipped}). ` +
       `Interacciones creadas: ${result.interactionsCreated} (omitidas: ${result.interactionsSkipped}). ` +
-      `Totales: ${result.totalEntities} clientes y ${result.totalDocuments} interacciones.`,
+      `Totales: ${result.totalEntities} clientes y ${result.totalDocuments} interacciones.`
   );
   if (result.errors.length) console.warn('Incidencias:', result.errors);
 }

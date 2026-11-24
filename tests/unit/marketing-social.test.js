@@ -44,7 +44,7 @@ describe('Registro de interacciones en redes (T099/T101)', () => {
         campaña: 'Lanzamiento',
       },
       entity,
-      config,
+      config
     );
 
     expect(documento.id).toBeTruthy();
@@ -64,9 +64,14 @@ describe('Registro de interacciones en redes (T099/T101)', () => {
 
   it('omite la campaña cuando no se proporciona', () => {
     const documento = registerSocialInteraction(
-      { plataforma: 'YouTube', tipo_interaccion: 'video', nota: 'Video visto', enlace: 'https://youtu.be/ejemplo' },
+      {
+        plataforma: 'YouTube',
+        tipo_interaccion: 'video',
+        nota: 'Video visto',
+        enlace: 'https://youtu.be/ejemplo',
+      },
       createEntity(),
-      config,
+      config
     );
 
     expect(documento.campaña).toBeUndefined();
@@ -76,17 +81,26 @@ describe('Registro de interacciones en redes (T099/T101)', () => {
 
   it('usa la fecha local ISO de hoy por defecto', () => {
     const documento = registerSocialInteraction(
-      { plataforma: 'Twitter', tipo_interaccion: 'me_gusta', nota: 'Publicación destacada', enlace: '' },
+      {
+        plataforma: 'Twitter',
+        tipo_interaccion: 'me_gusta',
+        nota: 'Publicación destacada',
+        enlace: '',
+      },
       createEntity(),
-      config,
+      config
     );
 
     expect(documento.startDate).toBe(localTodayISO());
   });
 
   it('rechaza el registro sin una entidad asociada', () => {
-    expect(() => registerSocialInteraction({ plataforma: 'Instagram' }, null, config)).toThrow(ValidationError);
-    expect(() => registerSocialInteraction({ plataforma: 'Instagram' }, {}, config)).toThrow(ValidationError);
+    expect(() => registerSocialInteraction({ plataforma: 'Instagram' }, null, config)).toThrow(
+      ValidationError
+    );
+    expect(() => registerSocialInteraction({ plataforma: 'Instagram' }, {}, config)).toThrow(
+      ValidationError
+    );
     try {
       registerSocialInteraction({ plataforma: 'Instagram' }, null, config);
     } catch (error) {
@@ -110,12 +124,14 @@ describe('Registro de interacciones en redes (T099/T101)', () => {
       ...config,
       customFields: {
         document: documentFields.map((field) =>
-          field.key === 'enlace' ? { ...field, type: 'number', label: 'Enlace' } : field,
+          field.key === 'enlace' ? { ...field, type: 'number', label: 'Enlace' } : field
         ),
       },
     };
 
-    expect(() => registerSocialInteraction(values, createEntity(), validatingConfig)).toThrow(ValidationError);
+    expect(() => registerSocialInteraction(values, createEntity(), validatingConfig)).toThrow(
+      ValidationError
+    );
     try {
       registerSocialInteraction(values, createEntity(), validatingConfig);
     } catch (error) {

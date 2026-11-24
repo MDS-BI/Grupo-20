@@ -3,8 +3,8 @@ Feedback Avance 01 (26/10/26)
 - no hay cambios en data-model ni en el plan.
 
 Proximos pasos:
- 
-- rectificar puntos anteriores 
+
+- rectificar puntos anteriores
 - trabajar en los specs (historias de usuario, US) para definir tareas
 - dividirse las US y tareas para una siguiente iteracion (avances cada semana)
 - ejecutar una version integrada de prueba
@@ -31,7 +31,7 @@ Feedback Avance 03 (16/11/26)
 - Consistencia sitio–especificación:
   - T093/FR-044: `computeSummary` en `src/storage.js` busca siempre "pendiente"; no usa estados marcados como pendientes (eso es T109, aún sin marcar, correcto). `statusLifecycle` de `src/module-config.js` no tiene marca de pendientes.
   - `src/app.js`: textos fijos "Editar", "Eliminar", "Guardar", contra T040/T041 (etiquetas desde configuración).
- 
+
 - hacer mejoras de funcionalidad e interfaz de usuario, incluir data simulada para probar campos, incluir mejoras de estilo, transicion, navegacion, etcetera.
 
 Presentacion de MVP final en 2 semanas.

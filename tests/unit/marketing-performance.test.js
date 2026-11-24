@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import { getConfig } from '../../src/module-config.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  DEFAULT_CONFIG,
+  MODULE_CONFIG,
+  getConfig,
+  setActiveConfig,
+} from '../../src/module-config.js';
+import { MARKETING_STAGE_LABELS } from '../../src/utils/marketing-stages.js';
 import { computeDashboardStats } from '../../src/utils/marketing-stats.js';
 import { computeMarketingPerformance } from '../../src/utils/marketing-performance.js';
 
@@ -39,7 +45,10 @@ function deepFreeze(value) {
 
 describe('Rendimiento global de Marketing (T116/T119)', () => {
   it('devuelve el contrato completo con los valores globales de prospectos e interacciones', () => {
-    const result = computeMarketingPerformance({ entities: sampleEntities(), documents: sampleDocuments() });
+    const result = computeMarketingPerformance({
+      entities: sampleEntities(),
+      documents: sampleDocuments(),
+    });
 
     expect(Object.keys(result).sort()).toEqual([
       'answeredQueries',
@@ -63,7 +72,10 @@ describe('Rendimiento global de Marketing (T116/T119)', () => {
   });
 
   it('calcula la conversión por etapa y la tasa de conversión con entidades ganadas', () => {
-    const result = computeMarketingPerformance({ entities: sampleEntities(), documents: sampleDocuments() });
+    const result = computeMarketingPerformance({
+      entities: sampleEntities(),
+      documents: sampleDocuments(),
+    });
 
     expect(result.stageConversions).toEqual([
       { stage: 'prospecto', label: 'Prospecto', count: 1 },
@@ -76,7 +88,10 @@ describe('Rendimiento global de Marketing (T116/T119)', () => {
   });
 
   it('cuenta solo consultas de chat respondidas y suma el importe de cerrado ganado', () => {
-    const result = computeMarketingPerformance({ entities: sampleEntities(), documents: sampleDocuments() });
+    const result = computeMarketingPerformance({
+      entities: sampleEntities(),
+      documents: sampleDocuments(),
+    });
 
     expect(result.answeredQueries).toBe(3);
     expect(result.wonSales).toBe(2);
@@ -111,12 +126,23 @@ describe('Rendimiento global de Marketing (T116/T119)', () => {
     });
     expect(result.stageConversions.every((step) => step.count === 0)).toBe(true);
     expect(result.byCampaign).toEqual([
-      { id: 'none', name: 'Sin campaña', totalProspects: 0, interactions: 0, wonSales: 0, hasData: false },
+      {
+        id: 'none',
+        name: 'Sin campaña',
+        totalProspects: 0,
+        interactions: 0,
+        wonSales: 0,
+        hasData: false,
+      },
     ]);
   });
 
   it('no muta las entradas ni escribe en localStorage', () => {
-    const args = deepFreeze({ entities: sampleEntities(), documents: sampleDocuments(), campaigns: [] });
+    const args = deepFreeze({
+      entities: sampleEntities(),
+      documents: sampleDocuments(),
+      campaigns: [],
+    });
     const before = JSON.stringify(args);
     const setItem = vi.spyOn(localStorage, 'setItem');
 
@@ -125,5 +151,52 @@ describe('Rendimiento global de Marketing (T116/T119)', () => {
     expect(JSON.stringify(args)).toBe(before);
     expect(setItem).not.toHaveBeenCalled();
     setItem.mockRestore();
+  });
+});
+
+describe('Terminología de conversión y estado de documento (T169)', () => {
+  beforeEach(() => setActiveConfig(MODULE_CONFIG));
+  afterEach(() => setActiveConfig(DEFAULT_CONFIG));
+
+  it('usa ganado como valor interno y Cliente ganado como etiqueta visible', () => {
+    expect(MARKETING_STAGE_LABELS.ganado).toBe('Cliente ganado');
+    expect(
+      MODULE_CONFIG.fieldRules.entity.estado_comercial.options.find(
+        (option) => option.value === 'ganado'
+      ).label
+    ).toBe('Cliente ganado');
+    expect(MODULE_CONFIG.statusLifecycle.states).toContain('cerrado ganado');
+    expect(MODULE_CONFIG.statusLifecycle.states).not.toContain('ganado');
+  });
+
+  it('computa ventas solo desde el estado de documento cerrado ganado', () => {
+    const result = computeMarketingPerformance({
+      entities: [{ entity_id: 'e1', estado_comercial: 'ganado' }],
+      documents: [
+        { id: 'd1', status: 'cerrado ganado', importe: 100 },
+        { id: 'd2', status: 'ganado', importe: 999 },
+      ],
+    });
+
+    expect(result.wonSales).toBe(1);
+    expect(result.wonAmount).toBe(100);
+    expect(result.stageConversions.find((step) => step.stage === 'ganado')).toEqual({
+      stage: 'ganado',
+      label: 'Cliente ganado',
+      count: 1,
+    });
+    expect(result.conversionRate).toBe(100);
+  });
+
+  it('no cuenta una entidad ganada como venta cerrada en el panel', () => {
+    const dashboard = computeDashboardStats({
+      entities: [{ entity_id: 'e1', estado_comercial: 'ganado' }],
+      documents: [{ id: 'd1', status: 'ganado', importe: 999 }],
+      config: MODULE_CONFIG,
+    });
+
+    expect(dashboard.entityCount).toBe(1);
+    expect(dashboard.wonDocuments).toBe(0);
+    expect(dashboard.wonAmount).toBe(0);
   });
 });

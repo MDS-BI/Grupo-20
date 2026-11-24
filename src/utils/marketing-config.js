@@ -37,8 +37,10 @@ export function validateMarketingConfig(raw, errors = []) {
   if (raw.privacyNoticeVersion !== undefined && !nonEmptyText(raw.privacyNoticeVersion)) {
     errors.push('marketing.privacyNoticeVersion debe ser una cadena no vacía.');
   }
-  if (raw.captureFields !== undefined &&
-      (!Array.isArray(raw.captureFields) || !raw.captureFields.every((key) => nonEmptyText(key)))) {
+  if (
+    raw.captureFields !== undefined &&
+    (!Array.isArray(raw.captureFields) || !raw.captureFields.every((key) => nonEmptyText(key)))
+  ) {
     errors.push('marketing.captureFields debe ser una lista de claves no vacías.');
   }
   if (raw.automationRules !== undefined && !Array.isArray(raw.automationRules)) {
@@ -86,8 +88,10 @@ export function validateMarketingConfig(raw, errors = []) {
           errors.push(`${memberPath} debe ser un objeto.`);
           continue;
         }
-        if (!nonEmptyText(member.name)) errors.push(`${memberPath}.name debe ser una cadena no vacía.`);
-        if (!nonEmptyText(member.role)) errors.push(`${memberPath}.role debe ser una cadena no vacía.`);
+        if (!nonEmptyText(member.name))
+          errors.push(`${memberPath}.name debe ser una cadena no vacía.`);
+        if (!nonEmptyText(member.role))
+          errors.push(`${memberPath}.role debe ser una cadena no vacía.`);
         if (member.active !== undefined && typeof member.active !== 'boolean') {
           errors.push(`${memberPath}.active debe ser booleano.`);
         }
@@ -103,8 +107,10 @@ export function validateMarketingConfig(raw, errors = []) {
         errors.push(`${path} debe ser un objeto.`);
         continue;
       }
-      if (!nonEmptyText(item.pregunta)) errors.push(`${path}.pregunta debe ser una cadena no vacía.`);
-      if (!nonEmptyText(item.respuesta)) errors.push(`${path}.respuesta debe ser una cadena no vacía.`);
+      if (!nonEmptyText(item.pregunta))
+        errors.push(`${path}.pregunta debe ser una cadena no vacía.`);
+      if (!nonEmptyText(item.respuesta))
+        errors.push(`${path}.respuesta debe ser una cadena no vacía.`);
     }
   }
   if (raw.campaigns !== undefined && !Array.isArray(raw.campaigns)) {
@@ -188,7 +194,8 @@ export function normalizeMarketingConfig(raw) {
   }
   return {
     config: {
-      privacyNoticeVersion: raw.privacyNoticeVersion || DEFAULT_MARKETING_CONFIG.privacyNoticeVersion,
+      privacyNoticeVersion:
+        raw.privacyNoticeVersion || DEFAULT_MARKETING_CONFIG.privacyNoticeVersion,
       automationRules: (raw.automationRules || []).map((rule) => ({
         event: rule.event,
         action: rule.action,

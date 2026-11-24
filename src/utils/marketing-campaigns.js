@@ -41,7 +41,9 @@ function campaignDateKey(value) {
     }
     return value;
   }
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value)) {
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value)
+  ) {
     const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) return localDateKey(parsed);
   }
@@ -121,10 +123,16 @@ export function createCampaign(values = {}, campaigns = []) {
     endDate: safeValues.endDate,
     status: 'activa',
     createdAt: new Date().toISOString(),
-    action: safeValues.action === undefined || safeValues.action === '' ? 'create_document' : safeValues.action,
+    action:
+      safeValues.action === undefined || safeValues.action === ''
+        ? 'create_document'
+        : safeValues.action,
     executive: safeValues.executive === undefined ? '' : safeValues.executive,
     targetStage: safeValues.targetStage === undefined ? '' : safeValues.targetStage,
     notes: safeValues.notes === undefined ? '' : safeValues.notes,
+    ...(safeValues.createdByUserId === undefined
+      ? {}
+      : { createdByUserId: safeValues.createdByUserId }),
   };
   return [...(Array.isArray(campaigns) ? campaigns : []), campaign];
 }
@@ -133,7 +141,8 @@ export function updateCampaign(id, updates = {}, campaigns = []) {
   const safeUpdates = isPlainObject(updates) ? updates : {};
   const changes = {};
   for (const field of EDITABLE_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(safeUpdates, field)) changes[field] = safeUpdates[field];
+    if (Object.prototype.hasOwnProperty.call(safeUpdates, field))
+      changes[field] = safeUpdates[field];
   }
   const errors = Object.keys(changes).length ? validateCampaign(changes, false) : [];
   if (errors.length) throw validationError(errors);
@@ -150,7 +159,7 @@ export function updateCampaign(id, updates = {}, campaigns = []) {
 
 export function stopCampaign(id, campaigns = []) {
   return (Array.isArray(campaigns) ? campaigns : []).map((campaign) =>
-    campaign?.id === id ? { ...campaign, status: 'detenida' } : campaign,
+    campaign?.id === id ? { ...campaign, status: 'detenida' } : campaign
   );
 }
 
@@ -164,7 +173,13 @@ export function isCampaignActive(campaign, now = new Date()) {
   return true;
 }
 
-export function selectCampaignsForEvent({ event, entity, campaigns = [], now = new Date(), context = {} } = {}) {
+export function selectCampaignsForEvent({
+  event,
+  entity,
+  campaigns = [],
+  now = new Date(),
+  context = {},
+} = {}) {
   if (!CAMPAIGN_EVENTS.includes(event)) return { selected: null, skipped: [] };
 
   const safeContext = isPlainObject(context) ? context : {};
@@ -179,7 +194,12 @@ export function selectCampaignsForEvent({ event, entity, campaigns = [], now = n
     if (!isPlainObject(campaign) || !isCampaignActive(campaign, currentDate)) return false;
     if (campaign.stage !== targetStage) return false;
     if (campaign.event !== undefined && campaign.event !== event) return false;
-    if (event === 'stage_changed' && campaign.from && safeContext.from && campaign.from !== safeContext.from) {
+    if (
+      event === 'stage_changed' &&
+      campaign.from &&
+      safeContext.from &&
+      campaign.from !== safeContext.from
+    ) {
       return false;
     }
     return INTERNAL_ACTIONS.includes(campaign.action ?? 'create_document');

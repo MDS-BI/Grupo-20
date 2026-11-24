@@ -13,7 +13,12 @@ const CLIENT_CONFIG = {
   fieldRules: {
     rut: { label: 'RUT', required: true, format: 'cl-rut', unique: true, normalize: 'cl-rut' },
     entity: {
-      code: { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false },
+      code: {
+        generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 },
+        unique: true,
+        hidden: true,
+        searchable: false,
+      },
       category: { hidden: true, searchable: false },
       description: { hidden: true, searchable: false },
       canal_contacto: { label: 'Canal de Contacto', required: true },
@@ -35,13 +40,23 @@ const CLIENT_CONFIG = {
     document: {},
   },
   detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
-  entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true },
+  entityDate: {
+    label: 'Fecha de nacimiento',
+    min: '1910-01-01',
+    max: 'localToday',
+    required: true,
+  },
 };
 
 describe('Reglas declarativas de campo (T028)', () => {
   it('resuelve reglas globales heredadas y permite el override por tipo de registro', () => {
     const rules = resolveFieldRules(CLIENT_CONFIG, 'entity');
-    expect(rules.rut).toMatchObject({ required: true, format: 'cl-rut', unique: true, normalize: 'cl-rut' });
+    expect(rules.rut).toMatchObject({
+      required: true,
+      format: 'cl-rut',
+      unique: true,
+      normalize: 'cl-rut',
+    });
     expect(rules.code.hidden).toBe(true);
     expect(resolveFieldRules(DEFAULT_CONFIG, 'entity')).toEqual({});
   });
@@ -65,7 +80,7 @@ describe('Reglas declarativas de campo (T028)', () => {
   it('detecta campos pendientes de clientes heredados sin bloquear fechas históricas', () => {
     const errors = getReadinessErrors(
       { name: 'Legacy', targetDate: '1900-05-05', rut: 'no-valido' },
-      CLIENT_CONFIG,
+      CLIENT_CONFIG
     );
     expect(errors.targetDate).toBeUndefined();
     expect(errors.rut).toBeTruthy();
@@ -79,7 +94,7 @@ describe('Reglas declarativas de campo (T028)', () => {
         canal_contacto: 'llamada',
         contacto_telefono: '+56 9 1234 5678',
       },
-      CLIENT_CONFIG,
+      CLIENT_CONFIG
     );
     expect(complete).toEqual({});
   });

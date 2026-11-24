@@ -8,6 +8,7 @@ import {
   MODULE_CONFIG,
 } from '../../src/module-config.js';
 import { sanitizeAccentColor } from '../../src/module-config.js';
+import { CANONICAL_SEARCH_KEYS } from '../../src/utils/field-rules.js';
 
 describe('Carga de configuración del módulo (H5)', () => {
   it('usa los valores predeterminados cuando no se provee configuración', () => {
@@ -20,8 +21,14 @@ describe('Carga de configuración del módulo (H5)', () => {
     const sales = {
       moduleName: 'Ventas',
       labels: { entity: 'Cliente', entityPlural: 'Clientes', document: 'Pedido de Venta' },
-      customFields: { entity: [{ key: 'creditLimit', label: 'Límite de crédito', type: 'number' }], document: [] },
-      statusLifecycle: { states: ['cotizacion', 'pedido', 'facturado'], transitions: { cotizacion: ['pedido'], pedido: ['facturado'] } },
+      customFields: {
+        entity: [{ key: 'creditLimit', label: 'Límite de crédito', type: 'number' }],
+        document: [],
+      },
+      statusLifecycle: {
+        states: ['cotizacion', 'pedido', 'facturado'],
+        transitions: { cotizacion: ['pedido'], pedido: ['facturado'] },
+      },
       theme: { accentColor: '#1a73e8' },
     };
     const { config, warning } = loadModuleConfig(sales);
@@ -38,12 +45,16 @@ describe('Carga de configuración del módulo (H5)', () => {
   });
 
   it('detecta un campo personalizado que choca con un nombre de campo base', () => {
-    const errors = validateConfig({ customFields: { entity: [{ key: 'name', type: 'text' }], document: [] } });
+    const errors = validateConfig({
+      customFields: { entity: [{ key: 'name', type: 'text' }], document: [] },
+    });
     expect(errors.length).toBeGreaterThan(0);
   });
 
   it('detecta un tipo de campo desconocido y una transición de ciclo de vida inválida', () => {
-    const badType = validateConfig({ customFields: { entity: [{ key: 'x', type: 'unknown-type' }] } });
+    const badType = validateConfig({
+      customFields: { entity: [{ key: 'x', type: 'unknown-type' }] },
+    });
     expect(badType.length).toBeGreaterThan(0);
 
     const badLifecycle = validateConfig({
@@ -55,7 +66,10 @@ describe('Carga de configuración del módulo (H5)', () => {
   it('retrocede en silencio a los valores integrados ante un color de acento inválido, sin invalidar el resto de la configuración', () => {
     expect(sanitizeAccentColor('not-a-color')).toBeNull();
     expect(sanitizeAccentColor('#1a73e8')).toBe('#1a73e8');
-    const { config, warning } = loadModuleConfig({ moduleName: 'Ventas', theme: { accentColor: 'not-a-color' } });
+    const { config, warning } = loadModuleConfig({
+      moduleName: 'Ventas',
+      theme: { accentColor: 'not-a-color' },
+    });
     expect(warning).toBeNull();
     expect(config.moduleName).toBe('Ventas');
     expect(config.theme.accentColor).toBeNull();
@@ -85,7 +99,10 @@ describe('Carga de configuración del módulo (H5)', () => {
   });
 
   it('hace fallback con advertencia cuando entityDate es inválida', () => {
-    const { config, warning } = loadModuleConfig({ moduleName: 'CRM', entityDate: { max: 'mañana' } });
+    const { config, warning } = loadModuleConfig({
+      moduleName: 'CRM',
+      entityDate: { max: 'mañana' },
+    });
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warning).toBeTruthy();
   });
@@ -98,8 +115,13 @@ describe('Carga de configuración del módulo (H5)', () => {
       },
     };
     expect(validateConfig(valid)).toEqual([]);
-    expect(validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: ['otro'] } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: 'pendiente' } }).length).toBeGreaterThan(0);
+    expect(
+      validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: ['otro'] } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({ statusLifecycle: { states: ['pendiente'], pendingStates: 'pendiente' } })
+        .length
+    ).toBeGreaterThan(0);
   });
 
   it('normaliza pendingStates sin perderlos', () => {
@@ -124,16 +146,28 @@ describe('Carga de configuración del módulo (H5)', () => {
   });
 
   it('rechaza formatos desconocidos y reglas mal formadas en fieldRules', () => {
-    expect(validateConfig({ fieldRules: { entity: { rut: { format: 'rut-magico' } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { rut: 'required' } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { canal: { when: { equals: 'llamada' } } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { canal: { when: { key: 'x' } } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { code: { generated: { prefix: 'CLI-' } } } } })).toEqual([]);
+    expect(
+      validateConfig({ fieldRules: { entity: { rut: { format: 'rut-magico' } } } }).length
+    ).toBeGreaterThan(0);
+    expect(validateConfig({ fieldRules: { entity: { rut: 'required' } } }).length).toBeGreaterThan(
+      0
+    );
+    expect(
+      validateConfig({ fieldRules: { entity: { canal: { when: { equals: 'llamada' } } } } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({ fieldRules: { entity: { canal: { when: { key: 'x' } } } } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({ fieldRules: { entity: { code: { generated: { prefix: 'CLI-' } } } } })
+    ).toEqual([]);
   });
 
   it('valida entityDate.required y detailPolicy', () => {
     expect(validateConfig({ entityDate: { required: 'si' } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ detailPolicy: { entity: { blockWhenInvalid: 'si' } } }).length).toBeGreaterThan(0);
+    expect(
+      validateConfig({ detailPolicy: { entity: { blockWhenInvalid: 'si' } } }).length
+    ).toBeGreaterThan(0);
     expect(validateConfig({ detailPolicy: [] }).length).toBeGreaterThan(0);
     expect(validateConfig({ entityDate: { required: true } })).toEqual([]);
   });
@@ -142,7 +176,12 @@ describe('Carga de configuración del módulo (H5)', () => {
     const raw = {
       fieldRules: { entity: { rut: { format: 'cl-rut', required: true } } },
       detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
-      entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true },
+      entityDate: {
+        label: 'Fecha de nacimiento',
+        min: '1910-01-01',
+        max: 'localToday',
+        required: true,
+      },
     };
     const { config, errors } = normalizeConfig(raw);
     expect(errors).toEqual([]);
@@ -152,10 +191,21 @@ describe('Carga de configuración del módulo (H5)', () => {
   });
 
   it('valida y conserva metadatos de presentación en fieldRules (T058)', () => {
-    expect(validateConfig({ fieldRules: { entity: { rut: { placeholder: 1 } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { rut: { order: '2' } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { canal: { options: [{ label: 'Llamada' }] } } } }).length).toBeGreaterThan(0);
-    expect(validateConfig({ fieldRules: { entity: { canal: { options: [{ value: 'llamada', label: 'Llamada' }] } } } })).toEqual([]);
+    expect(
+      validateConfig({ fieldRules: { entity: { rut: { placeholder: 1 } } } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({ fieldRules: { entity: { rut: { order: '2' } } } }).length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({ fieldRules: { entity: { canal: { options: [{ label: 'Llamada' }] } } } })
+        .length
+    ).toBeGreaterThan(0);
+    expect(
+      validateConfig({
+        fieldRules: { entity: { canal: { options: [{ value: 'llamada', label: 'Llamada' }] } } },
+      })
+    ).toEqual([]);
 
     const { config, errors } = normalizeConfig({
       fieldRules: {
@@ -167,11 +217,16 @@ describe('Carga de configuración del módulo (H5)', () => {
     });
     expect(errors).toEqual([]);
     expect(config.fieldRules.entity.rut).toEqual({ placeholder: 'Ej: 11.111.111-1', order: 2 });
-    expect(config.fieldRules.entity.canal.options).toEqual([{ value: 'llamada', label: 'Llamada' }]);
+    expect(config.fieldRules.entity.canal.options).toEqual([
+      { value: 'llamada', label: 'Llamada' },
+    ]);
   });
 
   it('hace fallback con advertencia cuando fieldRules es inválida', () => {
-    const { config, warning } = loadModuleConfig({ moduleName: 'CRM', fieldRules: { entity: { rut: { format: 'nope' } } } });
+    const { config, warning } = loadModuleConfig({
+      moduleName: 'CRM',
+      fieldRules: { entity: { rut: { format: 'nope' } } },
+    });
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warning).toBeTruthy();
   });
@@ -182,7 +237,10 @@ describe('Carga de configuración del módulo (H5)', () => {
     expect(config.marketing.privacyNoticeVersion).toBeTruthy();
     expect(config.marketing.automationRules.length).toBeGreaterThan(0);
     expect(config.customFields.entity.some((def) => def.key === 'estado_comercial')).toBe(true);
-    expect(config.fieldRules.entity.estado_comercial).toMatchObject({ hidden: true, searchable: false });
+    expect(config.fieldRules.entity.estado_comercial).toMatchObject({
+      hidden: true,
+      searchable: false,
+    });
   });
 
   it('rechaza un bloque marketing con una regla inválida', () => {
@@ -193,5 +251,66 @@ describe('Carga de configuración del módulo (H5)', () => {
       },
     });
     expect(errors.join(' ')).toContain('marketing');
+  });
+});
+
+describe('Lista canónica y anulación del perfil de clientes (FR-004, FR-020, FR-055)', () => {
+  it('no declara listas de búsqueda paralelas en la configuración', () => {
+    expect(MODULE_CONFIG.searchFields).toBeUndefined();
+    expect(MODULE_CONFIG.searchableFields).toBeUndefined();
+    expect(Object.keys(CANONICAL_SEARCH_KEYS)).toEqual(['entity', 'document']);
+    expect(CANONICAL_SEARCH_KEYS.entity).toEqual([
+      'name',
+      'code',
+      'category',
+      'description',
+      'targetDate',
+    ]);
+  });
+
+  it('aplica la anulación del perfil únicamente mediante fieldRules', () => {
+    expect(MODULE_CONFIG.fieldRules.entity).toMatchObject({
+      name: { searchable: true },
+      targetDate: { searchable: true },
+      code: { hidden: true, searchable: false },
+      category: { hidden: true, searchable: false },
+      description: { hidden: true, searchable: false },
+      estado_comercial: { hidden: true, searchable: false },
+    });
+    expect(MODULE_CONFIG.fieldRules.entity.rut).toMatchObject({ format: 'cl-rut' });
+  });
+
+  it('mantiene separadas la entidad ganada, la etiqueta visible y el estado de documento', () => {
+    const { config } = loadModuleConfig(MODULE_CONFIG);
+    const stageOption = config.fieldRules.entity.estado_comercial.options.find(
+      (option) => option.value === 'ganado'
+    );
+
+    expect(getLabel(config, 'entity')).toBe('Cliente');
+    expect(getLabel(config, 'document')).toBe('Interacción');
+    expect(stageOption.label).toBe('Cliente ganado');
+    expect(config.statusLifecycle.states).toContain('cerrado ganado');
+    expect(config.statusLifecycle.states).not.toContain('ganado');
+  });
+});
+
+describe('Validación autocontenida del bloque marketing (T169)', () => {
+  it('acepta el bloque marketing del perfil activo sin errores', () => {
+    expect(validateConfig(MODULE_CONFIG)).toEqual([]);
+  });
+
+  it('rechaza immutable fields, faq, campañas y acciones inválidos', () => {
+    expect(validateConfig({ marketing: { privacyNoticeVersion: 1 } }).join(' ')).toContain(
+      'privacyNoticeVersion'
+    );
+    expect(validateConfig({ marketing: { faq: 'no-lista' } }).join(' ')).toContain('faq');
+    expect(validateConfig({ marketing: { campaigns: [{ id: 'c' }] } }).join(' ')).toContain(
+      'campaigns'
+    );
+    expect(
+      validateConfig({
+        marketing: { automationRules: [{ event: 'x', action: 'update_stage', label: 'R' }] },
+      }).join(' ')
+    ).toContain('event');
   });
 });

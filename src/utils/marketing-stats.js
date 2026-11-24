@@ -44,10 +44,14 @@ export function computeDashboardStats({ entities = [], documents = [], config } 
   const safeDocuments = Array.isArray(documents) ? documents : [];
   const funnel = funnelFor(safeDocuments, config);
   let wonDocuments = 0;
+  let wonAmount = 0;
   let pipelineTotal = 0;
   for (const document of safeDocuments) {
     const status = normalizeText(document?.status);
-    if (status === 'cerrado ganado') wonDocuments += 1;
+    if (status === 'cerrado ganado') {
+      wonDocuments += 1;
+      wonAmount += Number(document?.importe) || 0;
+    }
     if (ACTIVE_STATES.includes(status)) pipelineTotal += Number(document?.importe) || 0;
   }
   const entityCount = safeEntities.length;
@@ -55,6 +59,7 @@ export function computeDashboardStats({ entities = [], documents = [], config } 
     entityCount,
     documentCount: safeDocuments.length,
     wonDocuments,
+    wonAmount,
     conversionRate: entityCount > 0 ? (wonDocuments / entityCount) * 100 : 0,
     pipelineTotal,
     funnel,

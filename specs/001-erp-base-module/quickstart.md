@@ -77,8 +77,8 @@ La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/enti
 3. Abra Marketing y confirme las cinco tarjetas del panel —entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— y el mismo embudo por estados de documento, con idénticos valores que en el panel.
 4. Confirme que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas, y que la lista «Últimas Interacciones / Próximos Seguimientos» coincide con la del panel.
 5. Con cero registros, verifique que las tarjetas y el embudo muestran cero con un estado vacío claro.
-6. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe explicarse el motivo.
-7. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas.
+6. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe mostrarse `Completa los campos obligatorios.`.
+7. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas, y que el visitante ve exactamente `Prospecto registrado correctamente.`.
 8. Cree, edite y elimine documentos «Cerrado ganado» y confirme que las tarjetas, el embudo y los valores del panel se actualizan sin recarga y sin duplicar documentos.
 9. Verifique que `estado_comercial` y las reglas automáticas siguen operando internamente, sin mostrarse en Marketing, y que cada ejecución aparece como documento en la ficha de la entidad.
 
@@ -89,7 +89,7 @@ La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/m
 1. Abra «Equipo de ventas y logros», cree un equipo y un integrante con nombre, cargo y estado, confirme que no hay casillas para capturar objetivo mensual ni real mensual, y recargue la página para verificar que la definición persiste.
 2. Registre documentos «Cerrado ganado» del mes para el ejecutivo asignado y confirme que el real mensual es la suma de sus importes y que el objetivo mensual es la proyección `ventas ÷ días transcurridos × días del mes`; sin ventas, ambos muestran cero.
 3. Abra «Redes sociales», registre una interacción de Instagram vinculada a un prospecto con plataforma, fecha, tipo, nota y enlace, y compruebe que aparece ordenada por fecha en la vista y en la ficha de la entidad.
-4. Abra el chat desde `?view=capture` y desde Marketing; confirme que una pregunta configurada recibe su respuesta rápida sin recarga y que una pregunta sin coincidencia muestra un acuse y queda guardada como documento para seguimiento.
+4. Abra el chat desde `?view=capture` y desde Marketing; confirme que una pregunta configurada recibe su respuesta rápida sin recarga y que una pregunta sin coincidencia muestra exactamente `Consulta registrada; un ejecutivo hará seguimiento.` y queda guardada como documento para seguimiento.
 5. Intente enviar el primer mensaje sin marcar el consentimiento del chat: el envío debe bloquearse y no debe registrarse ningún mensaje.
 6. Compruebe que los mensajes del chat y las interacciones de redes aparecen en la ficha de la entidad vinculada y permanecen intactos al navegar entre vistas.
 
@@ -99,8 +99,8 @@ La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/m
 2. Con un prospecto en la etapa objetivo, dispare un evento de captura, cambio de etapa o interacción y confirme que la acción se limita a crear un documento de seguimiento, asignar un ejecutivo o actualizar el estado comercial interno; compruebe que no se envía correo ni se publica en redes.
 3. Cree dos campañas activas para el mismo prospecto y evento: solo debe ejecutarse la más reciente y la otra debe quedar registrada como «omitida por solapamiento», sin acciones duplicadas.
 4. Asigne el campo opcional «Campaña» a un prospecto, una interacción y una venta; deje otro registro sin campaña y confirme que aparece bajo «Sin campaña».
-5. Abra «Rendimiento de campañas» y confirme que los indicadores globales y por campaña —prospectos, conversión por etapa, interacciones, consultas respondidas y ventas ganadas— coinciden con los registros almacenados y se actualizan sin recarga.
-6. Seleccione una campaña sin registros y confirme que los indicadores muestran cero con una explicación clara.
+5. Abra «Rendimiento de campañas» y confirme que los indicadores globales y por campaña —prospectos, conversión por etapa, interacciones, consultas respondidas y ventas «Cerrado ganado»— coinciden con los registros almacenados y se actualizan sin recarga.
+6. Seleccione una campaña sin registros y confirme que los indicadores muestran cero con el mensaje exacto `Sin registros para esta campaña.`.
 
 La forma de campañas, atribución e indicadores está en [`contracts/marketing.md`](contracts/marketing.md#forma-de-los-datos) y su efecto en el modelo en [`data-model.md`](data-model.md#6-campañas-de-marketing).
 
@@ -124,3 +124,46 @@ Los módulos ERP personalizados adaptan la base mediante un único archivo de co
 7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional.
 
 La generación de identidad, marcas de tiempo, integridad referencial entre entidades y documentos, eliminación en cascada, navegación y búsqueda siguen siendo gestionadas por el módulo base. Sin archivo de configuración, la aplicación se ejecuta con el comportamiento predeterminado Entidad/Documento. Consulte `specs/001-erp-base-module/` para la especificación completa.
+
+## Validación de Inicio de Sesión y Sesión
+
+1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: debe mostrarse solo el formulario con «Usuario» y «Contraseña», sin Panel, Buscar, Resumen ni Marketing; el formulario público de `?view=capture` y el chat deben seguir disponibles.
+2. Ingrese `pedro.soto` con una contraseña incorrecta: no debe crearse sesión y debe aparecer exactamente `Usuario o contraseña incorrectos`.
+3. Ingrese `camila.ramirez` con su contraseña vigente: el panel debe mostrar `camila.ramirez`, «Nivel 4 - Gerente comercial» y el menú del usuario con «Gestionar usuarios» y «Cerrar sesión».
+4. Recargue la página y luego cierre y vuelva a abrir el navegador: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
+5. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras autenticarse como `camila.ramirez`, debe abrirse el resumen solicitado.
+6. Pulse «Cerrar sesión»: la barra superior desaparece y vuelve a mostrarse solo el login.
+7. Simule 5 intentos fallidos: el usuario debe quedar bloqueado 15 minutos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
+
+## Validación de Mensajes Exactos y Rutas
+
+1. Busque un término sin coincidencias: la vista debe mostrar exactamente `No se encontraron resultados.` y no modificar registros.
+2. Guarde un cliente con RUT inválido y luego con un RUT repetido: debe mostrar `El RUT es inválido.` y `El RUT ya está registrado.`, respectivamente, sin crear ni modificar el registro.
+3. Deje vacía la casilla adicional de contacto o introduzca un formato inválido para el canal elegido: debe mostrar `Revisa el dato de contacto según el canal elegido.`.
+4. Abra `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, use Back/Forward y recargue: la vista solicitada debe resolverse desde `location.search` con la matriz de permisos; no existe `?view=panel` y el Panel se abre quitando el parámetro `view`.
+5. En `?view=capture`, envíe el formulario con consentimiento y compruebe que el visitante ve exactamente `Prospecto registrado correctamente.`; en el chat sin coincidencia con una pregunta frecuente compruebe exactamente `Consulta registrada; un ejecutivo hará seguimiento.`.
+6. En «Rendimiento de campañas», seleccione una campaña sin registros y compruebe el mensaje exacto `Sin registros para esta campaña.`; una operación denegada debe mostrar exactamente `No tienes permiso para realizar esta acción`.
+
+La forma de la sesión y las operaciones están en [`contracts/auth.md`](contracts/auth.md#clave-erp_session) y su efecto en el modelo en [`data-model.md`](data-model.md#82-sesión).
+
+## Validación de Permisos por Rango
+
+1. Con `sofia.torres` (Nivel 1), busque «Comercial Andina SpA», vea su historial y registre una «Llamada»; confirme que no puede registrar una «Reunión», cambiar estados, eliminar clientes ni abrir Resumen, Marketing o «Equipo de ventas y logros».
+2. Abra `?view=summary` con `sofia.torres`: debe ver «Acceso denegado» y volver al Panel sin ver los 47 seguimientos pendientes.
+3. Con `pedro.soto` (Nivel 2), cree «Ferretería Central» con él como «Ejecutivo Asignado» y confirme que puede editarla; intente eliminar «Transportes del Norte Ltda.» y cambiar el estado de sus interacciones: todo debe rechazarse con `No tienes permiso para realizar esta acción`.
+4. Desde la consola, intente eliminar «Transportes del Norte Ltda.» mediante una llamada directa a `storage.js`: la capa de datos debe rechazarla con el mismo mensaje y el cliente debe permanecer almacenado.
+5. Con `lucia.fernandez` (Nivel 3), cree la «Campaña Primavera 2026», capture un prospecto y consulte el rendimiento; intente eliminar «Comercial Andina SpA», abrir el resumen y detener una campaña de otro usuario: cada acción debe bloquearse.
+6. Con `camila.ramirez` (Nivel 4), elimine «Comercial Andina SpA», vea los 47 seguimientos del equipo, detenga la campaña de `lucia.fernandez` y gestione usuarios; confirme que no existe ninguna pantalla para editar la matriz de permisos.
+7. Despliegue «Ejecutivo Asignado» en un formulario de cliente: solo deben aparecer `pedro.soto`, `ana.munoz` y `camila.ramirez`, nunca `sofia.torres` ni `lucia.fernandez`.
+
+La matriz y las acciones están en [`contracts/auth.md`](contracts/auth.md#matriz-de-srcauthpermissionsjs) y la verificación en `storage.js` en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-autorización-de-operaciones).
+
+## Validación de Administración de Usuarios
+
+1. Ingrese como `sofia.torres` y abra el menú del usuario: debe ver «Cerrar sesión» pero no «Gestionar usuarios».
+2. Ingrese como `camila.ramirez`, abra el menú del usuario y seleccione «Gestionar usuarios»: la pantalla debe listar los cuatro usuarios semilla con rango y estado.
+3. Intente crear un usuario llamado `Pedro.Soto`: el guardado debe rechazarse por duplicado y el usuario original debe conservar su identidad, rango y clientes.
+4. Cambie el rango de `ana.munoz` a Nivel 3 y confirme que, en su siguiente acción o recarga, la barra superior y los permisos reflejan el cambio.
+5. Desactive a `pedro.soto` mientras tiene sesión iniciada: en la siguiente acción o recarga debe redirigirse a login, sus clientes deben mostrarse como «Sin asignar» hasta reasignarlos y sus ventas históricas deben seguir contando en el integrante vinculado.
+
+La forma de usuarios y reglas está en [`contracts/auth.md`](contracts/auth.md#clave-erp_users) y su efecto en el modelo en [`data-model.md`](data-model.md#81-usuario).

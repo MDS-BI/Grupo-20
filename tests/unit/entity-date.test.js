@@ -21,7 +21,9 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
   });
 
   it('resuelve localToday a la fecha local actual', () => {
-    const config = { entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' } };
+    const config = {
+      entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' },
+    };
     expect(resolveEntityDateRule(config, new Date(2026, 10, 23, 12))).toEqual({
       label: 'Fecha de nacimiento',
       min: '1910-01-01',
@@ -31,7 +33,9 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
   });
 
   it('deja sin límites los extremos omitidos', () => {
-    expect(resolveEntityDateRule({ entityDate: { label: 'Fecha' } }, new Date(2026, 10, 23))).toEqual({
+    expect(
+      resolveEntityDateRule({ entityDate: { label: 'Fecha' } }, new Date(2026, 10, 23))
+    ).toEqual({
       label: 'Fecha',
       min: '',
       max: '',
@@ -40,7 +44,14 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
   });
 
   it('expone required cuando la regla lo declara (T042)', () => {
-    const config = { entityDate: { label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday', required: true } };
+    const config = {
+      entityDate: {
+        label: 'Fecha de nacimiento',
+        min: '1910-01-01',
+        max: 'localToday',
+        required: true,
+      },
+    };
     expect(resolveEntityDateRule(config, new Date(2026, 10, 23)).required).toBe(true);
   });
 

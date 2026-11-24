@@ -71,7 +71,10 @@ function wonEntitiesFor(entities) {
 }
 
 function campaignGroups(campaigns, entities, documents) {
-  const groups = safeArray(campaigns).map((campaign) => ({ id: campaign?.id, name: campaign?.name }));
+  const groups = safeArray(campaigns).map((campaign) => ({
+    id: campaign?.id,
+    name: campaign?.name,
+  }));
   groups.push({ id: 'none', name: 'Sin campaña' });
   return groups.map((group) => {
     const groupEntities = entities.filter((record) => belongsToCampaign(record, group.id, false));
@@ -99,19 +102,30 @@ export function computeMarketingPerformance({
   const selectedId = campaignId || 'all';
   const isGlobal = selectedId === 'all';
   const dashboard = computeDashboardStats({ entities, documents, config: readConfig() });
-  const sourceEntities = Array.isArray(dashboard?.entities) ? dashboard.entities : safeArray(entities);
-  const sourceDocuments = Array.isArray(dashboard?.documents) ? dashboard.documents : safeArray(documents);
-  const scopedEntities = sourceEntities.filter((record) => belongsToCampaign(record, selectedId, isGlobal));
-  const scopedDocuments = sourceDocuments.filter((record) => belongsToCampaign(record, selectedId, isGlobal));
-  const totalProspects = isGlobal && Number.isFinite(dashboard?.entityCount)
-    ? dashboard.entityCount
-    : scopedEntities.length;
-  const interactions = isGlobal && Number.isFinite(dashboard?.documentCount)
-    ? dashboard.documentCount
-    : scopedDocuments.length;
-  const wonSales = isGlobal && Number.isFinite(dashboard?.wonDocuments)
-    ? dashboard.wonDocuments
-    : countWonDocuments(scopedDocuments);
+  const sourceEntities = Array.isArray(dashboard?.entities)
+    ? dashboard.entities
+    : safeArray(entities);
+  const sourceDocuments = Array.isArray(dashboard?.documents)
+    ? dashboard.documents
+    : safeArray(documents);
+  const scopedEntities = sourceEntities.filter((record) =>
+    belongsToCampaign(record, selectedId, isGlobal)
+  );
+  const scopedDocuments = sourceDocuments.filter((record) =>
+    belongsToCampaign(record, selectedId, isGlobal)
+  );
+  const totalProspects =
+    isGlobal && Number.isFinite(dashboard?.entityCount)
+      ? dashboard.entityCount
+      : scopedEntities.length;
+  const interactions =
+    isGlobal && Number.isFinite(dashboard?.documentCount)
+      ? dashboard.documentCount
+      : scopedDocuments.length;
+  const wonSales =
+    isGlobal && Number.isFinite(dashboard?.wonDocuments)
+      ? dashboard.wonDocuments
+      : countWonDocuments(scopedDocuments);
   const wonEntities = wonEntitiesFor(scopedEntities);
 
   return {

@@ -47,7 +47,9 @@ describe('Presentación del formulario de clientes (T064)', () => {
   });
 
   it('muestra «Nuevo Cliente» en el formulario y en la acción rápida', () => {
-    expect(document.querySelector('[data-action="quick-new-entity"]').textContent).toContain('Nuevo Cliente');
+    expect(document.querySelector('[data-action="quick-new-entity"]').textContent).toContain(
+      'Nuevo Cliente'
+    );
     openForm();
     expect(document.querySelector('h2').textContent).toContain('Nuevo Cliente');
     expect(document.querySelector('h2').textContent).not.toContain('Nueva cliente');
@@ -57,7 +59,11 @@ describe('Presentación del formulario de clientes (T064)', () => {
     openForm();
     chooseChannel('llamada');
 
-    const ids = [...document.querySelectorAll('#entity-form .form-field input, #entity-form .form-field select')]
+    const ids = [
+      ...document.querySelectorAll(
+        '#entity-form .form-field input, #entity-form .form-field select'
+      ),
+    ]
       .map((element) => element.id)
       .filter(Boolean);
 
@@ -78,8 +84,12 @@ describe('Presentación del formulario de clientes (T064)', () => {
 
     expect(qs('field-rut').getAttribute('placeholder')).toBe('Ej: 11.111.111-1');
     expect(qs('field-contacto_telefono').getAttribute('placeholder')).toBe('Ej: +56 9 1234 5678');
-    expect([...qs('field-canal_contacto').options].slice(1).map((option) => option.textContent)).toEqual(CHANNEL_LABELS);
-    expect([...qs('field-rubro').options].slice(1).map((option) => option.textContent)).toEqual(ACTIVITY_OPTIONS);
+    expect(
+      [...qs('field-canal_contacto').options].slice(1).map((option) => option.textContent)
+    ).toEqual(CHANNEL_LABELS);
+    expect([...qs('field-rubro').options].slice(1).map((option) => option.textContent)).toEqual(
+      ACTIVITY_OPTIONS
+    );
   });
 
   it('no persiste las pistas como valores capturados', () => {

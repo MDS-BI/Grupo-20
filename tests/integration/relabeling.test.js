@@ -77,8 +77,12 @@ describe('Reetiquetar pantallas desde la configuración (H7)', () => {
     };
     expect(renderEntityFormHtml(CLIENT_CONFIG, entity)).toContain('Fecha de nacimiento');
     expect(renderEntityFormHtml(CLIENT_CONFIG, entity)).not.toContain('Fecha objetivo');
-    expect(renderEntityListHtml([entity], CLIENT_CONFIG)).toContain('Fecha de nacimiento: 1985-07-14');
-    expect(renderEntityDetailHtml(CLIENT_CONFIG, entity, [])).toContain('Fecha de nacimiento: 1985-07-14');
+    expect(renderEntityListHtml([entity], CLIENT_CONFIG)).toContain(
+      'Fecha de nacimiento: 1985-07-14'
+    );
+    expect(renderEntityDetailHtml(CLIENT_CONFIG, entity, [])).toContain(
+      'Fecha de nacimiento: 1985-07-14'
+    );
     expect(renderSearchBarHtml(CLIENT_CONFIG)).toContain('Fecha de nacimiento');
   });
 

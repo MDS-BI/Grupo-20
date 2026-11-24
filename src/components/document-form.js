@@ -1,10 +1,16 @@
-import { buildFormBaseline, collectFormData, isFormDirty, renderFieldsHtml } from './form-fields.js';
+import {
+  buildFormBaseline,
+  collectFormData,
+  isFormDirty,
+  renderFieldsHtml,
+} from './form-fields.js';
 import { getLabel } from '../module-config.js';
 
 function statusOptions(config, document) {
   const lifecycle = config?.statusLifecycle;
   if (!lifecycle) return null;
-  const transitions = lifecycle.transitions && typeof lifecycle.transitions === 'object' ? lifecycle.transitions : {};
+  const transitions =
+    lifecycle.transitions && typeof lifecycle.transitions === 'object' ? lifecycle.transitions : {};
   const options = new Set();
   for (const [from, targets] of Object.entries(transitions)) {
     if (from) options.add(from);

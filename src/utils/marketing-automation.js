@@ -58,7 +58,9 @@ export function runAutomationRules(event, entity, config, documents = [], contex
   const marketing = config?.marketing;
   const rules = marketing?.automationRules;
   if (!marketing || !entity?.entity_id) return [];
-  const existingKeys = new Set(documents.map((document) => document.automation_key).filter(Boolean));
+  const existingKeys = new Set(
+    documents.map((document) => document.automation_key).filter(Boolean)
+  );
   const pending = [];
   if (Array.isArray(rules)) {
     for (const rule of rules) {

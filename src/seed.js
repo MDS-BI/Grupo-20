@@ -19,22 +19,52 @@ export const SEED_COUNT = 57;
 export const SEED_CATEGORIES = ['Activo', 'Prospecto', 'Corporativo', 'PyME', 'VIP'];
 
 const NAMES = [
-  'Andes', 'Mapocho', 'Biobío', 'Cordillera', 'Arauco', 'Maipo',
-  'Loa', 'Futaleufú', 'Toltén', 'Elqui', 'Aconcagua', 'Cautín',
+  'Andes',
+  'Mapocho',
+  'Biobío',
+  'Cordillera',
+  'Arauco',
+  'Maipo',
+  'Loa',
+  'Futaleufú',
+  'Toltén',
+  'Elqui',
+  'Aconcagua',
+  'Cautín',
 ];
 const SUFFIXES = ['Servicios', 'Comercial', 'Industrial', 'Tecnología', 'Logística', 'Consultores'];
 const LEGAL_FORMS = ['SpA', 'S.A.', 'Ltda.'];
 const RUBROS = [
-  'Dependiente', 'Independiente Formal', 'Independiente Informal', 'Jubilado',
-  'Dueño/a de casa', 'Estudiante', 'FFAA', 'Rentista', 'Jubilado - FFAA', 'Cesante',
+  'Dependiente',
+  'Independiente Formal',
+  'Independiente Informal',
+  'Jubilado',
+  'Dueño/a de casa',
+  'Estudiante',
+  'FFAA',
+  'Rentista',
+  'Jubilado - FFAA',
+  'Cesante',
 ];
-const EJECUTIVOS = ['María González', 'Carlos Rojas', 'Paula Muñoz', 'Javier Silva', 'Fernanda López'];
+const EJECUTIVOS = [
+  'María González',
+  'Carlos Rojas',
+  'Paula Muñoz',
+  'Javier Silva',
+  'Fernanda López',
+];
 
 const CONTACT_VALUES = {
-  llamada: (index) => ({ key: 'contacto_telefono', value: `+56 9 ${String(10000000 + index * 7919).slice(-8)}` }),
+  llamada: (index) => ({
+    key: 'contacto_telefono',
+    value: `+56 9 ${String(10000000 + index * 7919).slice(-8)}`,
+  }),
   correo: (index) => ({ key: 'contacto_correo', value: `cliente${index + 1}@ejemplo.cl` }),
   reunion: (index) => ({ key: 'contacto_lugar', value: `Sala de reuniones ${index + 1}` }),
-  whatsapp: (index) => ({ key: 'contacto_whatsapp', value: `+56 9 ${String(20000000 + index * 7919).slice(-8)}` }),
+  whatsapp: (index) => ({
+    key: 'contacto_whatsapp',
+    value: `+56 9 ${String(20000000 + index * 7919).slice(-8)}`,
+  }),
 };
 
 function resolveConfig() {
@@ -43,7 +73,10 @@ function resolveConfig() {
 }
 
 function normalizeCode(code) {
-  return String(code || '').trim().toLowerCase().replace(/\s+/g, '');
+  return String(code || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
 }
 
 function isoDate(offsetDays) {
@@ -77,7 +110,8 @@ function customValues(defs, index, ctx) {
     } else if (key === 'rut') values[key] = ctx.rut;
     else if (key === 'rubro') values[key] = ctx.rubro;
     else if (key === 'ejecutivo_asignado') values[key] = ctx.ejecutivo;
-    else if (key === 'canal_contacto') values[key] = def.options?.[index % def.options.length] || 'llamada';
+    else if (key === 'canal_contacto')
+      values[key] = def.options?.[index % def.options.length] || 'llamada';
     else if (def.type === 'select') values[key] = def.options?.[index % def.options.length] || '';
     else if (def.type === 'number') values[key] = (index * 3) % 20;
     else if (def.type === 'date') values[key] = isoDate(-(5 + (index % 30)));
@@ -100,11 +134,14 @@ function buildInteractions(index, client, config) {
 
   for (let step = 0; step < count; step += 1) {
     const isLast = step === count - 1;
-    const desired = isLast ? 'cerrado ganado' : ['contactado', 'en negociacion', 'pendiente'][step % 3];
+    const desired = isLast
+      ? 'cerrado ganado'
+      : ['contactado', 'en negociacion', 'pendiente'][step % 3];
     const status = stateOrFallback(desired, states);
     const daysAgo = (count - step) * 45 + (index % 7);
     const startDate = isoDate(-daysAgo);
-    const endDate = isLast && client.targetDate > startDate ? client.targetDate : isoDate(-daysAgo + 2);
+    const endDate =
+      isLast && client.targetDate > startDate ? client.targetDate : isoDate(-daysAgo + 2);
     const marker = `${SEED_MARKER}|${client.code}|${String(step + 1).padStart(2, '0')}`;
     interactions.push({
       marker,
@@ -123,7 +160,10 @@ export function buildSeedClients(count = SEED_COUNT, config = resolveConfig()) {
   for (let index = 0; index < count; index += 1) {
     const category = SEED_CATEGORIES[index % SEED_CATEGORIES.length];
     const rubro = RUBROS[index % RUBROS.length];
-    const canal = config.customFields.entity.find((def) => def.key === 'canal_contacto')?.options?.[index % 4] || 'llamada';
+    const canal =
+      config.customFields.entity.find((def) => def.key === 'canal_contacto')?.options?.[
+        index % 4
+      ] || 'llamada';
     const contact = CONTACT_VALUES[canal](index);
     const rut = formatRut(buildRutBody(index));
     const client = {
@@ -151,7 +191,9 @@ export function buildSeedClients(count = SEED_COUNT, config = resolveConfig()) {
 }
 
 function docMarker(notes) {
-  const first = String(notes || '').trim().split(/\s+/)[0];
+  const first = String(notes || '')
+    .trim()
+    .split(/\s+/)[0];
   return first && first.includes(SEED_MARKER) ? first : null;
 }
 
@@ -164,7 +206,11 @@ function isSeededEntity(entity) {
 
 export function seedClients({ count = SEED_COUNT, config = resolveConfig() } = {}) {
   const existingCodes = new Set(loadEntities().map((entity) => normalizeCode(entity.code)));
-  const existingMarkers = new Set(loadDocuments().map((doc) => docMarker(doc.notes)).filter(Boolean));
+  const existingMarkers = new Set(
+    loadDocuments()
+      .map((doc) => docMarker(doc.notes))
+      .filter(Boolean)
+  );
   const stats = {
     clientsCreated: 0,
     clientsSkipped: 0,
@@ -198,7 +244,7 @@ export function seedClients({ count = SEED_COUNT, config = resolveConfig() } = {
       try {
         addDocument(
           { ...interaction, entity_id: created.entity_id },
-          { customFieldDefs: config.customFields.document, statusLifecycle: config.statusLifecycle },
+          { customFieldDefs: config.customFields.document, statusLifecycle: config.statusLifecycle }
         );
         existingMarkers.add(interaction.marker);
         stats.interactionsCreated += 1;
@@ -221,7 +267,7 @@ export function clearSeedData() {
   const seededIds = new Set(seeded.map((entity) => entity.entity_id));
   const documents = loadDocuments();
   const seededDocs = documents.filter(
-    (doc) => seededIds.has(doc.entity_id) || Boolean(docMarker(doc.notes)),
+    (doc) => seededIds.has(doc.entity_id) || Boolean(docMarker(doc.notes))
   );
 
   saveEntities(entities.filter((entity) => !seededIds.has(entity.entity_id)));

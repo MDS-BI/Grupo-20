@@ -28,7 +28,9 @@ function createEntity(name, code) {
   app.navigate('manage-entity');
   document.getElementById('field-name').value = name;
   document.getElementById('field-code').value = code;
-  document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('entity-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 function addDocumentWithStatus(status) {
@@ -39,7 +41,9 @@ function addDocumentWithStatus(status) {
   const statusSelect = document.getElementById('field-status');
   statusSelect.value = status || 'pendiente';
   statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  document
+    .getElementById('document-form')
+    .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
 
 describe('Resumen de Gestión Comercial (H6)', () => {
@@ -49,7 +53,9 @@ describe('Resumen de Gestión Comercial (H6)', () => {
 
   it('muestra un estado vacío con indicadores en cero y las etiquetas Clientes e Historial/Ficha', () => {
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
-    const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
+    const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map(
+      (el) => el.textContent
+    );
     expect(values).toEqual(['0', '0', '0']);
     expect(document.querySelector('.empty-state')).toBeTruthy();
     expect(document.querySelector('.commercial-summary h2').textContent).toBe('Clientes');
@@ -61,11 +67,15 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     addDocumentWithStatus();
 
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
-    let values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
+    let values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map(
+      (el) => el.textContent
+    );
     expect(values).toEqual(['1', '1', '1']);
     expect(document.querySelector('.pending-list').textContent).toContain('Cliente Uno');
     expect(document.querySelector('.commercial-summary').textContent).toContain('Historial/Ficha');
-    expect(document.querySelector('.pending-list [data-action="view-entity"]').textContent).toBe('Ver ficha');
+    expect(document.querySelector('.pending-list [data-action="view-entity"]').textContent).toBe(
+      'Ver ficha'
+    );
 
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
@@ -73,10 +83,14 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     select.dispatchEvent(new Event('change', { bubbles: true }));
     document.querySelector('[data-action="edit-document"]').click();
     document.getElementById('field-status').value = 'completado';
-    document.getElementById('document-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('document-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="summary"]').click();
-    values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
+    values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map(
+      (el) => el.textContent
+    );
     expect(values).toEqual(['1', '1', '0']);
   });
 
@@ -96,7 +110,9 @@ describe('Resumen de Gestión Comercial (H6)', () => {
     addDocument({ entity_id: entity.entity_id, status: 'en_revision' });
 
     app.navigate('summary');
-    const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map((el) => el.textContent);
+    const values = Array.from(document.querySelectorAll('.summary-cards .stat-value')).map(
+      (el) => el.textContent
+    );
     expect(values).toEqual(['1', '2', '1']);
     expect(document.querySelector('.pending-list').textContent).toContain('Cliente Uno');
     app.destroy();

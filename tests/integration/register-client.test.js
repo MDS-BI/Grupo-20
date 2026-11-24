@@ -94,9 +94,15 @@ describe('Alta de clientes con perfil CRM (T040)', () => {
     qs('field-name').value = 'Acme';
     submit();
 
-    expect(document.getElementById('error-targetDate').textContent).toContain('Fecha de nacimiento');
-    expect(document.getElementById('error-rut').textContent).toContain('RUT');
-    expect(document.getElementById('error-canal_contacto').textContent).toContain('Canal');
+    expect(document.getElementById('error-targetDate').textContent).toContain(
+      'Fecha de nacimiento'
+    );
+    expect(document.getElementById('error-rut').textContent).toContain(
+      'Completa los campos obligatorios.'
+    );
+    expect(document.getElementById('error-canal_contacto').textContent).toContain(
+      'Completa los campos obligatorios.'
+    );
     expect(loadEntities()).toHaveLength(0);
   });
 
@@ -122,7 +128,7 @@ describe('Alta de clientes con perfil CRM (T040)', () => {
     fillRequired({ name: 'Otra', rut: '11111111-1' });
     submit();
 
-    expect(document.getElementById('error-rut').textContent).toMatch(/existe/i);
+    expect(document.getElementById('error-rut').textContent).toBe('El RUT ya está registrado.');
     expect(loadEntities()).toHaveLength(1);
   });
 });

@@ -2,7 +2,10 @@ import { escapeHtml } from '../utils/sanitize.js';
 
 function teamOptions(teams, selectedId) {
   return teams
-    .map((team) => `<option value="${escapeHtml(team.id)}" ${team.id === selectedId ? 'selected' : ''}>${escapeHtml(team.name)}</option>`)
+    .map(
+      (team) =>
+        `<option value="${escapeHtml(team.id)}" ${team.id === selectedId ? 'selected' : ''}>${escapeHtml(team.name)}</option>`
+    )
     .join('');
 }
 
@@ -48,8 +51,14 @@ export function renderMarketingTeamHtml({
         teams.length
           ? `<ul class="team-list">${teams
               .map((team) => {
-                const teamMetrics = metricsByTeam.get(team.id) || { realMonthly: 0, monthlyGoal: 0, members: [] };
-                const memberMetrics = new Map(teamMetrics.members.map((member) => [member.id, member]));
+                const teamMetrics = metricsByTeam.get(team.id) || {
+                  realMonthly: 0,
+                  monthlyGoal: 0,
+                  members: [],
+                };
+                const memberMetrics = new Map(
+                  teamMetrics.members.map((member) => [member.id, member])
+                );
                 return `
               <li class="team-item">
                 <div class="list-item-main">

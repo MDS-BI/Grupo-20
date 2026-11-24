@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
-import { addDocument, addEntity, loadDocuments, loadEntities, saveMarketingConfig } from '../../src/storage.js';
+import {
+  addDocument,
+  addEntity,
+  loadDocuments,
+  loadEntities,
+  saveMarketingConfig,
+} from '../../src/storage.js';
 import { formatRut } from '../../src/seed.js';
 import { computeMarketingPerformance } from '../../src/utils/marketing-performance.js';
 
@@ -11,8 +17,22 @@ const TEST_CONFIG = {
 };
 
 const CAMPAIGNS = [
-  { id: 'camp-a', name: 'Campaña A', stage: 'prospecto', startDate: '2026-11-01', endDate: '2026-11-30', status: 'detenida' },
-  { id: 'camp-b', name: 'Campaña B', stage: 'en_proceso', startDate: '2026-11-01', endDate: '2026-11-30', status: 'detenida' },
+  {
+    id: 'camp-a',
+    name: 'Campaña A',
+    stage: 'prospecto',
+    startDate: '2026-11-01',
+    endDate: '2026-11-30',
+    status: 'detenida',
+  },
+  {
+    id: 'camp-b',
+    name: 'Campaña B',
+    stage: 'en_proceso',
+    startDate: '2026-11-01',
+    endDate: '2026-11-30',
+    status: 'detenida',
+  },
   {
     id: 'camp-empty',
     name: 'Campaña sin registros',
@@ -80,12 +100,15 @@ function seedEntity(name, stage, attribution = {}) {
       estado_comercial: stage,
       ...attribution,
     },
-    { customFieldDefs: ENTITY_FIELDS },
+    { customFieldDefs: ENTITY_FIELDS }
   );
 }
 
 function seedDocument(entity, data) {
-  return addDocument({ entity_id: entity.entity_id, ...data }, { customFieldDefs: DOCUMENT_FIELDS });
+  return addDocument(
+    { entity_id: entity.entity_id, ...data },
+    { customFieldDefs: DOCUMENT_FIELDS }
+  );
 }
 
 function seedData() {
@@ -97,7 +120,12 @@ function seedData() {
 
   const documents = [
     seedDocument(a1, { status: 'contactado', campaña: 'camp-a' }),
-    seedDocument(a1, { status: 'pendiente', canal: 'chat', respuesta: 'Hola', campaignId: 'camp-a' }),
+    seedDocument(a1, {
+      status: 'pendiente',
+      canal: 'chat',
+      respuesta: 'Hola',
+      campaignId: 'camp-a',
+    }),
     seedDocument(a2, { status: 'cerrado ganado', importe: 100, campaña: 'camp-a' }),
     seedDocument(b1, { status: 'cerrado ganado', importe: 50, campaignId: 'camp-b' }),
     seedDocument(noCampaign, { status: 'pendiente', canal: 'chat', respuesta: 'Gracias' }),
@@ -107,10 +135,14 @@ function seedData() {
 
 function openPerformance() {
   app.navigate('marketing');
-  const tab = document.querySelector('[data-action="marketing-section"][data-section="performance"]');
+  const tab = document.querySelector(
+    '[data-action="marketing-section"][data-section="performance"]'
+  );
   expect(tab).toBeTruthy();
   tab.click();
-  const active = document.querySelector('[data-action="marketing-section"][data-section="performance"]');
+  const active = document.querySelector(
+    '[data-action="marketing-section"][data-section="performance"]'
+  );
   expect(active.getAttribute('aria-selected')).toBe('true');
   const root = document.querySelector('.marketing-performance');
   expect(root).toBeTruthy();
@@ -134,7 +166,9 @@ function cardValues(root) {
 }
 
 function stageLines(root) {
-  return [...root.querySelectorAll('.stage-conversions li')].map((item) => item.textContent.replace(/\s+/g, ' ').trim());
+  return [...root.querySelectorAll('.stage-conversions li')].map((item) =>
+    item.textContent.replace(/\s+/g, ' ').trim()
+  );
 }
 
 function derivedValues(campaignId) {
@@ -170,8 +204,15 @@ describe('Rendimiento de campañas en Marketing (T118)', () => {
 
     const root = openPerformance();
 
-    expect(document.querySelector('.marketing-performance h2').textContent).toBe('Rendimiento de campañas');
-    expect([...root.querySelectorAll('#performance-campaign option')].map((option) => [option.value, option.textContent])).toEqual([
+    expect(document.querySelector('.marketing-performance h2').textContent).toBe(
+      'Rendimiento de campañas'
+    );
+    expect(
+      [...root.querySelectorAll('#performance-campaign option')].map((option) => [
+        option.value,
+        option.textContent,
+      ])
+    ).toEqual([
       ['all', 'Todas las campañas'],
       ['none', 'Sin campaña'],
       ['camp-a', 'Campaña A'],
@@ -215,7 +256,9 @@ describe('Rendimiento de campañas en Marketing (T118)', () => {
 
     const root = selectCampaign('camp-empty');
 
-    expect(root.querySelector('.empty-state').textContent).toContain('No hay registros vinculados a esta selección');
+    expect(root.querySelector('.empty-state').textContent).toContain(
+      'Sin registros para esta campaña.'
+    );
     expect(cardValues(root)).toEqual(['0', '0.0%', '0', '0', '0']);
     expect(cardValues(root)).toEqual(derivedValues('camp-empty'));
     expect(stageLines(root).every((line) => line.endsWith(': 0'))).toBe(true);

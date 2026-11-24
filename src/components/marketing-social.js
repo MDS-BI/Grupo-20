@@ -2,20 +2,34 @@ import { escapeHtml, safeUrl } from '../utils/sanitize.js';
 
 function entityOptions(entities, selectedId) {
   return entities
-    .map((entity) => `<option value="${escapeHtml(entity.entity_id)}" ${entity.entity_id === selectedId ? 'selected' : ''}>${escapeHtml(entity.name)}</option>`)
+    .map(
+      (entity) =>
+        `<option value="${escapeHtml(entity.entity_id)}" ${entity.entity_id === selectedId ? 'selected' : ''}>${escapeHtml(entity.name)}</option>`
+    )
     .join('');
 }
 
 function campaignOptions(campaigns, selected) {
   return campaigns
-    .map((campaign) => `<option value="${escapeHtml(campaign.name)}" ${campaign.name === selected ? 'selected' : ''}>${escapeHtml(campaign.name)}</option>`)
+    .map(
+      (campaign) =>
+        `<option value="${escapeHtml(campaign.name)}" ${campaign.name === selected ? 'selected' : ''}>${escapeHtml(campaign.name)}</option>`
+    )
     .join('');
 }
 
-export function renderMarketingSocialHtml({ interactions = [], entities = [], campaigns = [], values = {}, editingId = null } = {}) {
+export function renderMarketingSocialHtml({
+  interactions = [],
+  entities = [],
+  campaigns = [],
+  values = {},
+  editingId = null,
+} = {}) {
   const platforms = ['Twitter', 'Instagram', 'YouTube', 'Otra'];
   const interactionTypes = ['Comentario', 'Mensaje', 'Me gusta', 'Compartido', 'Otra'];
-  const sorted = [...interactions].sort((a, b) => String(a.startDate || '').localeCompare(String(b.startDate || '')));
+  const sorted = [...interactions].sort((a, b) =>
+    String(a.startDate || '').localeCompare(String(b.startDate || ''))
+  );
   return `
     <section class="marketing-social marketing-panel">
       <h2>Redes sociales</h2>
@@ -53,7 +67,7 @@ export function renderMarketingSocialHtml({ interactions = [], entities = [], ca
                   <button type="button" data-action="edit-social" data-id="${escapeHtml(doc.id)}">Editar</button>
                   <button type="button" data-action="delete-social" data-id="${escapeHtml(doc.id)}">Eliminar</button>
                 </div>
-              </li>`,
+              </li>`
               )
               .join('')}</ul>`
           : '<p class="empty-state">Aún no hay interacciones en redes sociales.</p>'

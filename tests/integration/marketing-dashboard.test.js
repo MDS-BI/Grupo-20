@@ -33,16 +33,34 @@ function seedEntities() {
       rut: formatRut(`1111111${suffix}`),
       canal_contacto: 'correo',
       contacto_correo: `p${suffix}@ejemplo.cl`,
-    }),
+    })
   );
 }
 
 function seedDocuments(entities) {
   return [
-    addDocument({ entity_id: entities[0].entity_id, status: 'prospecto', importe: 100, notes: 'Primer contacto' }),
-    addDocument({ entity_id: entities[1].entity_id, status: 'en negociacion', importe: 250, notes: 'Propuesta enviada' }),
-    addDocument({ entity_id: entities[2].entity_id, status: 'cerrado ganado', notes: 'Venta cerrada' }),
-    addDocument({ entity_id: entities[3].entity_id, status: 'pendiente', notes: 'Seguimiento pendiente' }),
+    addDocument({
+      entity_id: entities[0].entity_id,
+      status: 'prospecto',
+      importe: 100,
+      notes: 'Primer contacto',
+    }),
+    addDocument({
+      entity_id: entities[1].entity_id,
+      status: 'en negociacion',
+      importe: 250,
+      notes: 'Propuesta enviada',
+    }),
+    addDocument({
+      entity_id: entities[2].entity_id,
+      status: 'cerrado ganado',
+      notes: 'Venta cerrada',
+    }),
+    addDocument({
+      entity_id: entities[3].entity_id,
+      status: 'pendiente',
+      notes: 'Seguimiento pendiente',
+    }),
   ];
 }
 
@@ -52,7 +70,7 @@ function snapshot(selector) {
     values: [...root.querySelectorAll('.summary-cards .stat-value')].map((el) => el.textContent),
     labels: [...root.querySelectorAll('.summary-cards .stat-label')].map((el) => el.textContent),
     funnel: [...root.querySelectorAll('.commercial-funnel .funnel-row')].map((row) =>
-      row.textContent.replace(/\s+/g, ' ').trim(),
+      row.textContent.replace(/\s+/g, ' ').trim()
     ),
     recent: root.querySelector('.recent-interactions').textContent.replace(/\s+/g, ' ').trim(),
   };

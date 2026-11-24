@@ -1,4 +1,9 @@
-import { buildFormBaseline, collectFormData, isFormDirty, renderFieldsHtml } from './form-fields.js';
+import {
+  buildFormBaseline,
+  collectFormData,
+  isFormDirty,
+  renderFieldsHtml,
+} from './form-fields.js';
 import { getLabel } from '../module-config.js';
 import { resolveEntityDateRule } from '../utils/entity-date.js';
 import { isFieldVisible, resolveFieldRules } from '../utils/field-rules.js';
@@ -7,7 +12,10 @@ export function getEntityFieldDefs(config, values = {}) {
   const dateRule = resolveEntityDateRule(config);
   const rules = resolveFieldRules(config, 'entity');
   const dateLabel = dateRule?.label || 'Fecha objetivo';
-  const rangeParts = [dateRule?.min && `desde ${dateRule.min}`, dateRule?.max && `hasta ${dateRule.max}`].filter(Boolean);
+  const rangeParts = [
+    dateRule?.min && `desde ${dateRule.min}`,
+    dateRule?.max && `hasta ${dateRule.max}`,
+  ].filter(Boolean);
   const applyRule = (def) => {
     const rule = rules[def.key] || {};
     return {

@@ -18,7 +18,9 @@ describe('Crear entidad y rechazar código duplicado (H1)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme Corp';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     const results = document.querySelectorAll('#search-results .list-item');
@@ -30,12 +32,16 @@ describe('Crear entidad y rechazar código duplicado (H1)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme Corp';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Otra Empresa';
     document.getElementById('field-code').value = ' ac-1 ';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     expect(document.querySelector('.field-error').textContent).toMatch(/código/i);
   });

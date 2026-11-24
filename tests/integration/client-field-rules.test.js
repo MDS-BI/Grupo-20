@@ -15,9 +15,18 @@ const customKeys = config.customFields.entity.map((def) => def.key);
 
 describe('Declaración de campos del perfil de clientes (T035)', () => {
   it('exige fecha de nacimiento, RUT y canal de contacto', () => {
-    expect(config.entityDate).toMatchObject({ label: 'Fecha de nacimiento', min: '1910-01-01', max: 'localToday' });
+    expect(config.entityDate).toMatchObject({
+      label: 'Fecha de nacimiento',
+      min: '1910-01-01',
+      max: 'localToday',
+    });
     expect(config.entityDate.required).toBe(true);
-    expect(rules.rut).toMatchObject({ required: true, format: 'cl-rut', unique: true, normalize: 'cl-rut' });
+    expect(rules.rut).toMatchObject({
+      required: true,
+      format: 'cl-rut',
+      unique: true,
+      normalize: 'cl-rut',
+    });
     expect(rules.canal_contacto).toMatchObject({ required: true });
     const errors = getReadinessErrors({ name: 'Sin datos' }, config);
     expect(errors.targetDate).toBeTruthy();
@@ -27,7 +36,12 @@ describe('Declaración de campos del perfil de clientes (T035)', () => {
 
   it('retira pedidos y oculta los campos generados y heredados', () => {
     expect(customKeys).not.toContain('pedidos');
-    expect(rules.code).toMatchObject({ generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false });
+    expect(rules.code).toMatchObject({
+      generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 },
+      unique: true,
+      hidden: true,
+      searchable: false,
+    });
     expect(rules.category).toMatchObject({ hidden: true, searchable: false });
     expect(rules.description).toMatchObject({ hidden: true, searchable: false });
     expect(isFieldVisible(rules, 'code', {})).toBe(false);
@@ -44,7 +58,11 @@ describe('Declaración de campos del perfil de clientes (T035)', () => {
     for (const [channel, expected] of Object.entries(channels)) {
       const rule = rules[expected.key];
       expect(customKeys).toContain(expected.key);
-      expect(rule).toMatchObject({ required: true, format: expected.format, group: 'contactDetail' });
+      expect(rule).toMatchObject({
+        required: true,
+        format: expected.format,
+        group: 'contactDetail',
+      });
       expect(isConditionActive(rule, { canal_contacto: channel })).toBe(true);
       expect(isConditionActive(rule, { canal_contacto: 'otro' })).toBe(false);
     }
@@ -98,7 +116,7 @@ describe('Declaración de campos del perfil de clientes (T035)', () => {
       expect(client.pedidos).toBeUndefined();
       expect(client.targetDate <= new Date().toISOString().slice(0, 10)).toBe(true);
       const contactKey = Object.keys(rules).find(
-        (key) => rules[key].group === 'contactDetail' && isConditionActive(rules[key], client),
+        (key) => rules[key].group === 'contactDetail' && isConditionActive(rules[key], client)
       );
       expect(contactKey).toBeTruthy();
       expect(client[contactKey]).toBeTruthy();

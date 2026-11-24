@@ -19,7 +19,12 @@ function seed() {
     canal_contacto: 'correo',
     contacto_correo: 'navegacion@ejemplo.cl',
   });
-  addDocument({ entity_id: entity.entity_id, status: 'pendiente', notes: 'Llamada de prueba', importe: 120 });
+  addDocument({
+    entity_id: entity.entity_id,
+    status: 'pendiente',
+    notes: 'Llamada de prueba',
+    importe: 120,
+  });
   return entity;
 }
 

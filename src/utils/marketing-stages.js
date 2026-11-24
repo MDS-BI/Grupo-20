@@ -15,7 +15,7 @@ export const MARKETING_STAGE_LABELS = Object.freeze({
 });
 
 export const MARKETING_CATEGORIES = Object.freeze([
-  { key: 'ganado', label: 'Clientes ganados', stages: ['ganado'], color: '#0f766e' },
+  { key: 'ganado', label: 'Cliente ganado', stages: ['ganado'], color: '#0f766e' },
   { key: 'en_recontacto', label: 'En recontacto', stages: ['en_recontacto'], color: '#2563eb' },
   { key: 'en_proceso', label: 'En proceso', stages: ['en_proceso'], color: '#7c3aed' },
   { key: 'perdido', label: 'Perdidos', stages: ['perdido'], color: '#c0392b' },
@@ -32,5 +32,8 @@ export function isMarketingStage(value) {
 }
 
 export function categoryForStage(stage) {
-  return MARKETING_CATEGORIES.find((category) => category.stages.includes(stage)) || MARKETING_CATEGORIES[4];
+  return (
+    MARKETING_CATEGORIES.find((category) => category.stages.includes(stage)) ||
+    MARKETING_CATEGORIES[4]
+  );
 }

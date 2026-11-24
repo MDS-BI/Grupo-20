@@ -58,7 +58,7 @@ export function renderDashboardHtml(config, stats, { title, sectionClass = 'dash
               <span class="funnel-state">${escapeHtml(step.label)}</span>
               <span class="funnel-count">${Number(step.count) || 0}</span>
               <div class="funnel-bar" style="width: ${documentCount > 0 ? ((Number(step.count) || 0) / documentCount) * 100 : 0}%"></div>
-            </div>`,
+            </div>`
             )
             .join('')}
         </div>
@@ -80,7 +80,7 @@ export function renderDashboardHtml(config, stats, { title, sectionClass = 'dash
                 <div class="list-item-actions">
                   <button type="button" data-action="view-entity" data-entity-id="${escapeHtml(doc.entity_id)}">Ver ficha</button>
                 </div>
-              </li>`,
+              </li>`
               )
               .join('')}
           </ul>

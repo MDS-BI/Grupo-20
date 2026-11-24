@@ -9,7 +9,10 @@ const SOCIAL_CONFIG = {
   ...MODULE_CONFIG,
   customFields: {
     ...MODULE_CONFIG.customFields,
-    document: [...MODULE_CONFIG.customFields.document, { key: 'nota', type: 'text', label: 'Nota' }],
+    document: [
+      ...MODULE_CONFIG.customFields.document,
+      { key: 'nota', type: 'text', label: 'Nota' },
+    ],
   },
 };
 
@@ -52,7 +55,9 @@ function openSocialSection() {
   const tab = document.querySelector('[data-action="marketing-section"][data-section="social"]');
   tab.click();
   expect(
-    document.querySelector('[data-action="marketing-section"][data-section="social"]').getAttribute('aria-selected'),
+    document
+      .querySelector('[data-action="marketing-section"][data-section="social"]')
+      .getAttribute('aria-selected')
   ).toBe('true');
   expect(document.querySelector('.marketing-social h2').textContent).toBe('Redes sociales');
 }
@@ -74,7 +79,7 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
             endDate: '2026-11-30',
           },
         ],
-      }),
+      })
     );
     sequence += 1;
     entity = addEntity({
@@ -96,14 +101,24 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
 
   it('abre la sección vacía y registra una interacción vinculada a la entidad con canal redes', () => {
     expect(document.querySelector('.marketing-social .empty-state').textContent).toBe(
-      'Aún no hay interacciones en redes sociales.',
+      'Aún no hay interacciones en redes sociales.'
     );
     expect(storedDocuments()).toEqual([]);
     expect(
-      [...document.querySelectorAll('#social-form [name]')].map((field) => field.name),
-    ).toEqual(['entity_id', 'plataforma', 'startDate', 'tipo_interaccion', 'nota', 'enlace', 'campaña']);
+      [...document.querySelectorAll('#social-form [name]')].map((field) => field.name)
+    ).toEqual([
+      'entity_id',
+      'plataforma',
+      'startDate',
+      'tipo_interaccion',
+      'nota',
+      'enlace',
+      'campaña',
+    ]);
     expect(
-      [...document.querySelectorAll('#social-form [name="campaña"] option')].map((option) => option.value),
+      [...document.querySelectorAll('#social-form [name="campaña"] option')].map(
+        (option) => option.value
+      )
     ).toContain(CAMPAIGN_NAME);
 
     fillSocialForm();
@@ -190,7 +205,9 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
       'Instagram · Comentario',
       'Twitter · Compartido',
     ]);
-    expect(document.querySelector('#social-form button[type="submit"]').textContent).toBe('Registrar interacción');
+    expect(document.querySelector('#social-form button[type="submit"]').textContent).toBe(
+      'Registrar interacción'
+    );
 
     document.querySelector(`[data-action="delete-social"][data-id="${edited.id}"]`).click();
     expect(storedDocuments().some((doc) => doc.id === edited.id)).toBe(false);
@@ -202,7 +219,7 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
     expect(storedDocuments()).toEqual([]);
     expect(localStorage.getItem('erp_documents')).toBe('[]');
     expect(document.querySelector('.marketing-social .empty-state').textContent).toBe(
-      'Aún no hay interacciones en redes sociales.',
+      'Aún no hay interacciones en redes sociales.'
     );
   });
 
@@ -221,7 +238,9 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
     });
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
-    document.querySelector(`[data-action="view-entity"][data-entity-id="${entity.entity_id}"]`).click();
+    document
+      .querySelector(`[data-action="view-entity"][data-entity-id="${entity.entity_id}"]`)
+      .click();
 
     expect(document.querySelector('#entity-detail').dataset.entityId).toBe(entity.entity_id);
     const history = document.querySelector('#entity-history');

@@ -6,6 +6,16 @@ import {
   stopCampaign,
   updateCampaign,
 } from '../../src/utils/marketing-campaigns.js';
+import { deactivateUser, listUsers, updateUser } from '../../src/auth.js';
+import { seedAuth, signIn } from '../helpers/auth-session.js';
+import { DEFAULT_CONFIG, MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
+import {
+  addDocument,
+  loadDocuments,
+  loadMarketingConfig,
+  saveEntities,
+  saveMarketingConfig,
+} from '../../src/storage.js';
 
 const now = new Date(2026, 10, 23, 12, 0, 0);
 const baseValues = {
@@ -38,7 +48,7 @@ describe('Campañas internas de Marketing (T110)', () => {
     const previous = [{ id: 'camp-anterior', name: 'Anterior' }];
     const campaigns = createCampaign(
       { name: 'Nueva campaña', startDate: '2026-11-01', endDate: '2026-11-30' },
-      previous,
+      previous
     );
 
     expect(campaigns).not.toBe(previous);
@@ -58,11 +68,21 @@ describe('Campañas internas de Marketing (T110)', () => {
   });
 
   it('valida nombre, etapa, fechas ISO y orden de fechas con errores adjuntos', () => {
-    expect(thrownError(() => createCampaign({ ...baseValues, name: '   ' })).errors.name).toBeTruthy();
-    expect(thrownError(() => createCampaign({ ...baseValues, stage: 'cerrado' })).errors.stage).toBeTruthy();
-    expect(thrownError(() => createCampaign({ ...baseValues, startDate: '23/11/2026' })).errors.startDate).toBeTruthy();
-    expect(thrownError(() => createCampaign({ ...baseValues, endDate: '2026-13-01' })).errors.endDate).toBeTruthy();
-    const error = thrownError(() => createCampaign({ ...baseValues, startDate: '2026-11-30', endDate: '2026-11-01' }));
+    expect(
+      thrownError(() => createCampaign({ ...baseValues, name: '   ' })).errors.name
+    ).toBeTruthy();
+    expect(
+      thrownError(() => createCampaign({ ...baseValues, stage: 'cerrado' })).errors.stage
+    ).toBeTruthy();
+    expect(
+      thrownError(() => createCampaign({ ...baseValues, startDate: '23/11/2026' })).errors.startDate
+    ).toBeTruthy();
+    expect(
+      thrownError(() => createCampaign({ ...baseValues, endDate: '2026-13-01' })).errors.endDate
+    ).toBeTruthy();
+    const error = thrownError(() =>
+      createCampaign({ ...baseValues, startDate: '2026-11-30', endDate: '2026-11-01' })
+    );
     expect(error.errors.endDate).toBeTruthy();
     expect(error.errors.length).toBeGreaterThan(0);
   });
@@ -71,16 +91,20 @@ describe('Campañas internas de Marketing (T110)', () => {
     const campaign = makeCampaign();
     const other = { id: 'camp-otra', name: 'Otra' };
     const campaigns = [campaign, other];
-    const updated = updateCampaign(campaign.id, {
-      name: 'Reactivación editada',
-      stage: 'ganado',
-      startDate: '2026-11-05',
-      endDate: '2026-11-25',
-      action: 'assign_executive',
-      executive: 'Ana',
-      targetStage: 'en_proceso',
-      notes: 'Seguimiento',
-    }, campaigns);
+    const updated = updateCampaign(
+      campaign.id,
+      {
+        name: 'Reactivación editada',
+        stage: 'ganado',
+        startDate: '2026-11-05',
+        endDate: '2026-11-25',
+        action: 'assign_executive',
+        executive: 'Ana',
+        targetStage: 'en_proceso',
+        notes: 'Seguimiento',
+      },
+      campaigns
+    );
 
     expect(updated).not.toBe(campaigns);
     expect(campaigns[0]).toBe(campaign);
@@ -101,7 +125,9 @@ describe('Campañas internas de Marketing (T110)', () => {
 
   it('no permite que una edición cambie id ni estado', () => {
     const campaign = makeCampaign();
-    const [updated] = updateCampaign(campaign.id, { id: 'camp-suplantada', status: 'detenida' }, [campaign]);
+    const [updated] = updateCampaign(campaign.id, { id: 'camp-suplantada', status: 'detenida' }, [
+      campaign,
+    ]);
     expect(updated).toMatchObject({ id: campaign.id, status: 'activa' });
   });
 
@@ -121,25 +147,30 @@ describe('Campañas internas de Marketing (T110)', () => {
         entity: { entity_id: 'ent_1', estado_comercial: 'en_recontacto' },
         campaigns: stopped,
         now,
-      }).selected,
+      }).selected
     ).toBeNull();
   });
 
   it('considera activo el día local de inicio y fin, inclusive', () => {
     const campaign = makeCampaign();
     expect(isCampaignActive(campaign, now)).toBe(true);
-    expect(isCampaignActive({ ...campaign, startDate: '2026-11-23', endDate: '2026-11-23' }, now)).toBe(true);
+    expect(
+      isCampaignActive({ ...campaign, startDate: '2026-11-23', endDate: '2026-11-23' }, now)
+    ).toBe(true);
     expect(isCampaignActive(campaign, new Date(2026, 9, 31, 23, 59))).toBe(false);
     expect(isCampaignActive(campaign, new Date(2026, 11, 1, 0, 1))).toBe(false);
     expect(isCampaignActive({ ...campaign, status: 'detenida' }, now)).toBe(false);
-    expect(isCampaignActive({ ...campaign, startDate: undefined, endDate: undefined }, now)).toBe(true);
+    expect(isCampaignActive({ ...campaign, startDate: undefined, endDate: undefined }, now)).toBe(
+      true
+    );
   });
 
   it('aplica la campaña solo a la etapa objetivo del evento', () => {
     const campaign = makeCampaign();
     const entity = { entity_id: 'ent_1', estado_comercial: 'en_recontacto' };
     expect(
-      selectCampaignsForEvent({ event: 'entity_created', entity, campaigns: [campaign], now }).selected,
+      selectCampaignsForEvent({ event: 'entity_created', entity, campaigns: [campaign], now })
+        .selected
     ).toBe(campaign);
     expect(
       selectCampaignsForEvent({
@@ -147,7 +178,7 @@ describe('Campañas internas de Marketing (T110)', () => {
         entity: { ...entity, estado_comercial: 'prospecto' },
         campaigns: [campaign],
         now,
-      }).selected,
+      }).selected
     ).toBeNull();
     expect(
       selectCampaignsForEvent({
@@ -156,7 +187,7 @@ describe('Campañas internas de Marketing (T110)', () => {
         context: { to: 'en_recontacto' },
         campaigns: [campaign],
         now,
-      }).selected,
+      }).selected
     ).toBe(campaign);
     expect(
       selectCampaignsForEvent({
@@ -164,7 +195,7 @@ describe('Campañas internas de Marketing (T110)', () => {
         entity,
         campaigns: [{ ...campaign, event: 'stage_changed' }],
         now,
-      }).selected,
+      }).selected
     ).toBeNull();
   });
 
@@ -183,7 +214,7 @@ describe('Campañas internas de Marketing (T110)', () => {
     for (const action of ['notify', 'send_email', 'publish']) {
       const campaign = makeCampaign({ stage: 'prospecto', action });
       expect(
-        selectCampaignsForEvent({ event: 'entity_created', entity, campaigns: [campaign], now }),
+        selectCampaignsForEvent({ event: 'entity_created', entity, campaigns: [campaign], now })
       ).toEqual({ selected: null, skipped: [] });
     }
   });
@@ -201,5 +232,98 @@ describe('Campañas internas de Marketing (T110)', () => {
 
     expect(result).toEqual({ selected: campaign, skipped: [] });
     expect(setItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('Atribución del creador de campañas (FR-086/FR-098)', () => {
+  afterEach(() => {
+    setActiveConfig(DEFAULT_CONFIG);
+  });
+
+  it('persiste createdByUserId y lo conserva al editar, detener y seleccionar', () => {
+    const campaign = makeCampaign({ createdByUserId: 'user-lucia' });
+    expect(campaign.createdByUserId).toBe('user-lucia');
+    expect(campaign.createdByUserId).not.toBe('Sistema');
+
+    const [edited] = updateCampaign(campaign.id, { name: 'Reactivación editada' }, [campaign]);
+    expect(edited.createdByUserId).toBe('user-lucia');
+
+    const [stopped] = stopCampaign(campaign.id, [campaign]);
+    expect(stopped.createdByUserId).toBe('user-lucia');
+
+    const older = {
+      ...campaign,
+      id: 'camp-anterior',
+      createdAt: new Date(Date.parse(campaign.createdAt) - 60_000).toISOString(),
+    };
+    const { selected, skipped } = selectCampaignsForEvent({
+      event: 'entity_created',
+      entity: { entity_id: 'ent-1', estado_comercial: campaign.stage },
+      campaigns: [older, campaign],
+      now,
+    });
+
+    expect(selected?.createdByUserId).toBe('user-lucia');
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0].createdByUserId).toBe('user-lucia');
+  });
+
+  it('conserva el creador real tras cambiar de rango y desactivarlo', async () => {
+    seedAuth();
+    const lucia = listUsers().find((user) => user.usernameKey === 'lucia.fernandez');
+    const creator = await signIn('lucia.fernandez');
+
+    const campaigns = createCampaign({
+      ...baseValues,
+      createdByUserId: creator.id,
+    });
+    saveMarketingConfig({ ...loadMarketingConfig(), campaigns });
+    expect(loadMarketingConfig().campaigns[0].createdByUserId).toBe(creator.id);
+
+    updateUser(creator.id, { rank: 'n1_support' });
+    expect(loadMarketingConfig().campaigns[0].createdByUserId).toBe(creator.id);
+
+    deactivateUser(creator.id);
+    expect(loadMarketingConfig().campaigns[0].createdByUserId).toBe(creator.id);
+    expect(lucia.id).toBe(creator.id);
+  });
+
+  it('registra la ejecución como Sistema sin reemplazar al creador de la campaña', async () => {
+    function nearbyDate(offsetDays) {
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      date.setDate(date.getDate() + offsetDays);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    setActiveConfig(MODULE_CONFIG);
+    seedAuth();
+    const lucia = listUsers().find((user) => user.usernameKey === 'lucia.fernandez');
+    await signIn('camila.ramirez');
+
+    const campaign = makeCampaign({
+      stage: 'prospecto',
+      startDate: nearbyDate(-1),
+      endDate: nearbyDate(1),
+      createdByUserId: lucia.id,
+    });
+    saveEntities([
+      {
+        id: 'ent-campana',
+        entity_id: 'CLI-CAMPANA',
+        name: 'Prospecto de campaña',
+        code: 'CAM-1',
+        targetDate: '1980-05-05',
+        estado_comercial: 'prospecto',
+      },
+    ]);
+    saveMarketingConfig({ ...loadMarketingConfig(), campaigns: [campaign] });
+    addDocument({ entity_id: 'CLI-CAMPANA' });
+
+    const history = loadDocuments().filter((document) => document.campaignId === campaign.id);
+    const storedCampaign = loadMarketingConfig().campaigns[0];
+    expect(history).toHaveLength(1);
+    expect(JSON.stringify({ history, storedCampaign })).toContain('Sistema');
+    expect(storedCampaign.createdByUserId).toBe(lucia.id);
   });
 });

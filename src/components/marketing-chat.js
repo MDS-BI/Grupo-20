@@ -13,10 +13,16 @@ export function renderMarketingChatHtml({
   publicView = false,
 } = {}) {
   const entityOptions = entities
-    .map((entity) => `<option value="${escapeHtml(entity.entity_id)}" ${entity.entity_id === selectedEntityId ? 'selected' : ''}>${escapeHtml(entity.name)}</option>`)
+    .map(
+      (entity) =>
+        `<option value="${escapeHtml(entity.entity_id)}" ${entity.entity_id === selectedEntityId ? 'selected' : ''}>${escapeHtml(entity.name)}</option>`
+    )
     .join('');
   const campaignOptions = campaigns
-    .map((campaign) => `<option value="${escapeHtml(campaign.name)}" ${campaign.name === campaignId ? 'selected' : ''}>${escapeHtml(campaign.name)}</option>`)
+    .map(
+      (campaign) =>
+        `<option value="${escapeHtml(campaign.name)}" ${campaign.name === campaignId ? 'selected' : ''}>${escapeHtml(campaign.name)}</option>`
+    )
     .join('');
   return `
     <section class="marketing-chat marketing-panel" data-role="marketing-chat">
@@ -34,7 +40,7 @@ export function renderMarketingChatHtml({
                   (doc) => `
               <p class="chat-message"><strong>${escapeHtml(doc.mensaje || doc.notes || '')}</strong>${
                 doc.respuesta ? `<span>${escapeHtml(doc.respuesta)}</span>` : ''
-              }</p>`,
+              }</p>`
                 )
                 .join('')
             : '<p class="empty-state">Aún no hay mensajes en esta conversación.</p>'

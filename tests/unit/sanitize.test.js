@@ -9,7 +9,7 @@ describe('Saneamiento XSS (T013/T127)', () => {
 
   it('recorta y escapa texto de usuario', () => {
     expect(sanitizeText('  <img src=x onerror=alert(1)>  ')).toBe(
-      '&lt;img src=x onerror=alert(1)&gt;',
+      '&lt;img src=x onerror=alert(1)&gt;'
     );
   });
 
@@ -19,7 +19,13 @@ describe('Saneamiento XSS (T013/T127)', () => {
   });
 
   it('rechaza esquemas peligrosos incluso con espacios o controladores', () => {
-    for (const url of ['javascript:alert(1)', '  JaVaScRiPt:alert(1)', 'java\nscript:alert(1)', 'data:text/html,x', 'vbscript:msgbox(1)']) {
+    for (const url of [
+      'javascript:alert(1)',
+      '  JaVaScRiPt:alert(1)',
+      'java\nscript:alert(1)',
+      'data:text/html,x',
+      'vbscript:msgbox(1)',
+    ]) {
       expect(isSafeUrl(url)).toBe(false);
       expect(safeUrl(url)).toBe('');
     }

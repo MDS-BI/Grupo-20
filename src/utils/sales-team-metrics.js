@@ -21,6 +21,10 @@ function projectGoal(realMonthly, elapsedDays, daysInMonth) {
   return Number(((realMonthly / elapsedDays) * daysInMonth).toFixed(2));
 }
 
+function hasValue(value) {
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
 export function computeSalesTeamMetrics({
   teams = [],
   entities = [],
@@ -45,11 +49,18 @@ export function computeSalesTeamMetrics({
   for (const document of safeDocuments) {
     if (normalizeText(document?.status) !== WON_STATUS) continue;
     if (!isSameMonth(document?.startDate, now)) continue;
-    const entity = entityById.get(document?.entity_id);
-    if (!entity) continue;
-    const executive = normalizeText(entity.ejecutivo_asignado ?? entity.executive);
-    if (!executive) continue;
-    wonByExecutive.set(executive, (wonByExecutive.get(executive) || 0) + (Number(document?.importe) || 0));
+    const entity = entityById.get(document?.entity_id) || {};
+    const saleOwner = hasValue(document?.assignedUserIdAtSale)
+      ? document.assignedUserIdAtSale
+      : hasValue(entity.ejecutivo_asignado)
+        ? entity.ejecutivo_asignado
+        : entity.executive;
+    if (!hasValue(saleOwner)) continue;
+    const executive = normalizeText(saleOwner);
+    wonByExecutive.set(
+      executive,
+      (wonByExecutive.get(executive) || 0) + (Number(document?.importe) || 0)
+    );
   }
 
   const elapsedDays = now.getDate();
@@ -57,7 +68,11 @@ export function computeSalesTeamMetrics({
 
   const resultTeams = safeTeams.map((team) => {
     const members = (Array.isArray(team?.members) ? team.members : []).map((member) => {
-      const executiveKeys = [...new Set([member?.name, member?.executive].map(normalizeText).filter(Boolean))];
+      const executiveKeys = [
+        ...new Set(
+          [member?.userId, member?.name, member?.executive].filter(hasValue).map(normalizeText)
+        ),
+      ];
       let realMonthly = 0;
       if (member?.active !== false) {
         for (const key of executiveKeys) realMonthly += wonByExecutive.get(key) || 0;
@@ -73,7 +88,7 @@ export function computeSalesTeamMetrics({
     });
     const realMonthly = members.reduce(
       (sum, member) => sum + (member.active === false ? 0 : member.realMonthly),
-      0,
+      0
     );
     return {
       id: team?.id,

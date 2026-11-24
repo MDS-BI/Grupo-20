@@ -9,7 +9,14 @@ const CONFIG = {
     documentPlural: 'Interacciones',
   },
   statusLifecycle: {
-    states: ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'cerrado perdido', 'pendiente'],
+    states: [
+      'prospecto',
+      'contactado',
+      'en negociacion',
+      'cerrado ganado',
+      'cerrado perdido',
+      'pendiente',
+    ],
   },
 };
 
@@ -25,6 +32,7 @@ const STAT_KEYS = [
   'entityPlural',
   'funnel',
   'pipelineTotal',
+  'wonAmount',
   'wonDocuments',
 ];
 

@@ -18,8 +18,14 @@ function openTeamSection() {
   document.querySelector('[data-action="navigate"][data-view="marketing"]').click();
   const tab = document.querySelector('[data-action="marketing-section"][data-section="team"]');
   tab.click();
-  expect(document.querySelector('[data-action="marketing-section"][data-section="team"]').getAttribute('aria-selected')).toBe('true');
-  expect(document.querySelector('.marketing-team h2').textContent).toBe('Equipo de ventas y logros');
+  expect(
+    document
+      .querySelector('[data-action="marketing-section"][data-section="team"]')
+      .getAttribute('aria-selected')
+  ).toBe('true');
+  expect(document.querySelector('.marketing-team h2').textContent).toBe(
+    'Equipo de ventas y logros'
+  );
 }
 
 function refreshTeamSection() {
@@ -48,14 +54,16 @@ function createMember({ teamId, name, role, active = true }) {
 
 function teamItem(name) {
   return [...document.querySelectorAll('.team-item')].find(
-    (item) => item.querySelector('.list-item-title')?.textContent === name,
+    (item) => item.querySelector('.list-item-title')?.textContent === name
   );
 }
 
 function memberItem(teamName, memberName) {
   const item = teamItem(teamName);
   expect(item).toBeTruthy();
-  return [...item.querySelectorAll('.member-item')].find((member) => member.textContent.includes(memberName));
+  return [...item.querySelectorAll('.member-item')].find((member) =>
+    member.textContent.includes(memberName)
+  );
 }
 
 function totals() {
@@ -99,7 +107,7 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
 
   it('abre la sección con estado vacío y crea y elimina el primer equipo y su integrante', () => {
     expect(document.querySelector('.marketing-team .empty-state').textContent).toBe(
-      'Aún no hay equipos de ventas registrados.',
+      'Aún no hay equipos de ventas registrados.'
     );
     expect(totals()).toEqual(['$0.00', '$0.00']);
     expect(document.querySelector('#team-form')).toBeTruthy();
@@ -111,7 +119,7 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     expect(storedTeams()).toHaveLength(1);
     expect(teamItem('Equipo Norte')).toBeTruthy();
     expect(document.querySelector('.team-item .empty-state').textContent).toBe(
-      'Este equipo aún no tiene integrantes.',
+      'Este equipo aún no tiene integrantes.'
     );
 
     const teamId = storedTeams()[0].id;
@@ -119,22 +127,26 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     expect(storedTeams()[0].members).toEqual([
       expect.objectContaining({ name: 'Ana Torres', role: 'Ejecutiva', active: true }),
     ]);
-    expect(memberItem('Equipo Norte', 'Ana Torres').textContent).toContain('Ana Torres · Ejecutiva · Activo');
+    expect(memberItem('Equipo Norte', 'Ana Torres').textContent).toContain(
+      'Ana Torres · Ejecutiva · Activo'
+    );
     expect(document.querySelector('.member-list .empty-state')).toBeNull();
 
     const memberId = storedTeams()[0].members[0].id;
     document
-      .querySelector(`[data-action="delete-member"][data-team-id="${teamId}"][data-id="${memberId}"]`)
+      .querySelector(
+        `[data-action="delete-member"][data-team-id="${teamId}"][data-id="${memberId}"]`
+      )
       .click();
     expect(storedTeams()[0].members).toEqual([]);
     expect(document.querySelector('.team-item .empty-state').textContent).toBe(
-      'Este equipo aún no tiene integrantes.',
+      'Este equipo aún no tiene integrantes.'
     );
 
     document.querySelector(`[data-action="delete-team"][data-id="${teamId}"]`).click();
     expect(storedTeams()).toEqual([]);
     expect(document.querySelector('.marketing-team .empty-state').textContent).toBe(
-      'Aún no hay equipos de ventas registrados.',
+      'Aún no hay equipos de ventas registrados.'
     );
   });
 
@@ -143,39 +155,56 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     createTeam('Equipo Beta');
     expect(storedTeams().map((team) => team.name)).toEqual(['Equipo Alfa', 'Equipo Beta']);
     expect(
-      [...document.querySelectorAll('#team-member-form [name="teamId"] option')].map((option) => option.value),
+      [...document.querySelectorAll('#team-member-form [name="teamId"] option')].map(
+        (option) => option.value
+      )
     ).toEqual(['', storedTeams()[0].id, storedTeams()[1].id]);
 
     const firstId = storedTeams()[0].id;
     document.querySelector(`[data-action="edit-team"][data-id="${firstId}"]`).click();
     expect(document.querySelector('#team-form [name="teamName"]').value).toBe('Equipo Alfa');
-    expect(document.querySelector('#team-form button[type="submit"]').textContent).toBe('Guardar equipo');
+    expect(document.querySelector('#team-form button[type="submit"]').textContent).toBe(
+      'Guardar equipo'
+    );
     document.querySelector('#team-form [name="teamName"]').value = 'Equipo Alfa Norte';
-    document.querySelector('#team-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .querySelector('#team-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(storedTeams()[0]).toMatchObject({ id: firstId, name: 'Equipo Alfa Norte' });
     expect(teamItem('Equipo Alfa Norte')).toBeTruthy();
     expect(teamItem('Equipo Alfa')).toBeUndefined();
 
     createMember({ teamId: firstId, name: 'Ana Torres', role: 'Ejecutiva', active: true });
     const memberId = storedTeams()[0].members[0].id;
-    expect(memberItem('Equipo Alfa Norte', 'Ana Torres').textContent).toContain('Ana Torres · Ejecutiva · Activo');
+    expect(memberItem('Equipo Alfa Norte', 'Ana Torres').textContent).toContain(
+      'Ana Torres · Ejecutiva · Activo'
+    );
     const editMemberButton = document.querySelector(
-      `[data-action="edit-member"][data-team-id="${firstId}"][data-id="${memberId}"]`,
+      `[data-action="edit-member"][data-team-id="${firstId}"][data-id="${memberId}"]`
     );
     expect(editMemberButton).toBeTruthy();
     editMemberButton.click();
     expect(document.querySelector('#team-member-form [name="teamId"]').value).toBe(firstId);
-    expect(document.querySelector('#team-member-form [name="memberName"]').value).toBe('Ana Torres');
+    expect(document.querySelector('#team-member-form [name="memberName"]').value).toBe(
+      'Ana Torres'
+    );
     expect(document.querySelector('#team-member-form [name="memberRole"]').value).toBe('Ejecutiva');
     expect(document.querySelector('#team-member-form [name="memberActive"]').checked).toBe(true);
     document.querySelector('#team-member-form [name="memberRole"]').value = 'Gerente comercial';
     document.querySelector('#team-member-form [name="memberActive"]').checked = false;
-    document.querySelector('#team-member-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .querySelector('#team-member-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(storedTeams()[0].members).toEqual([
-      expect.objectContaining({ id: memberId, name: 'Ana Torres', role: 'Gerente comercial', active: false }),
+      expect.objectContaining({
+        id: memberId,
+        name: 'Ana Torres',
+        role: 'Gerente comercial',
+        active: false,
+      }),
     ]);
     expect(memberItem('Equipo Alfa Norte', 'Ana Torres').textContent).toContain(
-      'Ana Torres · Gerente comercial · Inactivo',
+      'Ana Torres · Gerente comercial · Inactivo'
     );
 
     document.querySelector(`[data-action="delete-team"][data-id="${storedTeams()[1].id}"]`).click();
@@ -198,7 +227,7 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     expect(localStorage.getItem('erp_marketing_config')).toBe(before);
     expect(teamItem('Equipo Persistente')).toBeTruthy();
     expect(memberItem('Equipo Persistente', 'Berta Ruiz').textContent).toContain(
-      'Berta Ruiz · Ejecutiva · Inactivo',
+      'Berta Ruiz · Ejecutiva · Inactivo'
     );
   });
 
@@ -218,25 +247,27 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
 
     expect(totals()).toEqual(['$350.00', '$700.00']);
     expect(teamItem('Equipo Norte').querySelector('.team-metric').textContent).toBe(
-      'Real $350.00 · Objetivo $700.00',
+      'Real $350.00 · Objetivo $700.00'
     );
     expect(memberItem('Equipo Norte', 'Ana Torres').textContent).toContain(
-      'Real $350.00 · Objetivo $700.00',
+      'Real $350.00 · Objetivo $700.00'
     );
-    expect(memberItem('Equipo Norte', 'Luis Pérez').textContent).toContain('Real $0.00 · Objetivo $0.00');
+    expect(memberItem('Equipo Norte', 'Luis Pérez').textContent).toContain(
+      'Real $0.00 · Objetivo $0.00'
+    );
 
     updateDocument(firstSale.id, { importe: 150 });
     refreshTeamSection();
     expect(totals()).toEqual(['$400.00', '$800.00']);
     expect(memberItem('Equipo Norte', 'Ana Torres').textContent).toContain(
-      'Real $400.00 · Objetivo $800.00',
+      'Real $400.00 · Objetivo $800.00'
     );
 
     deleteDocument(firstSale.id);
     refreshTeamSection();
     expect(totals()).toEqual(['$250.00', '$500.00']);
     expect(memberItem('Equipo Norte', 'Ana Torres').textContent).toContain(
-      'Real $250.00 · Objetivo $500.00',
+      'Real $250.00 · Objetivo $500.00'
     );
   });
 
@@ -248,13 +279,15 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     refreshTeamSection();
 
     const controls = [
-      ...document.querySelectorAll('.marketing-team form input, .marketing-team form select, .marketing-team form textarea'),
+      ...document.querySelectorAll(
+        '.marketing-team form input, .marketing-team form select, .marketing-team form textarea'
+      ),
     ]
       .map((control) => control.name)
       .sort();
     expect(controls).toEqual(['memberActive', 'memberName', 'memberRole', 'teamId', 'teamName']);
     expect(document.querySelector('.marketing-team').innerHTML).not.toMatch(
-      /name="[^"]*(real|objetivo|goal|meta)/i,
+      /name="[^"]*(real|objetivo|goal|meta)/i
     );
 
     const stored = localStorage.getItem('erp_marketing_config');
@@ -263,6 +296,8 @@ describe('Equipo de ventas y logros en Marketing (T095)', () => {
     }
 
     expect(totals()).toEqual(['$120.00', '$240.00']);
-    expect(memberItem('Equipo Norte', 'Ana Torres').querySelectorAll('input, select, textarea')).toHaveLength(0);
+    expect(
+      memberItem('Equipo Norte', 'Ana Torres').querySelectorAll('input, select, textarea')
+    ).toHaveLength(0);
   });
 });

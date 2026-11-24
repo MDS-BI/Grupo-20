@@ -33,7 +33,9 @@ describe('Valores históricos de fecha de nacimiento (US2)', () => {
     expect(document.body.textContent).toContain('Fecha de nacimiento: 1900-05-05');
 
     document.querySelector('[data-action="view-entity"]').click();
-    expect(document.querySelector('#entity-detail').textContent).toContain('Fecha de nacimiento: 1900-05-05');
+    expect(document.querySelector('#entity-detail').textContent).toContain(
+      'Fecha de nacimiento: 1900-05-05'
+    );
 
     app.navigate('search');
     document.querySelector('[data-action="edit-entity"]').click();
@@ -41,13 +43,19 @@ describe('Valores históricos de fecha de nacimiento (US2)', () => {
     expect(dateInput.value).toBe('1900-05-05');
 
     document.querySelector('#field-name').value = 'Cliente Antiguo Actualizado';
-    document.querySelector('#entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .querySelector('#entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    expect(document.querySelector('#error-targetDate').textContent).toContain('Fecha de nacimiento');
+    expect(document.querySelector('#error-targetDate').textContent).toContain(
+      'Fecha de nacimiento'
+    );
     expect(loadEntities().find((e) => e.id === legacy.id).targetDate).toBe('1900-05-05');
 
     document.querySelector('#field-targetDate').value = '1950-05-05';
-    document.querySelector('#entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .querySelector('#entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     const updated = loadEntities().find((e) => e.id === legacy.id);
     expect(updated.targetDate).toBe('1950-05-05');
@@ -73,8 +81,7 @@ describe('Valores históricos de fecha de nacimiento (US2)', () => {
     document.querySelector('[data-action="view-entity"]').click();
     const blocked = document.querySelector('.entity-detail-blocked');
     expect(blocked).toBeTruthy();
-    expect(blocked.textContent).toContain('RUT');
-    expect(blocked.textContent).toContain('Canal de Contacto');
+    expect(blocked.textContent).toContain('Completa los campos obligatorios.');
     expect(blocked.querySelector('[data-action="edit-entity"]')).toBeTruthy();
     expect(document.querySelector('#entity-history')).toBeNull();
 
@@ -82,9 +89,13 @@ describe('Valores históricos de fecha de nacimiento (US2)', () => {
     expect(document.getElementById('field-code')).toBeNull();
     document.getElementById('field-rut').value = '11.111.111-1';
     document.getElementById('field-canal_contacto').value = 'llamada';
-    document.getElementById('field-canal_contacto').dispatchEvent(new Event('change', { bubbles: true }));
+    document
+      .getElementById('field-canal_contacto')
+      .dispatchEvent(new Event('change', { bubbles: true }));
     document.getElementById('field-contacto_telefono').value = '+56912345678';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     app.navigate('search');
     document.querySelector('[data-action="view-entity"]').click();

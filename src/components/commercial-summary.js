@@ -22,7 +22,7 @@ export function renderCommercialSummaryHtml(config, summary) {
           <span class="stat-value">${row.count}</span>
         </div>
         <button type="button" data-action="view-entity" data-entity-id="${escapeHtml(row.entityId)}">Ver ficha</button>
-      </li>`,
+      </li>`
     )
     .join('');
 

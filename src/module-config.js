@@ -25,8 +25,19 @@ export const MODULE_CONFIG = {
   customFields: {
     entity: [
       { key: 'rubro', type: 'text', label: 'Rubro' },
-      { key: 'ejecutivo_asignado', type: 'text', label: 'Ejecutivo Asignado' },
-      { key: 'canal_contacto', type: 'select', label: 'Canal de Contacto', options: ['llamada', 'correo', 'reunion', 'whatsapp'] },
+      {
+        key: 'ejecutivo_asignado',
+        type: 'select',
+        label: 'Ejecutivo Asignado',
+        options: 'executiveUsers',
+        emptyLabel: 'Sin asignar',
+      },
+      {
+        key: 'canal_contacto',
+        type: 'select',
+        label: 'Canal de Contacto',
+        options: ['llamada', 'correo', 'reunion', 'whatsapp'],
+      },
       { key: 'rut', type: 'text', label: 'RUT' },
       { key: 'contacto_telefono', type: 'text', label: 'Teléfono' },
       { key: 'contacto_correo', type: 'text', label: 'Correo electrónico' },
@@ -46,7 +57,12 @@ export const MODULE_CONFIG = {
     document: [
       { key: 'importe', type: 'number', label: 'Importe (USD)' },
       { key: 'automation_key', type: 'text', label: 'Clave de automatización' },
-      { key: 'plataforma', type: 'select', label: 'Plataforma', options: ['Twitter', 'Instagram', 'YouTube', 'Otra'] },
+      {
+        key: 'plataforma',
+        type: 'select',
+        label: 'Plataforma',
+        options: ['Twitter', 'Instagram', 'YouTube', 'Otra'],
+      },
       { key: 'tipo_interaccion', type: 'text', label: 'Tipo de interacción' },
       { key: 'enlace', type: 'text', label: 'Enlace' },
       { key: 'canal', type: 'text', label: 'Canal' },
@@ -56,7 +72,14 @@ export const MODULE_CONFIG = {
     ],
   },
   statusLifecycle: {
-    states: ['prospecto', 'contactado', 'en negociacion', 'cerrado ganado', 'cerrado perdido', 'pendiente'],
+    states: [
+      'prospecto',
+      'contactado',
+      'en negociacion',
+      'cerrado ganado',
+      'cerrado perdido',
+      'pendiente',
+    ],
     transitions: {},
   },
   marketing: {
@@ -83,8 +106,14 @@ export const MODULE_CONFIG = {
     ],
     salesTeams: [],
     faq: [
-      { pregunta: '¿Cómo puedo agendar una reunión?', respuesta: 'Déjanos tus datos y un ejecutivo te contactará para coordinarla.' },
-      { pregunta: '¿Dónde veo mis interacciones?', respuesta: 'Todas tus interacciones quedan registradas en tu ficha dentro del CRM.' },
+      {
+        pregunta: '¿Cómo puedo agendar una reunión?',
+        respuesta: 'Déjanos tus datos y un ejecutivo te contactará para coordinarla.',
+      },
+      {
+        pregunta: '¿Dónde veo mis interacciones?',
+        respuesta: 'Todas tus interacciones quedan registradas en tu ficha dentro del CRM.',
+      },
     ],
     campaigns: [],
   },
@@ -99,8 +128,13 @@ export const MODULE_CONFIG = {
   },
   fieldRules: {
     entity: {
-      name: { order: 1 },
-      code: { generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 }, unique: true, hidden: true, searchable: false },
+      name: { order: 1, searchable: true },
+      code: {
+        generated: { strategy: 'prefixSequence', prefix: 'CLI-', pad: 3 },
+        unique: true,
+        hidden: true,
+        searchable: false,
+      },
       category: { hidden: true, searchable: false },
       description: { hidden: true, searchable: false },
       rut: {
@@ -112,7 +146,7 @@ export const MODULE_CONFIG = {
         order: 2,
         placeholder: 'Ej: 11.111.111-1',
       },
-      targetDate: { order: 3 },
+      targetDate: { order: 3, searchable: true },
       canal_contacto: {
         label: 'Canal de Contacto',
         required: true,
@@ -192,7 +226,7 @@ export const MODULE_CONFIG = {
       consentimiento: { hidden: true, searchable: false },
       consentimiento_fecha: { hidden: true, searchable: false },
       consentimiento_version: { hidden: true, searchable: false },
-      campaña: { hidden: true, searchable: true, options: [] },
+      campaña: { hidden: true, searchable: false, options: [] },
     },
     document: {
       automation_key: { hidden: true, searchable: false },
@@ -208,10 +242,25 @@ export const MODULE_CONFIG = {
 };
 
 export const RESERVED_ENTITY_KEYS = [
-  'id', 'entity_id', 'name', 'code', 'category', 'description', 'targetDate', 'createdAt', 'updatedAt',
+  'id',
+  'entity_id',
+  'name',
+  'code',
+  'category',
+  'description',
+  'targetDate',
+  'createdAt',
+  'updatedAt',
 ];
 export const RESERVED_DOCUMENT_KEYS = [
-  'id', 'entity_id', 'startDate', 'endDate', 'notes', 'status', 'createdAt', 'updatedAt',
+  'id',
+  'entity_id',
+  'startDate',
+  'endDate',
+  'notes',
+  'status',
+  'createdAt',
+  'updatedAt',
 ];
 
 const VALID_FIELD_TYPES = ['text', 'number', 'date', 'select', 'boolean'];
@@ -264,14 +313,17 @@ function normalizeRule(rule) {
   if (isPlainObject(rule.when)) normalized.when = { ...rule.when };
   if (isPlainObject(rule.generated)) normalized.generated = { ...rule.generated };
   if (Array.isArray(rule.options)) {
-    normalized.options = rule.options.map((option) => (isPlainObject(option) ? { ...option } : option));
+    normalized.options = rule.options.map((option) =>
+      isPlainObject(option) ? { ...option } : option
+    );
   }
   return normalized;
 }
 
 function isValidEntityDateRule(rule) {
   if (!isPlainObject(rule)) return false;
-  if (rule.label !== undefined && (typeof rule.label !== 'string' || !rule.label.trim())) return false;
+  if (rule.label !== undefined && (typeof rule.label !== 'string' || !rule.label.trim()))
+    return false;
   if (rule.min !== undefined && !isValidISODate(rule.min)) return false;
   if (rule.max !== undefined && rule.max !== LOCAL_TODAY && !isValidISODate(rule.max)) return false;
   if (rule.required !== undefined && typeof rule.required !== 'boolean') return false;
@@ -331,7 +383,10 @@ function validateFieldRules(raw, errors) {
       continue;
     }
     for (const [key, rule] of Object.entries(map)) {
-      const path = scope === 'entity' || scope === 'document' ? `fieldRules.${scope}.${key}` : `fieldRules.${key}`;
+      const path =
+        scope === 'entity' || scope === 'document'
+          ? `fieldRules.${scope}.${key}`
+          : `fieldRules.${key}`;
       if (!isPlainObject(rule)) {
         errors.push(`${path} debe ser un objeto.`);
         continue;
@@ -339,7 +394,10 @@ function validateFieldRules(raw, errors) {
       if (rule.format !== undefined && !hasFormat(rule.format)) {
         errors.push(`${path} declara un formato desconocido: "${rule.format}".`);
       }
-      if (rule.when !== undefined && (!isPlainObject(rule.when) || !rule.when.key || rule.when.equals === undefined)) {
+      if (
+        rule.when !== undefined &&
+        (!isPlainObject(rule.when) || !rule.when.key || rule.when.equals === undefined)
+      ) {
         errors.push(`${path}.when debe declarar "key" y "equals".`);
       }
       if (rule.generated !== undefined && !isPlainObject(rule.generated)) {
@@ -354,11 +412,19 @@ function validateFieldRules(raw, errors) {
       if (rule.placeholder !== undefined && typeof rule.placeholder !== 'string') {
         errors.push(`${path}.placeholder debe ser una cadena.`);
       }
-      if (rule.order !== undefined && (typeof rule.order !== 'number' || !Number.isFinite(rule.order))) {
+      if (
+        rule.order !== undefined &&
+        (typeof rule.order !== 'number' || !Number.isFinite(rule.order))
+      ) {
         errors.push(`${path}.order debe ser un número finito.`);
       }
-      if (rule.options !== undefined && (!Array.isArray(rule.options) || !rule.options.every(isValidRuleOption))) {
-        errors.push(`${path}.options debe ser una lista de cadenas o de objetos con "value" y "label".`);
+      if (
+        rule.options !== undefined &&
+        (!Array.isArray(rule.options) || !rule.options.every(isValidRuleOption))
+      ) {
+        errors.push(
+          `${path}.options debe ser una lista de cadenas o de objetos con "value" y "label".`
+        );
       }
       for (const flag of ['required', 'hidden', 'searchable', 'unique']) {
         if (rule[flag] !== undefined && typeof rule[flag] !== 'boolean') {
@@ -399,7 +465,10 @@ export function validateConfig(raw) {
   const errors = [];
   if (!isPlainObject(raw)) return errors;
 
-  if (raw.moduleName !== undefined && (typeof raw.moduleName !== 'string' || !raw.moduleName.trim())) {
+  if (
+    raw.moduleName !== undefined &&
+    (typeof raw.moduleName !== 'string' || !raw.moduleName.trim())
+  ) {
     errors.push('moduleName debe ser una cadena no vacía.');
   }
   if (raw.labels !== undefined && !isPlainObject(raw.labels)) {
@@ -421,19 +490,27 @@ export function validateConfig(raw) {
         continue;
       }
       if (reserved.includes(def.key)) {
-        errors.push(`El campo personalizado "${def.key}" choca con un nombre de campo base de ${kind}.`);
+        errors.push(
+          `El campo personalizado "${def.key}" choca con un nombre de campo base de ${kind}.`
+        );
       }
       if (seen.has(def.key)) {
         errors.push(`El campo personalizado "${def.key}" está declarado más de una vez.`);
       }
       seen.add(def.key);
       if (def.type && !VALID_FIELD_TYPES.includes(def.type)) {
-        errors.push(`El campo personalizado "${def.key}" declara un tipo desconocido: "${def.type}".`);
+        errors.push(
+          `El campo personalizado "${def.key}" declara un tipo desconocido: "${def.type}".`
+        );
       }
     }
   }
 
-  if (raw.entityDate !== undefined && raw.entityDate !== null && !isValidEntityDateRule(raw.entityDate)) {
+  if (
+    raw.entityDate !== undefined &&
+    raw.entityDate !== null &&
+    !isValidEntityDateRule(raw.entityDate)
+  ) {
     errors.push('entityDate debe declarar una etiqueta, min ISO y max ISO o "localToday" válidos.');
   }
 
@@ -443,7 +520,11 @@ export function validateConfig(raw) {
 
   if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
     const lifecycle = raw.statusLifecycle;
-    if (!isPlainObject(lifecycle) || !Array.isArray(lifecycle.states) || lifecycle.states.length === 0) {
+    if (
+      !isPlainObject(lifecycle) ||
+      !Array.isArray(lifecycle.states) ||
+      lifecycle.states.length === 0
+    ) {
       errors.push('statusLifecycle debe declarar un arreglo "states" no vacío.');
     } else {
       if (lifecycle.pendingStates !== undefined) {
@@ -452,7 +533,9 @@ export function validateConfig(raw) {
         } else {
           for (const state of lifecycle.pendingStates) {
             if (!lifecycle.states.includes(state)) {
-              errors.push(`statusLifecycle.pendingStates referencia un estado desconocido: "${state}".`);
+              errors.push(
+                `statusLifecycle.pendingStates referencia un estado desconocido: "${state}".`
+              );
             }
           }
         }
@@ -464,7 +547,9 @@ export function validateConfig(raw) {
         }
         for (const to of tos) {
           if (!lifecycle.states.includes(to)) {
-            errors.push(`statusLifecycle.transitions.${from} referencia un estado desconocido: "${to}".`);
+            errors.push(
+              `statusLifecycle.transitions.${from} referencia un estado desconocido: "${to}".`
+            );
           }
         }
       }
@@ -551,12 +636,21 @@ export function normalizeConfig(rawConfig) {
   }
 
   const candidate = {
-    moduleName: rawConfig.moduleName === undefined ? DEFAULT_CONFIG.moduleName : rawConfig.moduleName,
-    labels: isPlainObject(rawConfig.labels) ? rawConfig.labels : rawConfig.labels === undefined ? {} : rawConfig.labels,
+    moduleName:
+      rawConfig.moduleName === undefined ? DEFAULT_CONFIG.moduleName : rawConfig.moduleName,
+    labels: isPlainObject(rawConfig.labels)
+      ? rawConfig.labels
+      : rawConfig.labels === undefined
+        ? {}
+        : rawConfig.labels,
     customFields: normalizeCustomFields(rawConfig.customFields),
     statusLifecycle: rawConfig.statusLifecycle ?? null,
     marketing: rawConfig.marketing ?? null,
-    theme: isPlainObject(rawConfig.theme) ? rawConfig.theme : rawConfig.theme === undefined ? {} : rawConfig.theme,
+    theme: isPlainObject(rawConfig.theme)
+      ? rawConfig.theme
+      : rawConfig.theme === undefined
+        ? {}
+        : rawConfig.theme,
     entityDate: rawConfig.entityDate ?? null,
     fieldRules: rawConfig.fieldRules ?? {},
     detailPolicy: rawConfig.detailPolicy ?? {},
@@ -589,7 +683,12 @@ export function normalizeConfig(rawConfig) {
 let activeConfig = DEFAULT_CONFIG;
 
 export function setActiveConfig(rawConfig) {
-  if (rawConfig && typeof rawConfig === 'object' && rawConfig.config && Array.isArray(rawConfig.errors)) {
+  if (
+    rawConfig &&
+    typeof rawConfig === 'object' &&
+    rawConfig.config &&
+    Array.isArray(rawConfig.errors)
+  ) {
     activeConfig = rawConfig.errors.length ? DEFAULT_CONFIG : rawConfig.config;
     return activeConfig;
   }

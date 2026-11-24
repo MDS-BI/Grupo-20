@@ -25,7 +25,9 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
   });
 
   it('ofrece cuatro botones laterales en el orden acordado sin Clientes ni Interacciones', () => {
-    const views = Array.from(document.querySelectorAll('.sidebar-button')).map((button) => button.dataset.view);
+    const views = Array.from(document.querySelectorAll('.sidebar-button')).map(
+      (button) => button.dataset.view
+    );
     expect(views).toEqual(['dashboard', 'search', 'summary', 'marketing']);
     expect(document.querySelector('#nav-entities')).toBeNull();
     expect(document.querySelector('#nav-documents')).toBeNull();
@@ -58,7 +60,9 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
     document.getElementById('field-code').value = 'AC-1';
-    document.getElementById('entity-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    document
+      .getElementById('entity-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     for (const view of ['dashboard', 'search', 'summary', 'marketing']) {
       document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
@@ -72,13 +76,17 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
     expect(document.querySelector('.manage-view')).toBeTruthy();
     app.navigate('manage-document');
     expect(document.querySelector('.manage-view')).toBeTruthy();
-    expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe('true');
+    expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe(
+      'true'
+    );
   });
 
   it('abre las vistas retiradas del menú mediante enlaces profundos', () => {
     window.history.replaceState({}, '', '/?view=manage-document');
     mount();
-    expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe('true');
+    expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe(
+      'true'
+    );
     window.history.replaceState({}, '', '/');
   });
 

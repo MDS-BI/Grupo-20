@@ -70,7 +70,10 @@ function captureProspect() {
   return loadEntities()[0];
 }
 
-function fillChatForm(message, { consent = true, campaign = CAMPAIGN_NAME, selectOption = '' } = {}) {
+function fillChatForm(
+  message,
+  { consent = true, campaign = CAMPAIGN_NAME, selectOption = '' } = {}
+) {
   const form = document.querySelector('#chat-form');
   if (selectOption) form.querySelector('[name="entity_id"]').value = selectOption;
   form.querySelector('[name="mensaje"]').value = message;
@@ -84,7 +87,9 @@ function openMarketingChat() {
   document.querySelector('[data-action="navigate"][data-view="marketing"]').click();
   document.querySelector('[data-action="marketing-section"][data-section="chat"]').click();
   expect(
-    document.querySelector('[data-action="marketing-section"][data-section="chat"]').getAttribute('aria-selected'),
+    document
+      .querySelector('[data-action="marketing-section"][data-section="chat"]')
+      .getAttribute('aria-selected')
   ).toBe('true');
 }
 
@@ -126,7 +131,9 @@ describe('Chat en la captura pública ?view=capture (T105)', () => {
 
     fillChatForm(FAQ_QUESTION, { consent: false });
 
-    expect(document.querySelector('.chat-response').textContent).toContain('consentimiento');
+    expect(document.querySelector('.chat-response').textContent).toContain(
+      'Completa los campos obligatorios.'
+    );
     expect(chatDocuments()).toEqual([]);
   });
 
@@ -164,7 +171,9 @@ describe('Chat en la captura pública ?view=capture (T105)', () => {
 
     fillChatForm(message);
 
-    expect(document.querySelector('.chat-response').textContent).toContain('Recibimos tu consulta');
+    expect(document.querySelector('.chat-response').textContent).toContain(
+      'Consulta registrada; un ejecutivo hará seguimiento.'
+    );
     const [doc] = chatDocuments();
     expect(doc).toMatchObject({
       entity_id: prospect.entity_id,
@@ -208,13 +217,18 @@ describe('Chat en Marketing (T105)', () => {
     document.querySelector('[data-action="marketing-section"][data-section="chat"]').click();
     const form = document.querySelector('#chat-form');
     expect(formNames(form)).toEqual(['entity_id', 'mensaje', 'campaña', 'consentimiento']);
-    expect([...form.querySelectorAll('[name="entity_id"] option')].map((option) => option.value)).toContain(
-      withoutConsent.entity_id,
+    expect(
+      [...form.querySelectorAll('[name="entity_id"] option')].map((option) => option.value)
+    ).toContain(withoutConsent.entity_id);
+
+    fillChatForm('Consulta sin consentimiento', {
+      consent: false,
+      selectOption: withoutConsent.entity_id,
+    });
+
+    expect(document.querySelector('.chat-response').textContent).toContain(
+      'Completa los campos obligatorios.'
     );
-
-    fillChatForm('Consulta sin consentimiento', { consent: false, selectOption: withoutConsent.entity_id });
-
-    expect(document.querySelector('.chat-response').textContent).toContain('consentimiento');
     expect(chatDocuments()).toEqual([]);
   });
 

@@ -31,4 +31,5 @@
 
 ## Notas
 
-- La especificación está lista para la planificación y la implementación.
+- La especificación quedó funcionalmente completa tras la clarificación, pero conserva referencias técnicas explícitas solicitadas (`storage.js`, `localStorage`, `select`).
+- Los cuatro elementos se aceptaron el 2026-11-24 por instrucción del usuario: las referencias técnicas (`storage.js`, `localStorage`, `select`, `permissions:edit`) y la estructura (`src/auth.js`, `src/auth/permissions.js`, `src/components/login.js`, `src/components/users-admin.js`) se solicitaron explícitamente, y SC-003 es una prueba de usabilidad no automatizable. El tratamiento está documentado en `plan.md` → «Revisión de la Lista de Verificación Pendiente».

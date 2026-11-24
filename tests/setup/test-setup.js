@@ -2,10 +2,18 @@ import { afterEach, beforeEach } from 'vitest';
 
 let localStorageMock = {
   storage: {},
-  getItem: function (key) { return this.storage[key] || null; },
-  setItem: function (key, value) { this.storage[key] = String(value); },
-  clear: function () { this.storage = {}; },
-  removeItem: function (key) { delete this.storage[key]; },
+  getItem: function (key) {
+    return this.storage[key] || null;
+  },
+  setItem: function (key, value) {
+    this.storage[key] = String(value);
+  },
+  clear: function () {
+    this.storage = {};
+  },
+  removeItem: function (key) {
+    delete this.storage[key];
+  },
 };
 
 beforeEach(() => {

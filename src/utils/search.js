@@ -14,5 +14,5 @@ export function matchesQuery(value, query) {
 }
 
 export function matchesAny(values, query) {
-  return values.some(value => matchesQuery(value, query));
+  return values.some((value) => matchesQuery(value, query));
 }
