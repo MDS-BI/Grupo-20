@@ -4,10 +4,10 @@ import { normalizeText } from './search.js';
 
 export class ChatConsentError extends Error {
   constructor() {
-    super('El chat requiere consentimiento explícito');
+    super('Dudas y consultas requiere consentimiento explícito');
     this.name = 'ChatConsentError';
     this.errors = {
-      consentimiento: 'Debes marcar el consentimiento explícito antes de enviar un mensaje.',
+      consentimiento: 'Debes marcar el consentimiento explícito antes de enviar una consulta en Dudas y consultas.',
     };
   }
 }

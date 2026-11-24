@@ -20,7 +20,7 @@ export function renderMarketingChatHtml({
     .join('');
   return `
     <section class="marketing-chat marketing-panel" data-role="marketing-chat">
-      <h2>Chat</h2>
+      <h2>Dudas y consultas</h2>
       ${
         faq.length
           ? `<p class="chat-faq">Preguntas frecuentes: ${faq.map((item) => escapeHtml(item.pregunta)).join(' · ')}</p>`
@@ -57,7 +57,7 @@ export function renderMarketingChatHtml({
             ? `<label>Campaña<select name="campaña"><option value="">Sin campaña</option>${campaignOptions}</select></label>`
             : ''
         }
-        <label class="checkbox-field"><input type="checkbox" name="consentimiento" ${consent ? 'checked' : ''} /> Acepto el aviso de privacidad para usar el chat</label>
+        <label class="checkbox-field"><input type="checkbox" name="consentimiento" ${consent ? 'checked' : ''} /> Acepto el aviso de privacidad para usar Dudas y consultas</label>
         <button type="submit">Enviar mensaje</button>
       </form>
     </section>`;

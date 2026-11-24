@@ -12,6 +12,8 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 
 **Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15), P2 (US2, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21) y P6 (US6). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable.
 
+**Incremento actual**: T134-T145 cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; conservan T001-T133 como historial completado.
+
 ## Formato: `[ID] [P?] [Historia] Descripción`
 
 - El checkbox es siempre `- [ ]`; los ID son secuenciales T001, T002, ...
@@ -206,9 +208,9 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 
 ## Phase 10: US15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
 
-**Objetivo**: Panel de entrada con cinco acciones rápidas y tarjetas de estadísticas en vivo.
+**Objetivo**: Panel de entrada con cinco acciones rápidas exclusivamente en el panel y tarjetas de estadísticas en vivo.
 
-**Prueba independiente**: Abrir la aplicación, contar al menos cinco acciones rápidas sin «Abrir Marketing», abrir cada destino con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
+**Prueba independiente**: Abrir la aplicación, contar exactamente cinco acciones rápidas en `.dashboard`, navegar a Marketing y verificar que no existe `.quick-actions`, abrir cada destino del panel con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
 
 ### Pruebas de US15
 
@@ -220,8 +222,12 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - [X] T050 [US15] Implementar `renderDashboardHtml()` y `formatCurrencyUsd()` en `src/components/dashboard.js` con las cinco tarjetas, el embudo por estados de documento y la lista «Últimas Interacciones / Próximos Seguimientos».
 - [X] T051 [US15] Implementar en `src/app.js` los casos `quick-new-entity`, `quick-new-document`, `quick-manage` y `quick-search`, abriendo el formulario vacío o enfocando `#search-input`.
 - [X] T052 [US15] Implementar `computeDashboardStats()` en `src/utils/marketing-stats.js` para derivar tarjetas y embudo desde entidades y documentos, reutilizándolo en `src/components/dashboard.js` sin escribir en `localStorage`.
+- [X] T134 [P] [US15] Ampliar `tests/integration/dashboard.test.js` para exigir que `.dashboard .quick-actions` contenga exactamente cinco botones `data-action="quick-*"`/`data-action="navigate"` y que siga sin aparecer «Abrir Marketing» (FR-091).
+- [X] T135 [P] [US15] Ampliar `tests/integration/marketing-dashboard.test.js` para comprobar que `.marketing-view .quick-actions` no existe tras navegar a Marketing, mientras el panel conserva los cinco accesos (SC-027).
+- [X] T136 [US15] Añadir la opción `showQuickActions = true` a `renderDashboardHtml(config, stats, { title, sectionClass, showQuickActions })` en `src/components/dashboard.js` para omitir `<div class="quick-actions">` cuando sea `false`, sin alterar tarjetas, embudo ni lista de interacciones.
+- [X] T137 [US15] Pasar `showQuickActions: false` en la llamada a `renderDashboardHtml()` dentro de `renderMarketingHtml()` en `src/components/marketing.js`, manteniendo `sectionClass: 'marketing-view'` y el resto del panel compartido.
 
-**Punto de control**: El panel ofrece accesos y cifras correctas incluso sin registros.
+**Punto de control**: El panel ofrece accesos y cifras correctas incluso sin registros, y Marketing no hereda sus acciones rápidas.
 
 ---
 
@@ -353,9 +359,9 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 
 ## Phase 17: US16 - Capturar y convertir prospectos desde Marketing (Prioridad: P2)
 
-**Objetivo**: Captura pública con consentimiento, prospectos como `Entidad`, automatización por eventos, conversión sin pérdida de identidad y panel/Marketing derivados de los mismos registros.
+**Objetivo**: Captura pública con consentimiento, prospectos como `Entidad`, automatización por eventos, conversión sin pérdida de identidad, panel/Marketing derivados de los mismos registros y cinco atajos de Marketing en orden fijo.
 
-**Prueba independiente**: Enviar `?view=capture` con consentimiento, ver creado el prospecto y la ejecución automática, avanzar a Cliente conservando historial, y comprobar que Marketing muestra las cinco tarjetas y el embudo del panel sin torta ni selector de etapas.
+**Prueba independiente**: Enviar `?view=capture` con consentimiento, ver creado el prospecto y la ejecución automática, avanzar a Cliente conservando historial, y comprobar que Marketing muestra las cinco tarjetas y el embudo del panel sin torta ni selector de etapas, sin acciones rápidas del panel y con los cinco atajos ordenados `team`, `campaigns`, `performance`, `chat`, `social`.
 
 ### Pruebas de US16
 
@@ -363,6 +369,7 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - [X] T084 [P] [US16] Ampliar `tests/unit/marketing-stats.test.js` para verificar que las cinco tarjetas y el embudo por estados de documento coinciden con el panel, contabilizan cada documento una sola vez y muestran cero sin registros.
 - [X] T085 [P] [US16] Ampliar `tests/integration/marketing-capture.test.js` para comprobar que `?view=capture` se renderiza sin marco ERP, sin consentimiento no crea entidad y con consentimiento muestra confirmación clara.
 - [X] T086 [P] [US16] Ampliar `tests/integration/marketing-dashboard.test.js` para verificar en Marketing las cinco tarjetas, el embudo y «Últimas Interacciones / Próximos Seguimientos» del panel, sin torta «Estado comercial de la cartera» ni selector de etapas, y sin mostrar `estado_comercial`.
+- [X] T138 [P] [US16] Ampliar `tests/integration/marketing-navigation.test.js` para exigir exactamente cinco botones `.marketing-sections [data-action="marketing-section"]` en el orden `team`, `campaigns`, `performance`, `chat`, `social`, con las etiquetas «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales» (FR-093/SC-029).
 
 ### Implementación de US16
 
@@ -373,26 +380,28 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - [X] T091 [US16] Reimplementar `renderMarketingHtml()` en `src/components/marketing.js` con cinco tarjetas, embudo por estados de documento, lista de interacciones con «Ver ficha» y estados vacíos, eliminando la torta y el selector de etapas.
 - [X] T092 [US16] Implementar `runAutomationRules()` en `src/utils/marketing-automation.js` y `persistAutomation()` en `src/storage.js`, con `automation_key = event|from|to|label`, `status = 'automatico'` y un `Documento` por ejecución en el historial de la entidad.
 - [X] T093 [US16] Ajustar `transitionStage()` en `src/utils/marketing-stage.js` y `updateEntityStage()` en `src/storage.js` para que `ganado` conserve `id`, `entity_id`, documentos y campos personalizados, manteniendo `estado_comercial` oculto en `src/module-config.js`.
+- [X] T139 [US16] Reordenar y renombrar `SECTIONS` en `src/components/marketing.js` a los cinco atajos exactos `team`, `campaigns`, `performance`, `chat`, `social` con las etiquetas de FR-093, actualizar el `<h2>` de `src/components/marketing-team.js` a «Equipos de ventas y logros» y conservar `data-action="marketing-section"` y el panel renderizado por cada clave.
 
-**Punto de control**: Marketing y panel coinciden exactamente y la captura es trazable sin nueva entidad.
+**Punto de control**: Marketing y panel coinciden exactamente, la captura es trazable sin nueva entidad y los cinco atajos respetan el orden y la terminología aprobada.
 
 ---
 
-## Phase 18: US17 - Consultar el Equipo de ventas y logros (Prioridad: P2)
+## Phase 18: US17 - Consultar los Equipos de ventas y logros (Prioridad: P2)
 
-**Objetivo**: Equipos e integrantes capturados por el usuario con real mensual y objetivo mensual calculados por el sistema.
+**Objetivo**: Equipos e integrantes capturados por el usuario con real mensual y objetivo mensual calculados por el sistema, accesibles desde el atajo «Equipos de ventas y logros».
 
-**Prueba independiente**: Crear equipo e integrante con nombre, cargo y estado, sin casillas de métricas, y comprobar que real mensual suma documentos «Cerrado ganado» del mes del ejecutivo y objetivo mensual proyecta `ventas ÷ días transcurridos × días del mes`.
+**Prueba independiente**: Abrir el atajo «Equipos de ventas y logros», crear equipo e integrante con nombre, cargo y estado, sin casillas de métricas, y comprobar que real mensual suma documentos «Cerrado ganado» del mes del ejecutivo y objetivo mensual proyecta `ventas ÷ días transcurridos × días del mes`, conservando `data-section="team"`.
 
 ### Pruebas de US17
 
 - [X] T094 [P] [US17] Crear `tests/unit/sales-team-metrics.test.js` con casos de suma de importes «Cerrado ganado» del mes por `ejecutivo_asignado`, proyección al cierre del mes y cero sin ventas o sin días transcurridos.
 - [X] T095 [P] [US17] Crear `tests/integration/marketing-team.test.js` para abrir «Equipo de ventas y logros», crear/editar/eliminar equipos e integrantes con nombre, cargo y «Activo»/«Inactivo», ver estado vacío y actualizar métricas tras cambiar documentos.
+- [X] T140 [P] [US17] Actualizar `tests/integration/marketing-team.test.js` para abrir la sección mediante el atajo «Equipos de ventas y logros» (plural) y verificar que el botón conserva `data-section="team"` y que no aparece la forma singular como etiqueta visible (SC-029).
 
 ### Implementación de US17
 
 - [X] T096 [US17] Implementar `computeSalesTeamMetrics()` en `src/utils/sales-team-metrics.js` con las fórmulas de FR-078 y FR-079, sin persistir resultados.
-- [X] T097 [US17] Implementar la sección «Equipo de ventas y logros» en `src/components/marketing.js` y sus estilos en `src/styles.css`, sin entradas para real ni objetivo.
+- [X] T097 [US17] Implementar la sección «Equipos de ventas y logros» en `src/components/marketing.js` y sus estilos en `src/styles.css`, sin entradas para real ni objetivo.
 - [X] T098 [US17] Conectar en `src/app.js` las acciones de equipo e integrante y persistir solo nombre, cargo y estado en `erp_marketing_config` desde `src/storage.js`, usando `marketing.salesTeams` como valores iniciales.
 
 **Punto de control**: Las cifras del equipo son calculadas, verificables y recalculadas sin recarga.
@@ -420,16 +429,17 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 
 ---
 
-## Phase 20: US19 - Ofrecer chat con respuestas rápidas (Prioridad: P2)
+## Phase 20: US19 - Ofrecer Dudas y consultas con respuestas rápidas (Prioridad: P2)
 
-**Objetivo**: Chat en captura y Marketing con respuestas desde FAQ configuradas, acuse para consultas sin coincidencia y consentimiento previo.
+**Objetivo**: Superficie visible «Dudas y consultas» en captura y Marketing con respuestas desde FAQ configuradas, acuse para consultas sin coincidencia y consentimiento previo; el canal interno `chat` permanece estable.
 
-**Prueba independiente**: Pregunta configurada recibe respuesta inmediata; pregunta sin coincidencia muestra acuse y queda como `Documento`; sin consentimiento no se registra ningún mensaje; ambas superficies comparten historial.
+**Prueba independiente**: Pregunta configurada recibe respuesta inmediata; pregunta sin coincidencia muestra acuse y queda como `Documento`; sin consentimiento no se registra ningún mensaje; ambas superficies comparten historial; los textos visibles dicen «Dudas y consultas» mientras `data-section="chat"`, `#chat-form`, `.chat-*` y `canal: 'chat'` no cambian.
 
 ### Pruebas de US19
 
 - [X] T104 [P] [US19] Crear `tests/unit/marketing-chat.test.js` para verificar `answerFaq()` con texto normalizado, `null` sin coincidencia y `registerChatMessage()` con consentimiento, canal `chat`, `mensaje`, `tipo_interaccion` y `campaña` opcional.
 - [X] T105 [P] [US19] Crear `tests/integration/marketing-chat.test.js` para usar el chat en `?view=capture` y en Marketing, comprobar respuesta rápida, acuse de recibo, documento de seguimiento, bloqueo sin consentimiento y mensajes visibles en la ficha.
+- [X] T141 [P] [US19] Ampliar `tests/integration/marketing-chat.test.js` para exigir que encabezado, pestaña y texto de consentimiento digan «Dudas y consultas» en captura y Marketing, sin «Chat» como etiqueta visible, verificando que `data-section="chat"`, `#chat-form`, `.chat-*` y los documentos con `canal: 'chat'` permanezcan iguales (SC-028).
 
 ### Implementación de US19
 
@@ -437,8 +447,10 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - [X] T107 [US19] Implementar `renderMarketingChatHtml()` en `src/components/marketing-chat.js` con casilla de consentimiento, mensajes, respuesta/acuse y estado vacío sin FAQ.
 - [X] T108 [US19] Integrar el chat en `src/components/capture-form.js` y `src/components/marketing.js`, con manejadores en `src/app.js` que lean `getEntityDocuments()` para compartir mensajes entre superficies.
 - [X] T109 [US19] Ampliar `validateMarketingConfig()` en `src/utils/marketing-config.js` para exigir pares `pregunta`/`respuesta` no vacíos en `marketing.faq` y añadir ejemplos en `src/module-config.js`.
+- [X] T142 [US19] Renombrar a «Dudas y consultas» el `<h2>` y el texto visible de consentimiento en `src/components/marketing-chat.js`, conservando `data-role="marketing-chat"`, `#chat-form`, `name="consentimiento"` y las clases `.chat-*`.
+- [X] T143 [US19] Actualizar los mensajes visibles de `ChatConsentError` en `src/utils/marketing-chat.js` para usar «Dudas y consultas», conservando el nombre de la clase, `name = 'ChatConsentError'` y `errors.consentimiento` consumido por `src/app.js`.
 
-**Punto de control**: El chat responde, registra y respeta el consentimiento en ambos puntos de entrada.
+**Punto de control**: «Dudas y consultas» responde, registra y respeta el consentimiento en ambos puntos de entrada sin cambiar contratos internos.
 
 ---
 
@@ -518,8 +530,10 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - [X] T131 [P] Ampliar `tests/integration/marketing-navigation.test.js` para verificar que no existen «Abrir Marketing», torta «Estado comercial de la cartera» ni selector de etapas, y que Marketing está como cuarta opción en `src/components/shell.js`.
 - [X] T132 Ejecutar `npm test` y `npm run lint` definidos en `package.json` y corregir los fallos en `src/` y `tests/` hasta que ambos comandos terminen sin errores.
 - [X] T133 [P] Ampliar `tests/integration/marketing-dashboard.test.js` con la comparación final de cinco tarjetas y embudo entre el panel y Marketing tras crear, editar y eliminar documentos, comprobando que no se escriben resultados derivados en `localStorage`.
+- [X] T144 [P] Ampliar `tests/integration/marketing-navigation.test.js` con la regresión final de clarificaciones: cinco acciones rápidas solo en `.dashboard`, cinco atajos de Marketing en orden exacto y ausencia de las etiquetas obsoletas «Chat» y «Equipo de ventas y logros» como texto visible.
+- [X] T145 Ejecutar `npm test` y `npm run lint` definidos en `package.json` tras T134-T144 y corregir fallos en `src/` y `tests/` hasta que ambos comandos terminen sin errores.
 
-**Punto de control**: Todas las historias pasan sus pruebas independientes y la suite completa queda en verde.
+**Punto de control**: Todas las historias pasan sus pruebas independientes, la suite completa queda en verde y las clarificaciones de Marketing quedan cubiertas.
 
 ---
 
@@ -561,6 +575,7 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - Las pruebas marcadas al inicio de la fase se escriben primero y deben fallar antes de la implementación.
 - La configuración declarativa precede a los componentes; los componentes preceden al cableado en `src/app.js`.
 - Las utilidades puras preceden a las vistas que las consumen; el historial de `Documento` es la única fuente de ejecuciones.
+- Clarificaciones Marketing: T134/T135 preceden a T136-T137; T138 precede a T139; T140 depende de T139; T141 precede a T142-T143; T144 y T145 cierran la regresión.
 
 ## Oportunidades de paralelismo
 
@@ -570,6 +585,7 @@ description: "Lista de tareas para la implementación del módulo base ERP"
 - US16: T083-T086 cubren consentimiento, estadísticas, captura y panel en archivos de prueba distintos; T087-T093 se implementan después.
 - Marketing P2: US17, US18, US19, US20 y US21 pueden repartirse entre personas distintas una vez cerrada US16, siempre que cada una mantenga sus propias suites en `tests/unit/` y `tests/integration/`.
 - Polish: T126-T131 y T133 tocan archivos de prueba o documentación distintos y pueden ejecutarse en paralelo; T132 se ejecuta al final.
+- Clarificaciones Marketing: T134, T135, T138, T140, T141 y T144 son suites independientes; T136-T137, T139 y T142-T143 se implementan después de sus pruebas; T145 se ejecuta al final.
 
 ### Ejemplo de paralelismo: US16
 
@@ -589,6 +605,15 @@ T116 "Crear tests/unit/marketing-performance.test.js ..."
 T118 "Crear tests/integration/marketing-performance.test.js ..."
 ```
 
+### Ejemplo de paralelismo: clarificaciones Marketing
+
+```bash
+T134 "Ampliar tests/integration/dashboard.test.js ..."
+T135 "Ampliar tests/integration/marketing-dashboard.test.js ..."
+T138 "Ampliar tests/integration/marketing-navigation.test.js ..."
+T141 "Ampliar tests/integration/marketing-chat.test.js ..."
+```
+
 ## Estrategia de implementación
 
 ### MVP primero
@@ -603,8 +628,9 @@ T118 "Crear tests/integration/marketing-performance.test.js ..."
 1. Añadir US3, US4, US5, US7, US8, US14 y US15 para completar el espacio de trabajo ERP base.
 2. Añadir US2, US9, US10, US11, US12 y US13 para el perfil de clientes y la búsqueda avanzada.
 3. Añadir US16 para habilitar Marketing con panel compartido y captura con consentimiento.
-4. Añadir US17-US21 para equipo, redes, chat, campañas y rendimiento.
+4. Añadir US17-US21 para equipo, redes, dudas y consultas, campañas y rendimiento.
 5. Cerrar con US6 y Polish; cada fase se valida con su prueba independiente antes de continuar.
+6. Aplicar el incremento T134-T145 sobre las fases US15, US16, US17, US19 y Polish para quitar acciones rápidas de Marketing, fijar los cinco atajos y usar «Dudas y consultas» sin cambiar contratos internos.
 
 ### Estrategia con equipo paralelo
 
@@ -620,3 +646,4 @@ T118 "Crear tests/integration/marketing-performance.test.js ..."
 - Marketing reutiliza `Entidad` y `Documento`: no hay nueva entidad, backend, dependencias ni almacenamiento de resultados derivados.
 - El campo `estado_comercial`, las reglas y las campañas son internos; Marketing no ofrece torta ni selector de etapas y el panel no ofrece «Abrir Marketing».
 - La captura pública se sirve en `?view=capture` y requiere mismo origen con el `localStorage` de la aplicación.
+- En el incremento de clarificaciones, los cambios de terminología son solo visuales: `chat` sigue siendo la clave, el canal y el nombre interno de `ChatConsentError`.

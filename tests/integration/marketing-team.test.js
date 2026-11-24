@@ -19,7 +19,8 @@ function openTeamSection() {
   const tab = document.querySelector('[data-action="marketing-section"][data-section="team"]');
   tab.click();
   expect(document.querySelector('[data-action="marketing-section"][data-section="team"]').getAttribute('aria-selected')).toBe('true');
-  expect(document.querySelector('.marketing-team h2').textContent).toBe('Equipo de ventas y logros');
+  expect(document.querySelector('.marketing-team h2').textContent).toBe('Equipos de ventas y logros');
+  expect(document.querySelector('.marketing-view').textContent).not.toContain('Equipo de ventas y logros');
 }
 
 function refreshTeamSection() {

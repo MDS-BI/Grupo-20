@@ -7,11 +7,11 @@ import { renderMarketingSocialHtml } from './marketing-social.js';
 import { renderMarketingChatHtml } from './marketing-chat.js';
 
 const SECTIONS = [
-  { key: 'team', label: 'Equipo de ventas y logros' },
-  { key: 'social', label: 'Redes sociales' },
-  { key: 'chat', label: 'Chat' },
+  { key: 'team', label: 'Equipos de ventas y logros' },
   { key: 'campaigns', label: 'Campañas' },
   { key: 'performance', label: 'Rendimiento de campañas' },
+  { key: 'chat', label: 'Dudas y consultas' },
+  { key: 'social', label: 'Redes sociales' },
 ];
 
 function optionsFromCampaigns(campaigns, selected) {
@@ -134,7 +134,11 @@ export function renderMarketingHtml(config, stats, options = {}) {
     campaigns = {},
     selectedCampaignId = 'all',
   } = options;
-  const dashboard = renderDashboardHtml(config, stats, { title: 'Marketing', sectionClass: 'marketing-view' });
+  const dashboard = renderDashboardHtml(config, stats, {
+    title: 'Marketing',
+    sectionClass: 'marketing-view',
+    showQuickActions: false,
+  });
   const navigation = `
     <div class="marketing-sections" role="tablist" aria-label="Secciones de Marketing">
       ${SECTIONS.map(

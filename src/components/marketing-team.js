@@ -18,7 +18,7 @@ export function renderMarketingTeamHtml({
   const total = metrics.totals || { realMonthly: 0, monthlyGoal: 0 };
   return `
     <section class="marketing-team marketing-panel">
-      <h2>Equipo de ventas y logros</h2>
+      <h2>Equipos de ventas y logros</h2>
       <div class="team-totals">
         <div class="stat-card"><span class="stat-value">$${Number(total.realMonthly || 0).toFixed(2)}</span><span class="stat-label">Real mensual</span></div>
         <div class="stat-card"><span class="stat-value">$${Number(total.monthlyGoal || 0).toFixed(2)}</span><span class="stat-label">Objetivo mensual</span></div>
