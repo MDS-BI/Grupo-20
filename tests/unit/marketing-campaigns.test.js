@@ -241,15 +241,15 @@ describe('Atribución del creador de campañas (FR-086/FR-098)', () => {
   });
 
   it('persiste createdByUserId y lo conserva al editar, detener y seleccionar', () => {
-    const campaign = makeCampaign({ createdByUserId: 'user-lucia' });
-    expect(campaign.createdByUserId).toBe('user-lucia');
+    const campaign = makeCampaign({ createdByUserId: 'user-marketing' });
+    expect(campaign.createdByUserId).toBe('user-marketing');
     expect(campaign.createdByUserId).not.toBe('Sistema');
 
     const [edited] = updateCampaign(campaign.id, { name: 'Reactivación editada' }, [campaign]);
-    expect(edited.createdByUserId).toBe('user-lucia');
+    expect(edited.createdByUserId).toBe('user-marketing');
 
     const [stopped] = stopCampaign(campaign.id, [campaign]);
-    expect(stopped.createdByUserId).toBe('user-lucia');
+    expect(stopped.createdByUserId).toBe('user-marketing');
 
     const older = {
       ...campaign,
@@ -263,15 +263,15 @@ describe('Atribución del creador de campañas (FR-086/FR-098)', () => {
       now,
     });
 
-    expect(selected?.createdByUserId).toBe('user-lucia');
+    expect(selected?.createdByUserId).toBe('user-marketing');
     expect(skipped).toHaveLength(1);
-    expect(skipped[0].createdByUserId).toBe('user-lucia');
+    expect(skipped[0].createdByUserId).toBe('user-marketing');
   });
 
   it('conserva el creador real tras cambiar de rango y desactivarlo', async () => {
     seedAuth();
-    const lucia = listUsers().find((user) => user.usernameKey === 'lucia.fernandez');
-    const creator = await signIn('lucia.fernandez');
+    const lucia = listUsers().find((user) => user.usernameKey === 'marketing');
+    const creator = await signIn('marketing');
 
     const campaigns = createCampaign({
       ...baseValues,
@@ -298,8 +298,8 @@ describe('Atribución del creador de campañas (FR-086/FR-098)', () => {
 
     setActiveConfig(MODULE_CONFIG);
     seedAuth();
-    const lucia = listUsers().find((user) => user.usernameKey === 'lucia.fernandez');
-    await signIn('camila.ramirez');
+    const lucia = listUsers().find((user) => user.usernameKey === 'marketing');
+    await signIn('gerente');
 
     const campaign = makeCampaign({
       stage: 'prospecto',

@@ -63,7 +63,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('puede eliminar el cliente Comercial Andina SpA', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const entity = addEntity(entityData('Comercial Andina SpA', 1));
     mount();
 
@@ -75,7 +75,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('puede ver el resumen completo de pendientes del equipo', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const first = addEntity(entityData('Comercial Andina SpA', 2));
     const second = addEntity(entityData('Ferretería Central', 3));
     addDocument({
@@ -111,7 +111,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('puede crear y editar equipos e integrantes', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
     app.navigate('marketing');
 
@@ -135,7 +135,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('puede detener una campaña creada por otra persona', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const ana = listUsers().find((user) => user.usernameKey === 'ana.munoz') || {
       id: 'user-ana-munoz',
     };
@@ -169,7 +169,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('puede abrir Gestionar usuarios desde el menú de usuario', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
 
     click('[data-action="navigate"][data-view="users-admin"]');
@@ -179,7 +179,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('no ofrece controles para editar la matriz de permisos', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
     app.navigate('users-admin');
 
@@ -193,7 +193,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('rechaza permissions:edit desde la capa de datos con el mensaje exacto', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
 
     expect(can('n4_manager', 'permissions:edit')).toBe(false);
@@ -219,7 +219,7 @@ describe('Permisos de Nivel 4 - Gerente comercial', () => {
   });
 
   it('como visitante no puede actuar sobre la capa de datos', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     logout();
     mount();
 

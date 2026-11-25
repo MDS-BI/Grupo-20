@@ -53,13 +53,13 @@ describe('Gestionar usuarios', () => {
     setSearch('');
   });
 
-  it('muestra Gestionar usuarios solo en el menú de camila.ramirez', async () => {
-    await mountAs('camila.ramirez');
+  it('muestra Gestionar usuarios solo en el menú de gerente', async () => {
+    await mountAs('gerente');
     expect(
       document.querySelector('[data-action="navigate"][data-view="users-admin"]')
     ).toBeTruthy();
 
-    for (const username of ['lucia.fernandez', 'pedro.soto', 'sofia.torres']) {
+    for (const username of ['marketing', 'ventas', 'atencion']) {
       app.destroy();
       await mountAs(username);
       expect(
@@ -69,7 +69,7 @@ describe('Gestionar usuarios', () => {
   });
 
   it('permite abrir la vista y crear ana.munoz con rango Nivel 2', async () => {
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     click('[data-action="navigate"][data-view="users-admin"]');
     expect(document.querySelector('.users-admin-view')).toBeTruthy();
 
@@ -84,16 +84,16 @@ describe('Gestionar usuarios', () => {
     expect(listUsers().find((user) => user.usernameKey === 'ana.munoz')?.rank).toBe('n2_sales');
   });
 
-  it('permite editar el rango de pedro.soto', async () => {
-    const pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
-    await mountAs('camila.ramirez');
+  it('permite editar el rango de ventas', async () => {
+    const pedro = listUsers().find((user) => user.usernameKey === 'ventas');
+    await mountAs('gerente');
     app.navigate('users-admin');
     click(`[data-action="edit-user"][data-id="${pedro.id}"]`);
 
     const form = document.querySelector('#user-form');
-    expect(form.querySelector('[name="username"]').value).toBe('pedro.soto');
+    expect(form.querySelector('[name="username"]').value).toBe('ventas');
     form.querySelector('[name="rank"]').value = 'n1_support';
-    submitUserForm({ username: 'pedro.soto', password: '', rank: 'n1_support' });
+    submitUserForm({ username: 'ventas', password: '', rank: 'n1_support' });
 
     expect(listUsers().find((user) => user.id === pedro.id).rank).toBe('n1_support');
     expect(document.querySelector('.users-admin-view').textContent).toContain(
@@ -101,25 +101,25 @@ describe('Gestionar usuarios', () => {
     );
   });
 
-  it('rechaza crear " Pedro.Soto " por duplicado tras normalizar', async () => {
-    await mountAs('camila.ramirez');
+  it('rechaza crear " VENTAS " por duplicado tras normalizar', async () => {
+    await mountAs('gerente');
     app.navigate('users-admin');
 
-    submitUserForm({ username: ' Pedro.Soto ', password: DEMO_PASSWORD, rank: 'n4_manager' });
+    submitUserForm({ username: ' VENTAS ', password: DEMO_PASSWORD, rank: 'n4_manager' });
 
     await vi.waitFor(() => expect(document.querySelector('#users-admin-error')).toBeTruthy());
     expect(document.querySelector('#users-admin-error').textContent).toBe(MESSAGES.required);
-    expect(listUsers().filter((user) => user.usernameKey === 'pedro.soto')).toHaveLength(1);
+    expect(listUsers().filter((user) => user.usernameKey === 'ventas')).toHaveLength(1);
   });
 
-  it('desactivar pedro.soto revoca su sesión activa', async () => {
-    const pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
-    await signIn('pedro.soto');
+  it('desactivar ventas revoca su sesión activa', async () => {
+    const pedro = listUsers().find((user) => user.usernameKey === 'ventas');
+    await signIn('ventas');
     const pedroSession = localStorage.getItem('erp_session');
     expect(pedroSession).toBeTruthy();
 
     app?.destroy();
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     app.navigate('users-admin');
     click(`[data-action="deactivate-user"][data-id="${pedro.id}"]`);
 
@@ -133,7 +133,7 @@ describe('Gestionar usuarios', () => {
   });
 
   it('no expone edición de la matriz de permisos', async () => {
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     app.navigate('users-admin');
 
     expect(document.getElementById('app').innerHTML).toContain(

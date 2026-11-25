@@ -55,7 +55,7 @@ describe('Navegación filtrada por rango', () => {
       'marketing',
     ]);
 
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
 
     expect(navViews()).toEqual(['dashboard', 'search', 'summary', 'marketing']);
     const actions = actionKeys();
@@ -69,7 +69,7 @@ describe('Navegación filtrada por rango', () => {
   });
 
   it('N3 no ve Resumen, Gestionar usuarios ni acciones rápidas de gestión de clientes', async () => {
-    await mountAs('lucia.fernandez');
+    await mountAs('marketing');
 
     expect(navViews()).not.toContain('summary');
     expect(navViews()).toContain('marketing');
@@ -81,7 +81,7 @@ describe('Navegación filtrada por rango', () => {
   });
 
   it('N2 no ve Resumen, Marketing ni Gestionar usuarios', async () => {
-    await mountAs('pedro.soto');
+    await mountAs('ventas');
 
     expect(navViews()).toContain('dashboard');
     expect(navViews()).toContain('search');
@@ -91,7 +91,7 @@ describe('Navegación filtrada por rango', () => {
   });
 
   it('N1 solo ve Panel y Buscar, sin acciones rápidas de edición', async () => {
-    await mountAs('sofia.torres');
+    await mountAs('atencion');
 
     expect(navViews()).toEqual(['dashboard', 'search']);
     expect(navViews()).not.toContain('summary');
@@ -107,7 +107,7 @@ describe('Navegación filtrada por rango', () => {
     for (const view of ['summary', 'marketing', 'users-admin']) {
       app?.destroy();
       setSearch(`?view=${view}`);
-      await mountAs('sofia.torres');
+      await mountAs('atencion');
 
       expect(document.querySelector('#route-notice')?.textContent, `?view=${view}`).toBe(
         MESSAGES.accessDenied

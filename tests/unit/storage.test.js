@@ -627,7 +627,7 @@ describe('Autorización de escrituras con sesión vigente', () => {
   beforeEach(async () => {
     saveEntities([victimEntity()]);
     saveDocuments([victimDocument()]);
-    await signIn('sofia.torres');
+    await signIn('atencion');
   });
 
   afterEach(() => {
@@ -650,7 +650,7 @@ describe('Autorización de escrituras con sesión vigente', () => {
 
 describe('Permisos aplicados a storage con sesión íntegra', () => {
   beforeEach(async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
   });
 
   afterEach(() => {
@@ -680,7 +680,7 @@ describe('Permisos aplicados a storage con sesión íntegra', () => {
   });
 
   it('aplica un cambio de rango a la siguiente mutación sin renovar la sesión', () => {
-    const camila = listUsers().find((user) => user.usernameKey === 'camila.ramirez');
+    const camila = listUsers().find((user) => user.usernameKey === 'gerente');
 
     updateUser(camila.id, { rank: 'n1_support' });
     expect(() => addEntity({ name: 'Denegada', code: 'DEN-1' })).toThrow(DENIAL_MESSAGE);
@@ -692,7 +692,7 @@ describe('Permisos aplicados a storage con sesión íntegra', () => {
   it('deniega a N2 la edición de registros ajenos y la configuración de marketing', async () => {
     saveEntities([victimEntity('user-otro')]);
     saveDocuments([victimDocument('user-otro')]);
-    await signIn('pedro.soto');
+    await signIn('ventas');
     const before = storageSnapshot();
 
     expect(() => updateEntity('ent-victima', { name: 'Ajena' })).toThrow(DENIAL_MESSAGE);

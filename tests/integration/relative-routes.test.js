@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe('Navegación por rutas relativas (T168)', () => {
   it('la raíz sin ?view muestra el Panel y no ?view=panel', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     setSearch('');
     const instance = mount();
 
@@ -52,7 +52,7 @@ describe('Navegación por rutas relativas (T168)', () => {
     expect(app.getState().pendingRoute).toMatchObject({ view: 'summary' });
     expect(window.location.search).toBe('?view=summary');
 
-    document.querySelector('#login-username').value = 'camila.ramirez';
+    document.querySelector('#login-username').value = 'gerente';
     document.querySelector('#login-password').value = DEMO_PASSWORD;
     document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
 
@@ -62,7 +62,7 @@ describe('Navegación por rutas relativas (T168)', () => {
   });
 
   it('mantiene la ruta al retroceder y avanzar en el historial', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     setSearch('?view=summary');
     mount();
 
@@ -91,7 +91,7 @@ describe('Navegación por rutas relativas (T168)', () => {
   });
 
   it('muestra Acceso denegado y vuelve al Panel en una ruta sin permiso', async () => {
-    await signIn('sofia.torres');
+    await signIn('atencion');
     setSearch('?view=summary');
     mount();
 

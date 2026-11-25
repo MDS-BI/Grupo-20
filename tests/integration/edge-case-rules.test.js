@@ -1,13 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  createUser,
-  DEMO_PASSWORD,
-  deactivateUser,
-  listUsers,
-  updateUser,
-} from '../../src/auth.js';
+import { deactivateUser, listUsers, updateUser } from '../../src/auth.js';
 import { initApp } from '../../src/app.js';
 import {
   DEFAULT_CONFIG,
@@ -52,7 +46,7 @@ function mount() {
 }
 
 beforeEach(async () => {
-  await signIn('camila.ramirez');
+  await signIn('gerente');
   setActiveConfig(MODULE_CONFIG);
 });
 
@@ -269,11 +263,11 @@ describe('Interfaz y sesión', () => {
   });
 
   it('revoca de inmediato la sesión de un usuario desactivado (FR-099)', async () => {
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
-    expect(document.querySelector('#current-user').textContent).toBe('pedro.soto');
+    expect(document.querySelector('#current-user').textContent).toBe('ventas');
 
-    const pedro = listUsers().find((user) => user.username === 'pedro.soto');
+    const pedro = listUsers().find((user) => user.username === 'ventas');
     deactivateUser(pedro.id);
     app.navigate('summary');
 
@@ -282,13 +276,12 @@ describe('Interfaz y sesión', () => {
   });
 
   it('aplica un cambio de rango en la siguiente acción (FR-099)', async () => {
-    await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
-    await signIn('ana.munoz');
+    await signIn('ventas');
     mount();
     expect(app.getState().role).toBe('n2_sales');
 
-    const ana = listUsers().find((user) => user.username === 'ana.munoz');
-    updateUser(ana.id, { rank: 'n3_marketing' });
+    const ventas = listUsers().find((user) => user.username === 'ventas');
+    updateUser(ventas.id, { rank: 'n3_marketing' });
     app.navigate('marketing');
 
     expect(app.getState().role).toBe('n3_marketing');

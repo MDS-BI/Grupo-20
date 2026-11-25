@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones de la autenticación local simulada, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23). La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva.
+Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23). La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se verifica contraseña ni se bloquea por intentos fallidos.
 
 ## Almacenamiento
 
@@ -13,15 +13,11 @@ Arreglo de usuarios. Cada usuario incluye:
 - `id`: cadena única autogenerada.
 - `username`: cadena visible de inicio de sesión.
 - `usernameKey`: `username` recortado y en minúsculas; único entre todos los usuarios.
-- `passwordHash`: digest hexadecimal PBKDF2-SHA-256.
-- `salt`: sal hexadecimal aleatoria de 16 bytes por usuario.
 - `rank`: uno de `n4_manager`, `n3_marketing`, `n2_sales`, `n1_support`.
 - `active`: booleano; `false` revoca la sesión y bloquea el login.
-- `failedAttempts`: número entero de intentos fallidos recientes.
-- `lockedUntil`: marca ISO o `null`.
 - `createdAt` / `updatedAt`: marcas ISO.
 
-Los usuarios semilla se inicializan solo si la clave no existe: `camila.ramirez` (N4), `lucia.fernandez` (N3), `pedro.soto` (N2), `sofia.torres` (N1).
+No se persisten contraseñas, hashes, sales ni contadores de intentos. Los usuarios semilla se inicializan solo si la clave no existe: `gerente` (`n4_manager`, Gerente Comercial), `marketing` (`n3_marketing`, Ejecutivo de Marketing), `ventas` (`n2_sales`, Ejecutivo de Ventas) y `atencion` (`n1_support`, Atencion al Cliente).
 
 ### Clave `erp_session`
 
@@ -29,15 +25,13 @@ Objeto único con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`. No conti
 
 ## Operaciones de `src/auth.js`
 
-- `normalizeUsername(value)`: recorta y convierte a minúsculas para comparar `usernameKey`.
-- `hashPassword(password, salt)`: deriva PBKDF2-SHA-256 con 100 000 iteraciones usando Web Crypto API.
-- `verifyPassword(password, user)`: compara el digest derivado con `user.passwordHash`.
-- `login(username, password)`: valida usuario activo, bloqueo y contraseña; crea `erp_session`; devuelve el usuario resuelto o un error con el mensaje exacto correspondiente.
+- `normalizeUsername(value)`: recorta y convierte a minúsculas para comparar nombres de usuario.
+- `login(username, password)`: normaliza el usuario; exige contraseña no vacía; solo acepta los cuatro usuarios demostrativos activos; crea `erp_session` y devuelve el usuario resuelto. Lanza `Ingresa una contraseña` si el campo está vacío y `Usuario no encontrado` si el usuario no es uno de los cuatro o está inactivo. No verifica hashes, no hay contraseñas incorrectas y no cuenta intentos fallidos.
 - `logout()`: elimina `erp_session`.
 - `getCurrentSession()`: devuelve la sesión vigente o `null` si falta, expiró o su usuario ya no existe o está inactivo.
 - `getCurrentUser()`: devuelve el usuario resuelto de la sesión vigente, incluido su `rank` actual.
 - `touchSession()`: actualiza `lastActivityAt` y `expiresAt` mientras la sesión siga vigente.
-- `createUser(values)`: exige `username` único normalizado, contraseña no vacía y `rank` válido; solo se invoca desde la vista de administración autorizada.
+- `createUser(values)`: exige `username` único normalizado, contraseña no vacía y `rank` válido; la contraseña no se persiste ni se verifica; solo se invoca desde la vista de administración autorizada.
 - `updateUser(id, updates)`: permite editar `username`, `rank` y `active`; mantiene `usernameKey` sincronizado y rechaza duplicados.
 - `deactivateUser(id)`: fija `active = false` y elimina la sesión de ese usuario.
 
@@ -81,7 +75,8 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 
 - Muestra solo los campos «Usuario» y «Contraseña» y el botón de ingreso, sin barra superior ni lateral.
 - Mantiene accesibles las rutas públicas de formulario de captura y chat.
-- Con credenciales inválidas muestra exactamente `Usuario o contraseña incorrectos`.
+- Con la contraseña vacía muestra exactamente `Ingresa una contraseña`; con un usuario distinto de los cuatro demostrativos muestra exactamente `Usuario no encontrado`.
+- Cualquier contraseña no vacía es válida para `gerente`, `marketing`, `ventas` y `atencion`, sin distinción de mayúsculas ni espacios en el usuario.
 - Tras autenticarse, redirige a la vista internamente solicitada; si no hay una vista pendiente, abre el Panel.
 - Nunca muestra el menú del usuario ni acciones de administración.
 
@@ -99,12 +94,12 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 - Un usuario autenticado sin permiso para una vista ve «Acceso denegado» y vuelve al Panel sin ejecutar la acción.
 - Una operación denegada responde con `No tienes permiso para realizar esta acción`, incluso cuando se invoca directamente desde `src/storage.js` o desde un enlace profundo.
 - Ocultar un botón nunca es la única barrera: la capa de datos valida con `assertPermission()`.
-- Cinco intentos fallidos bloquean el usuario durante 15 minutos; un login correcto reinicia el contador.
+- No existe bloqueo por intentos fallidos: la contraseña vacía y el usuario inexistente solo muestran su mensaje exacto y no crean sesión.
 - La sesión expira tras 8 horas de inactividad; «Cerrar sesión», la desactivación y la expiración eliminan `erp_session`.
 - La sesión persiste al recargar y al reabrir el navegador mientras no haya logout, desactivación ni expiración.
 - Un cambio de rango se refleja en la siguiente acción o recarga; la desactivación se refleja de inmediato.
 - `ejecutivo_asignado` y `Integrante.userId` aceptan solo usuarios activos de rango Nivel 2 o Nivel 4.
-- Las contraseñas nunca se guardan ni se muestran en texto plano.
+- No se guardan contraseñas, hashes ni sales; el campo solo comprueba que no esté vacío.
 
 ## Integración
 
@@ -120,10 +115,11 @@ La aplicación usa un único documento HTML sin host ni ruta de servidor. La vis
 
 ## Mensajes exactos
 
-Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción`, `Acceso denegado` y `Usuario o contraseña incorrectos`; en validación de campos se usa `Completa los campos obligatorios.`. Cualquier variante de estos textos incumple el contrato.
+Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción`, `Acceso denegado`, `Ingresa una contraseña` y `Usuario no encontrado`; en validación de campos se usa `Completa los campos obligatorios.`. Cualquier variante de estos textos incumple el contrato.
 
 ## Extensibilidad y límite
 
 - Agregar un rango requiere añadir una fila en `PERMISSION_MATRIX`; desde la interfaz no puede modificarse.
 - Un módulo personalizado puede reutilizar `can()` con nuevas acciones sin cambiar el núcleo de autenticación.
-- La autenticación es local y simulada: el hash, el bloqueo y la expiración son medidas demostrativas. Una implementación productiva requiere autenticación en servidor, tal como declara la especificación.
+- La autenticación es local y simulada en modo demostración: cualquier contraseña no vacía sirve para los cuatro usuarios, no hay hash ni bloqueo, y la expiración de la sesión sigue siendo demostrativa.
+ Una implementación productiva requiere autenticación en servidor, tal como declara la especificación.

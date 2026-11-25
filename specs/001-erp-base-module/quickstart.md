@@ -136,12 +136,12 @@ La generación de identidad, marcas de tiempo, integridad referencial entre enti
 ## Validación de Inicio de Sesión y Sesión
 
 1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: debe mostrarse solo el formulario con «Usuario» y «Contraseña», sin Panel, Buscar, Resumen ni Marketing; el formulario público de `?view=capture` y el chat deben seguir disponibles.
-2. Ingrese `pedro.soto` con una contraseña incorrecta: no debe crearse sesión y debe aparecer exactamente `Usuario o contraseña incorrectos`.
-3. Ingrese `camila.ramirez` con su contraseña vigente: el panel debe mostrar `camila.ramirez`, «Nivel 4 - Gerente comercial» y el menú del usuario con «Gestionar usuarios» y «Cerrar sesión».
-4. Recargue la página y luego cierre y vuelva a abrir el navegador: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
-5. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras autenticarse como `camila.ramirez`, debe abrirse el resumen solicitado.
-6. Pulse «Cerrar sesión»: la barra superior desaparece y vuelve a mostrarse solo el login.
-7. Simule 5 intentos fallidos: el usuario debe quedar bloqueado 15 minutos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
+2. Ingrese `gerente`, `marketing`, `ventas` y `atencion`, cada uno con una contraseña cualquiera (por ejemplo, `demo`): los cuatro deben iniciar sesión; se admiten mayúsculas y espacios al inicio o al final del usuario. `gerente` debe mostrar «Nivel 4 - Gerente Comercial» y el menú con «Gestionar usuarios» y «Cerrar sesión».
+3. Deje vacío el campo «Contraseña» e intente ingresar como `gerente`: no debe crearse sesión y debe aparecer exactamente `Ingresa una contraseña`.
+4. Ingrese un usuario que no sea uno de los cuatro, por ejemplo `desconocido`: no debe crearse sesión y debe aparecer exactamente `Usuario no encontrado`.
+5. Recargue la página y luego cierre y vuelva a abrir el navegador: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
+6. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras autenticarse como `gerente`, debe abrirse el resumen solicitado.
+7. Pulse «Cerrar sesión»: la barra superior desaparece y vuelve a mostrarse solo el login. No hay bloqueo por intentos fallidos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
 
 ## Validación de Mensajes Exactos y Rutas
 
@@ -156,22 +156,22 @@ La forma de la sesión y las operaciones están en [`contracts/auth.md`](contrac
 
 ## Validación de Permisos por Rango
 
-1. Con `sofia.torres` (Nivel 1), busque «Comercial Andina SpA», vea su historial y registre una «Llamada»; confirme que no puede registrar una «Reunión», cambiar estados, eliminar clientes ni abrir Resumen, Marketing o «Equipo de ventas y logros».
-2. Abra `?view=summary` con `sofia.torres`: debe ver «Acceso denegado» y volver al Panel sin ver los 47 seguimientos pendientes.
-3. Con `pedro.soto` (Nivel 2), cree «Ferretería Central» con él como «Ejecutivo Asignado» y confirme que puede editarla; intente eliminar «Transportes del Norte Ltda.» y cambiar el estado de sus interacciones: todo debe rechazarse con `No tienes permiso para realizar esta acción`.
+1. Con `atencion` (Nivel 1), busque «Comercial Andina SpA», vea su historial y registre una «Llamada»; confirme que no puede registrar una «Reunión», cambiar estados, eliminar clientes ni abrir Resumen, Marketing o «Equipo de ventas y logros».
+2. Abra `?view=summary` con `atencion`: debe ver «Acceso denegado» y volver al Panel sin ver los 47 seguimientos pendientes.
+3. Con `ventas` (Nivel 2), cree «Ferretería Central» con él como «Ejecutivo Asignado» y confirme que puede editarla; intente eliminar «Transportes del Norte Ltda.» y cambiar el estado de sus interacciones: todo debe rechazarse con `No tienes permiso para realizar esta acción`.
 4. Desde la consola, intente eliminar «Transportes del Norte Ltda.» mediante una llamada directa a `storage.js`: la capa de datos debe rechazarla con el mismo mensaje y el cliente debe permanecer almacenado.
-5. Con `lucia.fernandez` (Nivel 3), cree la «Campaña Primavera 2026», capture un prospecto y consulte el rendimiento; intente eliminar «Comercial Andina SpA», abrir el resumen y detener una campaña de otro usuario: cada acción debe bloquearse.
-6. Con `camila.ramirez` (Nivel 4), elimine «Comercial Andina SpA», vea los 47 seguimientos del equipo, detenga la campaña de `lucia.fernandez` y gestione usuarios; confirme que no existe ninguna pantalla para editar la matriz de permisos.
-7. Despliegue «Ejecutivo Asignado» en un formulario de cliente: solo deben aparecer `pedro.soto`, `ana.munoz` y `camila.ramirez`, nunca `sofia.torres` ni `lucia.fernandez`.
+5. Con `marketing` (Nivel 3), cree la «Campaña Primavera 2026», capture un prospecto y consulte el rendimiento; intente eliminar «Comercial Andina SpA», abrir el resumen y detener una campaña de otro usuario: cada acción debe bloquearse.
+6. Con `gerente` (Nivel 4), elimine «Comercial Andina SpA», vea los 47 seguimientos del equipo, detenga la campaña de `marketing` y gestione usuarios; confirme que no existe ninguna pantalla para editar la matriz de permisos.
+7. Despliegue «Ejecutivo Asignado» en un formulario de cliente: solo deben aparecer `ventas`, `ana.munoz` y `gerente`, nunca `atencion` ni `marketing`.
 
 La matriz y las acciones están en [`contracts/auth.md`](contracts/auth.md#matriz-de-srcauthpermissionsjs) y la verificación en `storage.js` en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-autorización-de-operaciones).
 
 ## Validación de Administración de Usuarios
 
-1. Ingrese como `sofia.torres` y abra el menú del usuario: debe ver «Cerrar sesión» pero no «Gestionar usuarios».
-2. Ingrese como `camila.ramirez`, abra el menú del usuario y seleccione «Gestionar usuarios»: la pantalla debe listar los cuatro usuarios semilla con rango y estado.
+1. Ingrese como `atencion` y abra el menú del usuario: debe ver «Cerrar sesión» pero no «Gestionar usuarios».
+2. Ingrese como `gerente`, abra el menú del usuario y seleccione «Gestionar usuarios»: la pantalla debe listar los cuatro usuarios semilla con rango y estado.
 3. Intente crear un usuario llamado `Pedro.Soto`: el guardado debe rechazarse por duplicado y el usuario original debe conservar su identidad, rango y clientes.
 4. Cambie el rango de `ana.munoz` a Nivel 3 y confirme que, en su siguiente acción o recarga, la barra superior y los permisos reflejan el cambio.
-5. Desactive a `pedro.soto` mientras tiene sesión iniciada: en la siguiente acción o recarga debe redirigirse a login, sus clientes deben mostrarse como «Sin asignar» hasta reasignarlos y sus ventas históricas deben seguir contando en el integrante vinculado.
+5. Desactive a `ventas` mientras tiene sesión iniciada: en la siguiente acción o recarga debe redirigirse a login, sus clientes deben mostrarse como «Sin asignar» hasta reasignarlos y sus ventas históricas deben seguir contando en el integrante vinculado.
 
 La forma de usuarios y reglas está en [`contracts/auth.md`](contracts/auth.md#clave-erp_users) y su efecto en el modelo en [`data-model.md`](data-model.md#81-usuario).

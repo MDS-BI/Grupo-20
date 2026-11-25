@@ -141,10 +141,10 @@ function resolveAuthState() {
 let activePermissionContext = {};
 
 const RANK_LABELS = {
-  n4_manager: 'Nivel 4 - Gerente comercial',
+  n4_manager: 'Nivel 4 - Gerente Comercial',
   n3_marketing: 'Nivel 3 - Ejecutivo de Marketing',
   n2_sales: 'Nivel 2 - Ejecutivo de Ventas',
-  n1_support: 'Nivel 1 - Atención al cliente',
+  n1_support: 'Nivel 1 - Atencion al Cliente',
 };
 
 function canViewRoute(role, view, manageTab = 'entity') {
@@ -394,8 +394,8 @@ export function initApp(rootEl = null, options = {}) {
     const values = formValues(formEl);
     try {
       await login(values.username, values.password);
-    } catch {
-      state.loginError = MESSAGES.invalidCredentials;
+    } catch (error) {
+      state.loginError = error instanceof Error ? error.message : MESSAGES.userNotFound;
       render();
       return;
     }

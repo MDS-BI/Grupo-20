@@ -64,10 +64,10 @@ function legacyEntity(id, name, ejecutivo, index) {
 describe('Migración de Ejecutivo Asignado', () => {
   beforeEach(async () => {
     seedAuth();
-    camila = listUsers().find((user) => user.usernameKey === 'camila.ramirez');
-    lucia = listUsers().find((user) => user.usernameKey === 'lucia.fernandez');
-    sofia = listUsers().find((user) => user.usernameKey === 'sofia.torres');
-    pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
+    camila = listUsers().find((user) => user.usernameKey === 'gerente');
+    lucia = listUsers().find((user) => user.usernameKey === 'marketing');
+    sofia = listUsers().find((user) => user.usernameKey === 'atencion');
+    pedro = listUsers().find((user) => user.usernameKey === 'ventas');
     ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
     if (!ana) {
       ana = await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
@@ -86,12 +86,12 @@ describe('Migración de Ejecutivo Asignado', () => {
 
   it('migra texto libre a userId de usuarios activos N2/N4 al cargar la aplicación', async () => {
     saveEntities([
-      legacyEntity('ent-mig-1', 'Comercial Andina SpA', 'pedro.soto', 1),
+      legacyEntity('ent-mig-1', 'Comercial Andina SpA', 'ventas', 1),
       legacyEntity('ent-mig-2', 'Ferretería Central', 'ana.munoz', 2),
-      legacyEntity('ent-mig-3', 'Transportes del Norte Ltda.', 'camila.ramirez', 3),
+      legacyEntity('ent-mig-3', 'Transportes del Norte Ltda.', 'gerente', 3),
       legacyEntity('ent-mig-4', 'Cliente sin ejecutivo', 'María González', 4),
     ]);
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
 
     await vi.waitFor(() =>
@@ -111,7 +111,7 @@ describe('Migración de Ejecutivo Asignado', () => {
   });
 
   it('el select de Ejecutivo Asignado ofrece solo usuarios activos N2/N4', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
     app.navigate('manage-entity');
 
@@ -127,7 +127,7 @@ describe('Migración de Ejecutivo Asignado', () => {
 
   it('desactivar ana.munoz muestra Sin asignar y la retira del select', async () => {
     saveEntities([legacyEntity('ent-mig-5', 'Ferretería Central', ana.id, 5)]);
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
     deactivateUser(ana.id);
 
@@ -175,7 +175,7 @@ describe('Migración de Ejecutivo Asignado', () => {
         },
       ],
     });
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     mount();
     deactivateUser(ana.id);
 

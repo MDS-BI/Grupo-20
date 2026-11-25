@@ -30,7 +30,7 @@ function buildEntities() {
       targetDate: '1990-01-01',
       estado_comercial: STAGES[index % STAGES.length],
       campaña: `c-${index % 20}`,
-      ownerId: 'user-camila-ramirez',
+      ownerId: 'user-gerente',
       createdAt: '2026-11-01T00:00:00.000Z',
     };
   });

@@ -1,6 +1,6 @@
 import { DEMO_PASSWORD, ensureSeedUsers, login } from '../../src/auth.js';
 
-export async function signIn(username = 'camila.ramirez', password = DEMO_PASSWORD) {
+export async function signIn(username = 'gerente', password = DEMO_PASSWORD) {
   ensureSeedUsers();
   return login(username, password);
 }

@@ -18,7 +18,8 @@ const EXPECTED_MESSAGES = {
   noCampaignRecords: 'Sin registros para esta campaña.',
   permissionDenied: 'No tienes permiso para realizar esta acción',
   accessDenied: 'Acceso denegado',
-  invalidCredentials: 'Usuario o contraseña incorrectos',
+  passwordRequired: 'Ingresa una contraseña',
+  userNotFound: 'Usuario no encontrado',
 };
 
 let app = null;
@@ -65,7 +66,7 @@ function submitCapture() {
 }
 
 beforeEach(async () => {
-  await signIn('camila.ramirez');
+  await signIn('gerente');
   setActiveConfig(MODULE_CONFIG);
   setSearch('');
 });
@@ -82,7 +83,7 @@ afterEach(() => {
 describe('Mensajes exactos', () => {
   it('declara los once textos sin variantes', () => {
     expect(MESSAGES).toMatchObject(EXPECTED_MESSAGES);
-    expect(Object.keys(EXPECTED_MESSAGES)).toHaveLength(11);
+    expect(Object.keys(EXPECTED_MESSAGES)).toHaveLength(12);
   });
 
   it(MESSAGES.noResults, () => {
@@ -213,11 +214,11 @@ describe('Mensajes exactos', () => {
       rut,
       canal_contacto: 'llamada',
       contacto_telefono: '+56912345678',
-      ownerId: 'user-camila-ramirez',
+      ownerId: 'user-gerente',
     });
     expect(owner.rut).toBe(rut);
 
-    await signIn('pedro.soto');
+    await signIn('ventas');
     let thrown;
     try {
       deleteEntity(owner.id);
@@ -229,26 +230,38 @@ describe('Mensajes exactos', () => {
   });
 
   it(MESSAGES.accessDenied, async () => {
-    await signIn('sofia.torres');
+    await signIn('atencion');
     mount();
     app.navigate('marketing');
 
     expect(document.querySelector('#route-notice').textContent).toBe('Acceso denegado');
   });
 
-  it(MESSAGES.invalidCredentials, async () => {
+  it(MESSAGES.passwordRequired, async () => {
     logout();
     seedAuth();
     mount();
 
-    document.querySelector('#login-username').value = 'camila.ramirez';
-    document.querySelector('#login-password').value = 'incorrecta';
+    document.querySelector('#login-username').value = 'gerente';
+    document.querySelector('#login-password').value = '';
     document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
 
     await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe(
-        'Usuario o contraseña incorrectos'
-      )
+      expect(document.querySelector('#login-message').textContent).toBe('Ingresa una contraseña')
+    );
+  });
+
+  it(MESSAGES.userNotFound, async () => {
+    logout();
+    seedAuth();
+    mount();
+
+    document.querySelector('#login-username').value = 'desconocido';
+    document.querySelector('#login-password').value = 'clave-cualquiera';
+    document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('#login-message').textContent).toBe('Usuario no encontrado')
     );
   });
 });

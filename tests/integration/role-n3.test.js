@@ -108,7 +108,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
     );
     expect(loadEntities().some((entity) => entity.name === 'Visita 2026-11-23')).toBe(true);
 
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     app.navigate('search');
     const input = document.querySelector('#search-input');
     input.value = 'Visita 2026-11-23';
@@ -122,7 +122,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
     const entity = addEntity(entityData('Comercial Andina SpA', 1));
     const rawConfig = structuredClone(MODULE_CONFIG);
     rawConfig.customFields.document.push({ key: 'nota', type: 'text', label: 'Nota' });
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount(rawConfig);
     app.navigate('marketing');
     click('[data-action="marketing-section"][data-section="social"]');
@@ -149,7 +149,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
   it('puede registrar una consulta del chat y resolver la FAQ desde configuración', async () => {
     const entity = addEntity(entityData('Visita 2026-11-23', 2));
     const pregunta = MODULE_CONFIG.marketing.faq[1].pregunta;
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('marketing');
     click('[data-action="marketing-section"][data-section="chat"]');
@@ -176,7 +176,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
   });
 
   it('puede crear y consultar la Campaña Primavera 2026', async () => {
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('marketing');
     click('[data-action="marketing-section"][data-section="campaigns"]');
@@ -207,7 +207,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
       importe: 1250,
       startDate: localTodayISO(),
       notes: 'Venta del mes',
-      assignedUserIdAtSale: 'user-pedro-soto',
+      assignedUserIdAtSale: 'user-ventas',
     });
     const config = loadMarketingConfig();
     saveMarketingConfig({
@@ -222,13 +222,13 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
               name: 'Pedro Soto',
               role: 'Ejecutivo de Ventas',
               active: true,
-              userId: 'user-pedro-soto',
+              userId: 'user-ventas',
             },
           ],
         },
       ],
     });
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
 
     openDetail('Comercial Andina SpA');
@@ -244,7 +244,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
 
   it('no ofrece control para eliminar clientes', async () => {
     const entity = addEntity(entityData('Comercial Andina SpA', 4));
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('search');
 
@@ -256,7 +256,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
 
   it('la capa de datos rechaza eliminar clientes', async () => {
     const entity = addEntity(entityData('Comercial Andina SpA', 5));
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
 
     expect(() => deleteEntity(entity.id)).toThrow(MESSAGES.permissionDenied);
@@ -264,7 +264,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
   });
 
   it('no ofrece controles para abrir el resumen', async () => {
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('summary');
 
@@ -275,7 +275,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
   });
 
   it('no puede crear integrantes desde la interfaz (team:manage no autorizado)', async () => {
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('marketing');
 
@@ -299,7 +299,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
       action: 'create_document',
     };
     saveMarketingConfig({ ...loadMarketingConfig(), campaigns: [campaign] });
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
     app.navigate('marketing');
     click('[data-action="marketing-section"][data-section="campaigns"]');
@@ -326,7 +326,7 @@ describe('Permisos de Nivel 3 - Ejecutivo de Marketing', () => {
   });
 
   it('no puede gestionar usuarios ni modificar entidades por llamada directa', async () => {
-    await signIn('lucia.fernandez');
+    await signIn('marketing');
     mount();
 
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();

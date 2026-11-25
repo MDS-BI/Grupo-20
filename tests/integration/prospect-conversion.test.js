@@ -49,7 +49,7 @@ function openPerformance() {
 }
 
 beforeEach(async () => {
-  await signIn('camila.ramirez');
+  await signIn('gerente');
   setActiveConfig(BASE_CONFIG);
 });
 

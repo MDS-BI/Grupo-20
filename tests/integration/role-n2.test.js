@@ -67,7 +67,7 @@ function setEntityField(name, value) {
 describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
   beforeEach(async () => {
     seedAuth();
-    pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
+    pedro = listUsers().find((user) => user.usernameKey === 'ventas');
     ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
     if (!ana) {
       ana = await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
@@ -82,7 +82,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
   });
 
   it('puede crear Ferretería Central consigo mismo como Ejecutivo Asignado', async () => {
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     app.navigate('manage-entity');
 
@@ -97,7 +97,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
     expect(executive?.tagName, 'El ejecutivo asignado debe ser un select').toBe('SELECT');
     expect(
       [...executive.options].some(
-        (option) => option.value === pedro.id && option.textContent.includes('pedro.soto')
+        (option) => option.value === pedro.id && option.textContent.includes('ventas')
       )
     ).toBe(true);
     executive.value = pedro.id;
@@ -110,7 +110,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('puede editar sus propios clientes desde la interfaz', async () => {
     const entity = addEntity(entityData('Ferretería Central', 1));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     app.navigate('search');
     click(`[data-action="edit-entity"][data-id="${entity.id}"]`);
@@ -125,7 +125,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('puede registrar y cambiar el estado de las interacciones de sus clientes', async () => {
     const entity = addEntity(entityData('Ferretería Central', 2));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     app.navigate('manage-document');
 
@@ -166,7 +166,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
       notes: 'Pendiente ana',
       importe: 900,
     });
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
 
     app.navigate('summary');
@@ -226,7 +226,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
         },
       ],
     });
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
 
     app.navigate('marketing');
@@ -252,7 +252,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('no ofrece controles para eliminar Transportes del Norte Ltda.', async () => {
     addEntity(entityData('Transportes del Norte Ltda.', 7, ana.id));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     app.navigate('search');
 
@@ -263,7 +263,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('la capa de datos rechaza eliminar Transportes del Norte Ltda.', async () => {
     const entity = addEntity(entityData('Transportes del Norte Ltda.', 8, ana.id));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
 
     expect(() => deleteEntity(entity.id)).toThrow(MESSAGES.permissionDenied);
@@ -272,7 +272,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('no puede editar clientes de ana.munoz desde la interfaz', async () => {
     const entity = addEntity(entityData('Transportes del Norte Ltda.', 9, ana.id));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     app.navigate('search');
 
@@ -288,7 +288,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
 
   it('la capa de datos rechaza editar clientes de ana.munoz', async () => {
     const entity = addEntity(entityData('Transportes del Norte Ltda.', 10, ana.id));
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
 
     expect(() => updateEntity(entity.id, { name: 'Modificado por pedro' })).toThrow(
@@ -297,7 +297,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
   });
 
   it('la capa de datos rechaza escritura directa con el mensaje exacto', async () => {
-    await signIn('pedro.soto');
+    await signIn('ventas');
     mount();
     const created = addEntity(entityData('Cliente directo N2', 11));
     expect(created.ownerId).toBe(pedro.id);

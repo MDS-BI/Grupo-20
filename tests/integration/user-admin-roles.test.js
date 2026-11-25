@@ -99,11 +99,11 @@ afterEach(() => {
 describe('Gestor comercial (Nivel 4)', () => {
   it('inicia sesión con la identidad, rango y menú de gerente', async () => {
     mount();
-    submitLogin('camila.ramirez', DEMO_PASSWORD);
+    submitLogin('gerente', DEMO_PASSWORD);
 
     await vi.waitFor(() => expect(app.getState().view).toBe('dashboard'));
-    expect(document.querySelector('#current-user').textContent).toBe('camila.ramirez');
-    expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente comercial');
+    expect(document.querySelector('#current-user').textContent).toBe('gerente');
+    expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente Comercial');
     expect(
       document.querySelector('[data-action="navigate"][data-view="users-admin"]')
     ).toBeTruthy();
@@ -111,8 +111,8 @@ describe('Gestor comercial (Nivel 4)', () => {
   });
 
   it('tiene acceso total en la matriz y puede eliminar y detener campañas ajenas', async () => {
-    await signIn('camila.ramirez');
-    const lucia = listUsers().find((user) => user.username === 'lucia.fernandez');
+    await signIn('gerente');
+    const lucia = listUsers().find((user) => user.username === 'marketing');
     const entity = addEntity(validClient());
     const campaign = {
       id: 'campaign-primavera',
@@ -139,7 +139,7 @@ describe('Gestor comercial (Nivel 4)', () => {
     expect(can('n4_manager', 'campaign:stop_any')).toBe(true);
     expect(deleteEntity(entity.id)).toEqual({ deletedDocumentCount: 0 });
 
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     app.navigate('marketing');
     click('[data-section="campaigns"]');
     click(`[data-action="stop-campaign"][data-id="${campaign.id}"]`);
@@ -149,7 +149,7 @@ describe('Gestor comercial (Nivel 4)', () => {
   });
 
   it('crea usuarios, rechaza duplicados normalizados y desactiva una sesión activa', async () => {
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     app.navigate('users-admin');
     submitUserForm({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
 
@@ -158,12 +158,12 @@ describe('Gestor comercial (Nivel 4)', () => {
     );
     expect(listUsers().find((user) => user.usernameKey === 'ana.munoz').rank).toBe('n2_sales');
 
-    submitUserForm({ username: ' Pedro.Soto ', password: DEMO_PASSWORD, rank: 'n4_manager' });
+    submitUserForm({ username: ' VENTAS ', password: DEMO_PASSWORD, rank: 'n4_manager' });
     await vi.waitFor(() => expect(document.querySelector('#users-admin-error')).toBeTruthy());
     expect(document.querySelector('#users-admin-error').textContent).toBe(MESSAGES.required);
-    expect(listUsers().filter((user) => user.usernameKey === 'pedro.soto')).toHaveLength(1);
+    expect(listUsers().filter((user) => user.usernameKey === 'ventas')).toHaveLength(1);
 
-    const pedro = listUsers().find((user) => user.username === 'pedro.soto');
+    const pedro = listUsers().find((user) => user.username === 'ventas');
     deactivateUser(pedro.id);
     expect(listUsers().find((user) => user.id === pedro.id).active).toBe(false);
 
@@ -173,7 +173,7 @@ describe('Gestor comercial (Nivel 4)', () => {
   });
 
   it('cierra la sesión desde el menú del usuario', async () => {
-    await mountAs('camila.ramirez');
+    await mountAs('gerente');
     click('[data-action="logout"]');
 
     expect(app.getState().view).toBe('login');
@@ -183,9 +183,9 @@ describe('Gestor comercial (Nivel 4)', () => {
 
 describe('Ejecutivo de Marketing (Nivel 3)', () => {
   it('accede a Marketing, captura y chat sin poder borrar entidades ni ver resumen', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const entity = addEntity(validClient());
-    await mountAs('lucia.fernandez');
+    await mountAs('marketing');
 
     expect(document.querySelector('#current-rank').textContent).toBe(
       'Nivel 3 - Ejecutivo de Marketing'
@@ -212,9 +212,9 @@ describe('Ejecutivo de Marketing (Nivel 3)', () => {
 
 describe('Ejecutivo de Ventas (Nivel 2)', () => {
   it('edita solo sus clientes y cambia el estado de sus documentos', async () => {
-    const pedro = listUsers().find((user) => user.username === 'pedro.soto');
-    const camila = listUsers().find((user) => user.username === 'camila.ramirez');
-    await signIn('pedro.soto');
+    const pedro = listUsers().find((user) => user.username === 'ventas');
+    const camila = listUsers().find((user) => user.username === 'gerente');
+    await signIn('ventas');
 
     const own = addEntity(validClient({ ownerId: pedro.id }));
     const other = addEntity(validClient({ ownerId: camila.id }));
@@ -245,8 +245,8 @@ describe('Ejecutivo de Ventas (Nivel 2)', () => {
   });
 
   it('ve su propio resumen pero no Marketing ni gestión de usuarios', async () => {
-    const pedro = listUsers().find((user) => user.username === 'pedro.soto');
-    await mountAs('pedro.soto');
+    const pedro = listUsers().find((user) => user.username === 'ventas');
+    await mountAs('ventas');
 
     app.navigate('summary');
     expect(app.getState().view).toBe('summary');
@@ -262,13 +262,13 @@ describe('Ejecutivo de Ventas (Nivel 2)', () => {
 
 describe('Atención al cliente (Nivel 1) y visitante', () => {
   it('puede buscar, crear documentos y usar el chat, pero no crear clientes', async () => {
-    await signIn('camila.ramirez');
-    const camila = listUsers().find((user) => user.username === 'camila.ramirez');
+    await signIn('gerente');
+    const camila = listUsers().find((user) => user.username === 'gerente');
     const entity = addEntity(validClient({ ownerId: camila.id }));
-    await mountAs('sofia.torres');
+    await mountAs('atencion');
 
     expect(document.querySelector('#current-rank').textContent).toBe(
-      'Nivel 1 - Atención al cliente'
+      'Nivel 1 - Atencion al Cliente'
     );
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
     app.navigate('search');
@@ -291,7 +291,7 @@ describe('Atención al cliente (Nivel 1) y visitante', () => {
   });
 
   it('bloquea Resumen, Marketing y usuarios con Acceso denegado', async () => {
-    await mountAs('sofia.torres');
+    await mountAs('atencion');
 
     for (const view of ['summary', 'marketing', 'users-admin', 'manage-entity']) {
       app.navigate(view);

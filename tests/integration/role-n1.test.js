@@ -78,13 +78,13 @@ describe('Permisos de Nivel 1 - Atención al cliente', () => {
       rut: formatRut(14000001),
       canal_contacto: 'llamada',
       contacto_telefono: '+56 9 1234 5678',
-      ejecutivo_asignado: 'user-pedro-soto',
+      ejecutivo_asignado: 'user-ventas',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     };
     saveEntities([baseEntity]);
     saveDocuments([]);
-    await signIn('sofia.torres');
+    await signIn('atencion');
     setSearch('');
   });
 
@@ -154,7 +154,7 @@ describe('Permisos de Nivel 1 - Atención al cliente', () => {
     await vi.waitFor(() => expect(document.querySelector('.chat-response')).toBeTruthy());
     expect(loadDocuments().some((doc) => doc.respuesta)).toBe(true);
 
-    await signIn('sofia.torres');
+    await signIn('atencion');
     app.navigate('search');
     const input = document.querySelector('#search-input');
     input.value = 'Consulta pública N1';

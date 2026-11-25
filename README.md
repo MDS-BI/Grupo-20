@@ -49,6 +49,19 @@ npm run lint
 
 `npm install` instala dependencias; `npm run dev` inicia Vite (http://localhost:5173 o la URL que indique); `npm test` ejecuta la suite unitaria y de integración (Vitest + jsdom); `npm run lint` comprueba el código con ESLint.
 
+## Usuarios de demostración
+
+El inicio de sesión funciona en modo demostración: el usuario no distingue mayúsculas ni espacios y cualquier contraseña no vacía permite entrar. No se verifica hash, no hay contraseñas incorrectas ni bloqueo por intentos fallidos; la sesión persiste, expira tras 8 horas de inactividad y se revoca al desactivar al usuario.
+
+| Usuario     | Rango                         | Capacidades principales                                                                                               |
+| ----------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `gerente`   | Nivel 4 - Gerente Comercial   | Acceso total; gestiona usuarios, equipos, clientes, documentos, resumen completo y campañas de cualquier usuario.        |
+| `marketing` | Nivel 3 - Ejecutivo de Marketing | Capta prospectos, gestiona campañas y chat, ve fichas y solo lee «Equipo de ventas y logros»; sin resumen ni borrados. |
+| `ventas`    | Nivel 2 - Ejecutivo de Ventas | Crea y edita sus clientes y documentos, ve su propio resumen y su real/objetivo; no elimina ni ve el resumen completo.   |
+| `atencion`  | Nivel 1 - Atencion al Cliente | Busca fichas e historiales, registra «Llamada» o «Correo» y da seguimiento al chat; sin resumen, Marketing ni equipo.    |
+
+La contraseña vacía muestra exactamente `Ingresa una contraseña`; un usuario distinto de los cuatro muestra exactamente `Usuario no encontrado`. Los cuatro usuarios conservan los permisos de la matriz única por rango definida en `specs/001-erp-base-module/spec.md`.
+
 **Limitación de `?view=capture`**: no hay backend, por lo que la captura pública y el chat embebido requieren el **mismo origen** (host y puerto) que la aplicación; no se pueden incrustar en otro dominio ni resolverse añadiendo dependencias. Los registros quedan en el `localStorage` de esa aplicación, como describe `specs/001-erp-base-module/contracts/marketing.md`.
 
 ## Building Custom Modules

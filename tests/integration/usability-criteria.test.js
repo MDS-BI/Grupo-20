@@ -143,7 +143,7 @@ describe('Checklist SC-003', () => {
 
 describe('Simulación SC-003 de cinco participantes virtuales', () => {
   it('crea, edita, busca y elimina una entidad con éxito en cada iteración', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     app = initApp({ mountElement: document.body, rawConfig: MODULE_CONFIG, enableAuth: true });
 
     const resultados = [];

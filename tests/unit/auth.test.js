@@ -1,86 +1,65 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEMO_PASSWORD,
-  LOCK_MINUTES,
-  MAX_FAILED_ATTEMPTS,
   SESSION_HOURS,
   createUser,
   deactivateUser,
   ensureSeedUsers,
   getCurrentSession,
   getCurrentUser,
-  hashPassword,
   listUsers,
   login,
   logout,
   normalizeUsername,
   touchSession,
   updateUser,
-  verifyPassword,
 } from '../../src/auth.js';
 import { seedAuth, signIn } from '../helpers/auth-session.js';
-import { MESSAGES } from '../../src/utils/messages.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
   logout();
 });
 
-describe('Política de autenticación local', () => {
-  it('expone las constantes de sesión, bloqueo e intentos', () => {
+describe('Política de autenticación demostrativa', () => {
+  it('expone la duración de sesión y una contraseña de prueba cualquiera', () => {
     expect(SESSION_HOURS).toBe(8);
-    expect(LOCK_MINUTES).toBe(15);
-    expect(MAX_FAILED_ATTEMPTS).toBe(5);
     expect(DEMO_PASSWORD).toBeTruthy();
   });
 
   it('normaliza nombres de usuario recortando y pasando a minúsculas', () => {
-    expect(normalizeUsername('  Pedro.Soto  ')).toBe('pedro.soto');
-    expect(normalizeUsername('CAMILA.RAMIREZ')).toBe('camila.ramirez');
+    expect(normalizeUsername('  Ventas  ')).toBe('ventas');
+    expect(normalizeUsername('GERENTE')).toBe('gerente');
     expect(normalizeUsername('')).toBe('');
     expect(normalizeUsername(null)).toBe('');
     expect(normalizeUsername(undefined)).toBe('');
   });
-
-  it('deriva hashes PBKDF2 estables y verifica contraseñas sin guardarlas en texto plano', async () => {
-    const salt = 'salt-de-prueba';
-    const hash = await hashPassword(DEMO_PASSWORD, salt);
-
-    expect(hash).toMatch(/^[0-9a-f]{64}$/);
-    expect(hash).not.toContain(DEMO_PASSWORD);
-    expect(await hashPassword(DEMO_PASSWORD, salt)).toBe(hash);
-    expect(await hashPassword('otra-contraseña', salt)).not.toBe(hash);
-    expect(await hashPassword(DEMO_PASSWORD, 'otra-sal')).not.toBe(hash);
-    expect(await verifyPassword(DEMO_PASSWORD, { salt, passwordHash: hash })).toBe(true);
-    expect(await verifyPassword('incorrecta', { salt, passwordHash: hash })).toBe(false);
-    expect(await verifyPassword(DEMO_PASSWORD, {})).toBe(false);
-  });
 });
 
-describe('Usuarios semilla', () => {
-  it('siembra los cuatro rangos una sola vez con datos derivados', () => {
+describe('Usuarios de demostración', () => {
+  it('siembra exactamente los cuatro usuarios con sus rangos y sin contraseñas', () => {
     ensureSeedUsers();
     const users = listUsers();
 
     expect(users.map((user) => user.usernameKey)).toEqual([
-      'camila.ramirez',
-      'lucia.fernandez',
-      'pedro.soto',
-      'sofia.torres',
+      'gerente',
+      'marketing',
+      'ventas',
+      'atencion',
     ]);
     expect(Object.fromEntries(users.map((user) => [user.usernameKey, user.rank]))).toEqual({
-      'camila.ramirez': 'n4_manager',
-      'lucia.fernandez': 'n3_marketing',
-      'pedro.soto': 'n2_sales',
-      'sofia.torres': 'n1_support',
+      gerente: 'n4_manager',
+      marketing: 'n3_marketing',
+      ventas: 'n2_sales',
+      atencion: 'n1_support',
     });
     for (const user of users) {
       expect(user.id).toBeTruthy();
-      expect(user.salt).toBeTruthy();
-      expect(user.passwordHash).not.toBe(DEMO_PASSWORD);
+      expect(user).not.toHaveProperty('passwordHash');
+      expect(user).not.toHaveProperty('salt');
+      expect(user).not.toHaveProperty('failedAttempts');
+      expect(user).not.toHaveProperty('lockedUntil');
       expect(user.active).toBe(true);
-      expect(user.failedAttempts).toBe(0);
-      expect(user.lockedUntil).toBeNull();
       expect(Number.isNaN(Date.parse(user.createdAt))).toBe(false);
     }
 
@@ -90,12 +69,17 @@ describe('Usuarios semilla', () => {
   });
 });
 
-describe('Login y sesión persistente', () => {
-  it('acepta el usuario normalizado y crea una sesión vigente de ocho horas', async () => {
-    const user = await signIn('  CAMILA.RAMIREZ ', DEMO_PASSWORD);
+describe('Inicio de sesión demostrativo', () => {
+  it.each([
+    ['gerente', 'n4_manager'],
+    ['marketing', 'n3_marketing'],
+    ['ventas', 'n2_sales'],
+    ['atencion', 'n1_support'],
+  ])('%s inicia sesión con cualquier contraseña', async (username, rank) => {
+    const user = await login(`  ${username.toUpperCase()}  `, `clave-${username}-cualquiera`);
     const session = getCurrentSession();
 
-    expect(user.rank).toBe('n4_manager');
+    expect(user.rank).toBe(rank);
     expect(session).toMatchObject({ userId: user.id });
     expect(Number.isNaN(Date.parse(session.issuedAt))).toBe(false);
     expect(Number.isNaN(Date.parse(session.lastActivityAt))).toBe(false);
@@ -103,16 +87,41 @@ describe('Login y sesión persistente', () => {
       SESSION_HOURS * 60 * 60 * 1000
     );
     expect(session).not.toHaveProperty('rank');
-    expect(getCurrentUser()).toMatchObject({ id: user.id, rank: 'n4_manager' });
+    expect(getCurrentUser()).toMatchObject({ id: user.id, rank });
+  });
 
-    logout();
+  it('rechaza la contraseña vacía con el mensaje exacto', async () => {
+    seedAuth();
+
+    await expect(login('gerente', '')).rejects.toThrow('Ingresa una contraseña');
+    await expect(login('gerente', '   ')).rejects.toThrow('Ingresa una contraseña');
     expect(getCurrentSession()).toBeNull();
-    expect(getCurrentUser()).toBeNull();
     expect(localStorage.getItem('erp_session')).toBeNull();
   });
 
+  it('rechaza un usuario inexistente con el mensaje exacto', async () => {
+    seedAuth();
+
+    await expect(login('desconocido', DEMO_PASSWORD)).rejects.toThrow('Usuario no encontrado');
+    expect(getCurrentSession()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('no bloquea al usuario tras intentos fallidos', async () => {
+    seedAuth();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(login('ventas', '')).rejects.toThrow('Ingresa una contraseña');
+    }
+
+    await expect(login('ventas', 'otra-clave')).resolves.toMatchObject({ usernameKey: 'ventas' });
+    expect(getCurrentSession()).not.toBeNull();
+    expect(listUsers().find((user) => user.usernameKey === 'ventas')).not.toHaveProperty(
+      'failedAttempts'
+    );
+  });
+
   it('renueva lastActivityAt y expiresAt con touchSession mientras la sesión esté vigente', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const before = getCurrentSession();
     const later = Date.now() + 60_000;
     vi.spyOn(Date, 'now').mockReturnValue(later);
@@ -130,7 +139,7 @@ describe('Login y sesión persistente', () => {
   });
 
   it('descarta una sesión expirada y elimina la clave', async () => {
-    const user = await signIn('pedro.soto');
+    const user = await signIn('ventas');
     const session = getCurrentSession();
     localStorage.setItem(
       'erp_session',
@@ -144,7 +153,7 @@ describe('Login y sesión persistente', () => {
   });
 
   it('revoca de inmediato la sesión de un usuario desactivado', async () => {
-    const user = await signIn('pedro.soto');
+    const user = await signIn('ventas');
     expect(getCurrentUser()).not.toBeNull();
 
     deactivateUser(user.id);
@@ -152,82 +161,40 @@ describe('Login y sesión persistente', () => {
     expect(getCurrentSession()).toBeNull();
     expect(getCurrentUser()).toBeNull();
     expect(localStorage.getItem('erp_session')).toBeNull();
-    await expect(login('pedro.soto', DEMO_PASSWORD)).rejects.toThrow(
-      'Usuario o contraseña incorrectos'
-    );
-  });
-});
-
-describe('Bloqueo por intentos fallidos', () => {
-  it('cuenta los fallos con el mensaje exacto y bloquea tras cinco intentos', async () => {
-    seedAuth();
-    for (let attempt = 0; attempt < MAX_FAILED_ATTEMPTS; attempt += 1) {
-      await expect(login('pedro.soto', 'contraseña-mala')).rejects.toThrow(
-        'Usuario o contraseña incorrectos'
-      );
-    }
-
-    const locked = listUsers().find((user) => user.usernameKey === 'pedro.soto');
-    expect(locked.failedAttempts).toBeGreaterThanOrEqual(MAX_FAILED_ATTEMPTS);
-    expect(Date.parse(locked.lockedUntil)).toBeGreaterThan(Date.now());
-    expect(Date.parse(locked.lockedUntil) - Date.now()).toBeLessThanOrEqual(
-      LOCK_MINUTES * 60 * 1000
-    );
-    await expect(login('pedro.soto', DEMO_PASSWORD)).rejects.toThrow(MESSAGES.invalidCredentials);
-  });
-
-  it('un inicio de sesión correcto reinicia el contador antes del bloqueo', async () => {
-    seedAuth();
-    for (let attempt = 0; attempt < MAX_FAILED_ATTEMPTS - 1; attempt += 1) {
-      await expect(login('sofia.torres', 'contraseña-mala')).rejects.toThrow(
-        MESSAGES.invalidCredentials
-      );
-    }
-
-    await login('sofia.torres', DEMO_PASSWORD);
-    const user = listUsers().find((candidate) => candidate.usernameKey === 'sofia.torres');
-
-    expect(user.failedAttempts).toBe(0);
-    expect(user.lockedUntil).toBeNull();
-    expect(getCurrentSession()).not.toBeNull();
   });
 });
 
 describe('Administración de usuarios', () => {
-  it('createUser persiste datos derivados y rechaza duplicados normalizados', async () => {
+  it('createUser rechaza duplicados normalizados', async () => {
     seedAuth();
-    const created = await createUser({
+    const created = createUser({
       username: ' Ana.Muñoz ',
       password: DEMO_PASSWORD,
       rank: 'n2_sales',
     });
 
     expect(created.usernameKey).toBe('ana.muñoz');
-    expect(created.passwordHash).not.toContain(DEMO_PASSWORD);
-    expect(created.salt).toBeTruthy();
+    expect(created).not.toHaveProperty('passwordHash');
     expect(created.active).toBe(true);
-    expect(created.failedAttempts).toBe(0);
-    expect(created.lockedUntil).toBeNull();
-    expect(await verifyPassword(DEMO_PASSWORD, created)).toBe(true);
 
     const count = listUsers().length;
-    await expect(
+    expect(() =>
       createUser({ username: 'ANA.MUÑOZ', password: DEMO_PASSWORD, rank: 'n4_manager' })
-    ).rejects.toThrow();
-    await expect(
+    ).toThrow();
+    expect(() =>
       createUser({ username: '  ana.muñoz  ', password: DEMO_PASSWORD, rank: 'n2_sales' })
-    ).rejects.toThrow();
+    ).toThrow();
     expect(listUsers()).toHaveLength(count);
   });
 
   it('updateUser sincroniza usernameKey, aplica rangos y rechaza duplicados', () => {
     seedAuth();
-    const pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
+    const ventas = listUsers().find((user) => user.usernameKey === 'ventas');
 
-    const renamed = updateUser(pedro.id, { username: ' PEDRO.SOTO ', rank: 'n4_manager' });
-    expect(renamed.usernameKey).toBe('pedro.soto');
+    const renamed = updateUser(ventas.id, { username: ' VENTAS ', rank: 'n4_manager' });
+    expect(renamed.usernameKey).toBe('ventas');
     expect(renamed.rank).toBe('n4_manager');
-    expect(() => updateUser(pedro.id, { username: ' Camila.Ramirez ' })).toThrow();
-    expect(listUsers().find((user) => user.id === pedro.id).rank).toBe('n4_manager');
+    expect(() => updateUser(ventas.id, { username: ' GERENTE ' })).toThrow();
+    expect(listUsers().find((user) => user.id === ventas.id).rank).toBe('n4_manager');
   });
 });

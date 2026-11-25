@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { signIn, seedAuth } from '../helpers/auth-session.js';
-import {
-  DEMO_PASSWORD,
-  createUser,
-  deactivateUser,
-  listUsers,
-  updateUser,
-} from '../../src/auth.js';
+import { deactivateUser, listUsers, updateUser } from '../../src/auth.js';
 
 let app;
 
@@ -33,14 +27,6 @@ async function submitLogin(username, password) {
   form.querySelector('#login-username').value = username;
   form.querySelector('#login-password').value = password;
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-}
-
-async function ensureAna() {
-  let ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
-  if (!ana) {
-    ana = await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
-  }
-  return ana;
 }
 
 describe('Inicio de sesión y sesión persistente', () => {
@@ -73,17 +59,21 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.body.textContent).not.toContain('Resumen');
   });
 
-  it('camila.ramirez inicia sesión con nombre, rango, menú de usuario y cierre de sesión', async () => {
+  it.each([
+    ['gerente', 'Nivel 4 - Gerente Comercial'],
+    ['marketing', 'Nivel 3 - Ejecutivo de Marketing'],
+    ['ventas', 'Nivel 2 - Ejecutivo de Ventas'],
+    ['atencion', 'Nivel 1 - Atencion al Cliente'],
+  ])('%s inicia sesión con una contraseña cualquiera', async (username, rankLabel) => {
     mount();
-    await submitLogin('camila.ramirez', DEMO_PASSWORD);
+    await submitLogin(`  ${username.toUpperCase()}  `, `clave-${username}-cualquiera`);
 
-    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe('camila.ramirez'));
-    expect(document.querySelector('#current-user').textContent).toBe('camila.ramirez');
-    expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente comercial');
-    const menu = document.querySelector('.user-meta');
-    expect(menu).toBeTruthy();
-    expect(menu.textContent).toContain('Gestionar usuarios');
-    expect(menu.textContent).toContain('Cerrar sesión');
+    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe(username));
+    expect(document.querySelector('#current-user').textContent).toBe(username);
+    expect(document.querySelector('#current-rank').textContent).toBe(rankLabel);
+    expect(document.querySelector('.user-meta')).toBeTruthy();
+    expect(document.querySelector('#login-form')).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeTruthy();
 
     click('[data-action="logout"]');
     await vi.waitFor(() => expect(document.querySelector('.login-view')).toBeTruthy());
@@ -91,14 +81,34 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.querySelector('.user-meta')).toBeNull();
   });
 
-  it('un login incorrecto de pedro.soto muestra el mensaje exacto y no crea sesión', async () => {
+  it('el menú de gerente ofrece Gestionar usuarios y Cerrar sesión', async () => {
     mount();
-    await submitLogin('pedro.soto', 'clave-incorrecta');
+    await submitLogin('gerente', 'clave-cualquiera');
+
+    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe('gerente'));
+    const menu = document.querySelector('.user-meta');
+    expect(menu.textContent).toContain('Gestionar usuarios');
+    expect(menu.textContent).toContain('Cerrar sesión');
+  });
+
+  it('rechaza la contraseña vacía con el mensaje exacto y no crea sesión', async () => {
+    mount();
+    await submitLogin('gerente', '');
 
     await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe(
-        'Usuario o contraseña incorrectos'
-      )
+      expect(document.querySelector('#login-message').textContent).toBe('Ingresa una contraseña')
+    );
+    expect(document.querySelector('.user-meta')).toBeNull();
+    expect(document.querySelector('.dashboard')).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('rechaza un usuario inexistente con el mensaje exacto y no crea sesión', async () => {
+    mount();
+    await submitLogin('desconocido', 'clave-cualquiera');
+
+    await vi.waitFor(() =>
+      expect(document.querySelector('#login-message').textContent).toBe('Usuario no encontrado')
     );
     expect(document.querySelector('.user-meta')).toBeNull();
     expect(document.querySelector('.dashboard')).toBeNull();
@@ -112,7 +122,7 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.querySelector('.login-view')).toBeTruthy();
     expect(app.getState().pendingRoute?.view).toBe('summary');
 
-    await submitLogin('camila.ramirez', DEMO_PASSWORD);
+    await submitLogin('gerente', 'clave-cualquiera');
     await vi.waitFor(() => expect(document.querySelector('.commercial-summary')).toBeTruthy());
     expect(window.location.search).toBe('?view=summary');
   });
@@ -120,7 +130,7 @@ describe('Inicio de sesión y sesión persistente', () => {
   it('la ruta del resumen se conserva en recarga y en Back/Forward', async () => {
     setSearch('?view=summary');
     mount();
-    await submitLogin('camila.ramirez', DEMO_PASSWORD);
+    await submitLogin('gerente', 'clave-cualquiera');
     await vi.waitFor(() => expect(document.querySelector('.commercial-summary')).toBeTruthy());
 
     app.navigate('search');
@@ -136,24 +146,24 @@ describe('Inicio de sesión y sesión persistente', () => {
   });
 
   it('recargar o reabrir la aplicación conserva la sesión iniciada', async () => {
-    await signIn('camila.ramirez');
+    await signIn('gerente');
     const first = mount();
-    expect(document.querySelector('#current-user').textContent).toBe('camila.ramirez');
+    expect(document.querySelector('#current-user').textContent).toBe('gerente');
 
     first.destroy();
     app = mount();
-    expect(document.querySelector('#current-user').textContent).toBe('camila.ramirez');
-    expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente comercial');
+    expect(document.querySelector('#current-user').textContent).toBe('gerente');
+    expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente Comercial');
     expect(document.querySelector('.login-view')).toBeNull();
   });
 
-  it('desactivar pedro.soto con sesión activa redirige a login en la siguiente acción', async () => {
-    const pedro = listUsers().find((user) => user.usernameKey === 'pedro.soto');
-    await signIn('pedro.soto');
+  it('desactivar ventas con sesión activa redirige a login en la siguiente acción', async () => {
+    const user = listUsers().find((candidate) => candidate.usernameKey === 'ventas');
+    await signIn('ventas');
     mount();
-    expect(document.querySelector('#current-user').textContent).toBe('pedro.soto');
+    expect(document.querySelector('#current-user').textContent).toBe('ventas');
 
-    deactivateUser(pedro.id);
+    deactivateUser(user.id);
     app.navigate('search');
 
     await vi.waitFor(() => expect(document.querySelector('.login-view')).toBeTruthy());
@@ -161,16 +171,15 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.querySelector('.user-meta')).toBeNull();
   });
 
-  it('el cambio de rango de ana.munoz se refleja en la barra y los permisos en la siguiente acción', async () => {
-    await ensureAna();
-    await signIn('ana.munoz');
+  it('el cambio de rango de ventas se refleja en la barra y los permisos en la siguiente acción', async () => {
+    await signIn('ventas');
     mount();
     expect(document.querySelector('#current-rank').textContent).toBe(
       'Nivel 2 - Ejecutivo de Ventas'
     );
 
-    const ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
-    updateUser(ana.id, { rank: 'n3_marketing' });
+    const user = listUsers().find((candidate) => candidate.usernameKey === 'ventas');
+    updateUser(user.id, { rank: 'n3_marketing' });
     app.navigate('search');
 
     expect(document.querySelector('#current-rank').textContent).toBe(

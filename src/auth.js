@@ -4,35 +4,13 @@ const USERS_KEY = 'erp_users';
 const SESSION_KEY = 'erp_session';
 
 export const SESSION_HOURS = 8;
-export const LOCK_MINUTES = 15;
-export const MAX_FAILED_ATTEMPTS = 5;
 export const DEMO_PASSWORD = 'demo1234';
 
-const SEED_USERS = [
-  [
-    'camila.ramirez',
-    'n4_manager',
-    'camila.ramirez-erp-salt',
-    '6bb2d9c271ebc1bb800072a36b88b478886ebcf17f48dfb091fbac904d0bb1fc',
-  ],
-  [
-    'lucia.fernandez',
-    'n3_marketing',
-    'lucia.fernandez-erp-salt',
-    'fd09bc01c2fb3cf207ebf221ea4a976815b76984007be454cd564fe38f1f889e',
-  ],
-  [
-    'pedro.soto',
-    'n2_sales',
-    'pedro.soto-erp-salt',
-    'a1b9a42baf1757956cc672df6fa40085106fd0fd022e1239db7ec0ffacdb66e9',
-  ],
-  [
-    'sofia.torres',
-    'n1_support',
-    'sofia.torres-erp-salt',
-    '79e06f8ce7c68cbd8a9d685dd8207ea7153c3c652c2743f44b759be2bdc3a33f',
-  ],
+const DEMO_USERS = [
+  ['gerente', 'n4_manager'],
+  ['marketing', 'n3_marketing'],
+  ['ventas', 'n2_sales'],
+  ['atencion', 'n1_support'],
 ];
 
 function storage() {
@@ -58,62 +36,14 @@ export function normalizeUsername(value) {
     .toLowerCase();
 }
 
-function bytesToHex(bytes) {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function randomSalt() {
-  const subtle = globalThis.crypto;
-  if (subtle?.getRandomValues) return bytesToHex(subtle.getRandomValues(new Uint8Array(16)));
-  return bytesToHex(new Uint8Array(16).map(() => Math.floor(Math.random() * 256)));
-}
-
-export async function hashPassword(password, salt) {
-  const subtle = globalThis.crypto?.subtle;
-  if (!subtle) throw new Error('Web Crypto API no disponible');
-  const key = await subtle.importKey(
-    'raw',
-    new TextEncoder().encode(String(password)),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  const bits = await subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      salt: new TextEncoder().encode(String(salt)),
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    key,
-    256
-  );
-  return bytesToHex(new Uint8Array(bits));
-}
-
-export async function verifyPassword(password, user) {
-  if (!user?.salt || !user?.passwordHash) return false;
-  try {
-    const digest = await hashPassword(password, user.salt);
-    return digest.toLowerCase() === String(user.passwordHash).toLowerCase();
-  } catch {
-    return false;
-  }
-}
-
-async function buildUser(username, rank, password) {
-  const salt = randomSalt();
+function buildUser(username, rank) {
   const now = new Date().toISOString();
   return {
     id: `user-${normalizeUsername(username).replace(/[^a-z0-9]+/g, '-')}`,
     username,
     usernameKey: normalizeUsername(username),
-    passwordHash: await hashPassword(password, salt),
-    salt,
     rank,
     active: true,
-    failedAttempts: 0,
-    lockedUntil: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -131,21 +61,7 @@ export function authEnabled() {
 
 export function ensureSeedUsers() {
   if (storage()?.getItem(USERS_KEY)) return;
-  const now = new Date().toISOString();
-  const users = SEED_USERS.map(([username, rank, salt, passwordHash]) => ({
-    id: `user-${normalizeUsername(username).replace(/[^a-z0-9]+/g, '-')}`,
-    username,
-    usernameKey: normalizeUsername(username),
-    passwordHash,
-    salt,
-    rank,
-    active: true,
-    failedAttempts: 0,
-    lockedUntil: null,
-    createdAt: now,
-    updatedAt: now,
-  }));
-  writeJson(USERS_KEY, users);
+  writeJson(USERS_KEY, DEMO_USERS.map(([username, rank]) => buildUser(username, rank)));
 }
 
 export function listUsers() {
@@ -182,25 +98,12 @@ export function getCurrentUser() {
 
 export async function login(username, password) {
   ensureSeedUsers();
-  const users = listUsers();
+  if (!String(password || '').trim()) throw new Error(MESSAGES.passwordRequired);
   const key = normalizeUsername(username);
-  const user = users.find((candidate) => candidate.usernameKey === key);
-  const locked = user?.lockedUntil && Date.parse(user.lockedUntil) > Date.now();
-  const valid = user && user.active !== false && !locked && (await verifyPassword(password, user));
-  if (!valid) {
-    if (user && user.active !== false && !locked) {
-      user.failedAttempts = (user.failedAttempts || 0) + 1;
-      if (user.failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        user.lockedUntil = new Date(Date.now() + LOCK_MINUTES * 60 * 1000).toISOString();
-      }
-      saveUsers(users);
-    }
-    throw new Error(MESSAGES.invalidCredentials);
-  }
-  user.failedAttempts = 0;
-  user.lockedUntil = null;
-  user.updatedAt = new Date().toISOString();
-  saveUsers(users);
+  const demoKey = DEMO_USERS.find(([name]) => normalizeUsername(name) === key)?.[0];
+  if (!demoKey) throw new Error(MESSAGES.userNotFound);
+  const user = listUsers().find((candidate) => candidate.id === `user-${demoKey}`);
+  if (!user || user.active === false) throw new Error(MESSAGES.userNotFound);
   const now = Date.now();
   writeJson(SESSION_KEY, {
     userId: user.id,
@@ -226,8 +129,9 @@ export function touchSession() {
   });
 }
 
-export async function createUser(values = {}) {
-  const user = await buildUser(values.username, values.rank, values.password);
+export function createUser(values = {}) {
+  if (!String(values.password || '').trim()) throw new Error(MESSAGES.passwordRequired);
+  const user = buildUser(values.username, values.rank);
   const users = listUsers();
   if (users.some((candidate) => candidate.usernameKey === user.usernameKey)) {
     throw new Error(MESSAGES.required);
