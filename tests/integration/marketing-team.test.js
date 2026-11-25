@@ -18,12 +18,11 @@ function openTeamSection() {
   document.querySelector('[data-action="navigate"][data-view="marketing"]').click();
   const tab = document.querySelector('[data-action="marketing-section"][data-section="team"]');
   tab.click();
-  expect(
-    document
-      .querySelector('[data-action="marketing-section"][data-section="team"]')
-      .getAttribute('aria-selected')
-  ).toBe('true');
+  expect(tab.getAttribute('aria-selected')).toBe('true');
   expect(document.querySelector('.marketing-team h2').textContent).toBe(
+    'Equipos de ventas y logros'
+  );
+  expect(document.querySelector('.marketing-view').textContent).not.toContain(
     'Equipo de ventas y logros'
   );
 }

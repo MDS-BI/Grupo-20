@@ -722,6 +722,8 @@ export function initApp(rootEl = null, options = {}) {
       selectedCampaignId: state.selectedCampaignId,
       currentUserId: state.currentUser?.id || null,
       canStopAnyCampaign: uiCan('campaign:stop_any'),
+      role: state.role,
+      authEnabled: state.authEnabled,
     });
   }
 

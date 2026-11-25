@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones de la autenticación local simulada, la sesión persistente y la matriz única de permisos (FR-091 a FR-099, US22, US23). La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva.
+Definir la forma de los datos y las operaciones de la autenticación local simulada, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23). La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva.
 
 ## Almacenamiento
 

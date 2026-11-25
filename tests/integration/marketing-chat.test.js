@@ -123,6 +123,17 @@ afterEach(() => {
 describe('Chat en la captura pública ?view=capture (T105)', () => {
   beforeEach(() => mountApp('/?view=capture'));
 
+  it('usa «Dudas y consultas» en la captura sin cambiar el chat interno (T141)', () => {
+    captureProspect();
+    const chat = document.querySelector('.marketing-chat');
+
+    expect(chat.querySelector('h2').textContent).toBe('Dudas y consultas');
+    expect(chat.querySelector('.checkbox-field').textContent).toContain('Dudas y consultas');
+    expect(chat.textContent).not.toContain('usar el chat');
+    expect(chat.querySelector('#chat-form')).toBeTruthy();
+    expect(chat.querySelector('.chat-faq')).toBeTruthy();
+  });
+
   it('muestra el chat sin entidad y bloquea el primer mensaje sin consentimiento', () => {
     const form = document.querySelector('#chat-form');
     expect(form).toBeTruthy();
@@ -210,6 +221,18 @@ describe('Chat en Marketing (T105)', () => {
     mountApp('/');
     entity = seedEntity();
     openMarketingChat();
+  });
+
+  it('muestra «Dudas y consultas» en Marketing conservando selectores y canal (T141)', () => {
+    const tab = document.querySelector('[data-action="marketing-section"][data-section="chat"]');
+    const chat = document.querySelector('.marketing-chat');
+
+    expect(tab.textContent.trim()).toBe('Dudas y consultas');
+    expect(chat.querySelector('h2').textContent).toBe('Dudas y consultas');
+    expect(chat.querySelector('.checkbox-field').textContent).toContain('Dudas y consultas');
+    expect(chat.querySelector('#chat-form')).toBeTruthy();
+    expect(chat.querySelector('.chat-messages')).toBeTruthy();
+    expect(tab.dataset.section).toBe('chat');
   });
 
   it('selecciona la entidad y bloquea el envío sin consentimiento explícito', () => {

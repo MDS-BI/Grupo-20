@@ -146,4 +146,14 @@ describe('Panel y Marketing comparten tarjetas y embudo (T086/T133)', () => {
     expectNoDerivedKeys();
     expect(documents).toHaveLength(4);
   });
+
+  it('reserva las acciones rápidas del panel para el panel (T135)', () => {
+    app.navigate('dashboard');
+    expect(document.querySelectorAll('.dashboard .quick-actions button')).toHaveLength(5);
+
+    app.navigate('marketing');
+    expect(document.querySelector('.marketing-view .quick-actions')).toBeNull();
+    expect(document.querySelectorAll('.marketing-view [data-action^="quick-"]')).toHaveLength(0);
+    expect(document.querySelectorAll('.marketing-view .summary-cards .stat-value')).toHaveLength(5);
+  });
 });

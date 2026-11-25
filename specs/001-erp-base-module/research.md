@@ -234,15 +234,15 @@
 
 ## Decisiones de diseño (equipo, canales, campañas y rendimiento)
 
-### Decisión: Equipo de ventas con métricas calculadas, no capturadas
+### Decisión: Equipos de ventas y logros con métricas calculadas, no capturadas
 
 - **Decisión**: `marketing.salesTeams` contiene equipos con `name` e `integrantes`; cada integrante guarda `name`, `role`/`cargo` y `active`. El real mensual se calcula sumando importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al integrante. El objetivo mensual es `ventasAcumuladas / díasTranscurridos * díasDelMes`, o cero sin ventas o sin días transcurridos.
 - **Justificación**: La especificación exige que el usuario capture solo datos del equipo y que el sistema derive ambas cifras (FR-076 a FR-079). Reutilizar documentos y el campo existente evita una nueva estructura y mantiene una sola fuente de verdad.
 - **Alternativas consideradas**: Capturar objetivo y real manualmente (contradice FR-077); crear un almacén de ventas separado (rompe XR-001 y duplica el historial).
 
-### Decisión: Redes y chat como `Documento` con tipos declarados
+### Decisión: Redes y «Dudas y consultas» como `Documento` con tipos declarados
 
-- **Decisión**: Las interacciones de redes y los mensajes/consultas del chat se persisten como `Documento` con campos personalizados `plataforma`/`canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace` y `campaña`. Las respuestas rápidas se declaran en `marketing.faq` como pares pregunta/respuesta. El chat bloquea el primer mensaje sin consentimiento y reutiliza `privacyNoticeVersion`.
+- **Decisión**: Las interacciones de redes y los mensajes/consultas de «Dudas y consultas» se persisten como `Documento` con campos personalizados `plataforma`/`canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace` y `campaña`. Las respuestas rápidas se declaran en `marketing.faq` como pares pregunta/respuesta. «Dudas y consultas» bloquea el primer mensaje sin consentimiento y reutiliza `privacyNoticeVersion`.
 - **Justificación**: FR-080 a FR-085 exigen trazabilidad en la ficha de la entidad, consentimiento y respuestas configurables; `Documento` ya aporta vinculación, historial y sanitización al renderizar. No se introducen APIs de redes ni proveedores de mensajería.
 - **Alternativas consideradas**: Nueva entidad «Interacción social» (duplica identidad e historial); integración con plataformas externas (contradice la decisión de registro manual y añade dependencias).
 
@@ -287,26 +287,26 @@
 ### Decisión: Matriz de permisos única en `src/auth/permissions.js`
 
 - **Decisión**: Exportar `ROLES`, `PERMISSION_MATRIX`, `can(role, action, context)` y `assertPermission(role, action, context)` desde `src/auth/permissions.js`. La tabla replica la sección «Matriz de permisos» de la especificación; las acciones no declaradas devuelven `false`; `assertPermission()` lanza un error cuyo mensaje es exactamente `No tienes permiso para realizar esta acción`.
-- **Justificación**: FR-091 exige una sola fuente para botones, navegación, vistas y capa de datos, y la aclaración 2026-11-24 impidió editarla desde la interfaz. Un módulo separado de `src/auth.js` mantiene la identidad separada de la autorización, sin añadir dependencias.
-- **Alternativas consideradas**: Mantener permisos en cada componente (divergencia y aumento de pruebas frágiles); guardar la matriz en `localStorage` editable (contradice la aclaración); permitir que el Gerente modifique la tabla (contradice FR-091 y SC-027).
+- **Justificación**: FR-094 exige una sola fuente para botones, navegación, vistas y capa de datos, y la aclaración 2026-11-24 impidió editarla desde la interfaz. Un módulo separado de `src/auth.js` mantiene la identidad separada de la autorización, sin añadir dependencias.
+- **Alternativas consideradas**: Mantener permisos en cada componente (divergencia y aumento de pruebas frágiles); guardar la matriz en `localStorage` editable (contradice la aclaración); permitir que el Gerente modifique la tabla (contradice FR-094 y SC-033).
 
 ### Decisión: `Sistema` como identidad de auditoría, no como rango
 
 - **Decisión**: Las automatizaciones siguen ejecutándose como `Sistema` sin consultar el rango del usuario conectado; cada ejecución conserva `createdBy: 'Sistema'` y el historial de campaña mantiene el usuario creador real. `Sistema` no aparece en `ROLES` ni en el `select` de «Ejecutivo Asignado».
-- **Justificación**: FR-098 exige independencia del usuario conectado y la matriz debe seguir teniendo una fila por rango interactivo más el visitante. Mezclar `Sistema` como rango permitiría iniciar sesión con una identidad sin permisos definidos.
-- **Alternativas consideradas**: Usar el rango del usuario que disparó la regla (contradice FR-098); crear un rango «Sistema» con todos los permisos (amplía la matriz y la superficie de login); no registrar creador de campaña (rompe trazabilidad).
+- **Justificación**: FR-101 exige independencia del usuario conectado y la matriz debe seguir teniendo una fila por rango interactivo más el visitante. Mezclar `Sistema` como rango permitiría iniciar sesión con una identidad sin permisos definidos.
+- **Alternativas consideradas**: Usar el rango del usuario que disparó la regla (contradice FR-101); crear un rango «Sistema» con todos los permisos (amplía la matriz y la superficie de login); no registrar creador de campaña (rompe trazabilidad).
 
 ### Decisión: Vistas `login.js` y `users-admin.js` con límites distintos
 
 - **Decisión**: `src/components/login.js` renderiza «Usuario» y «Contraseña» sin barra superior ni lateral, conserva enlaces públicos a captura/chat y redirige a la vista solicitada tras autenticarse. `src/components/users-admin.js` se monta solo desde el menú del usuario de la barra superior y solo para Nivel 4; no se añade a `NAV_ITEMS`.
-- **Justificación**: US22 exige que sin sesión solo se vea el login excepto las rutas públicas, y FR-095 exige que la administración de usuarios no esté en la barra lateral. Separar ambos componentes permite probar sus flujos sin acoplarlos al marco ERP.
-- **Alternativas consideradas**: Mostrar login dentro del shell (filtra vistas protegidas); añadir «Usuarios» a la barra lateral (contradice FR-095); combinar login y administración en un único componente (acopla una vista pública con una privada).
+- **Justificación**: US22 exige que sin sesión solo se vea el login excepto las rutas públicas, y FR-098 exige que la administración de usuarios no esté en la barra lateral. Separar ambos componentes permite probar sus flujos sin acoplarlos al marco ERP.
+- **Alternativas consideradas**: Mostrar login dentro del shell (filtra vistas protegidas); añadir «Usuarios» a la barra lateral (contradice FR-098); combinar login y administración en un único componente (acopla una vista pública con una privada).
 
 ### Decisión: Integración en almacenamiento y configuración existente
 
 - **Decisión**: `src/storage.js` llama a `assertPermission()` antes de `addEntity`, `updateEntity`, `deleteEntity`, altas/ediciones/bajas de documentos, cambios de estado y escrituras directas de las listas; `app.js` controla el acceso a vistas y `shell.js`/`dashboard.js` filtran navegación y acciones rápidas con la misma matriz. El campo `ejecutivo_asignado` pasa de texto libre a un `select` poblado con usuarios activos de rango Nivel 2 o Nivel 4, y los integrantes del equipo se vinculan al `userId` correspondiente.
-- **Justificación**: FR-092 exige validar en la capa de datos y SC-029 comprueba una llamada directa a `storage.js`; FR-096 y FR-097 exigen que ejecutivo e integrante provengan de usuarios activos válidos. Reutilizar la configuración evita crear un esquema paralelo.
-- **Alternativas consideradas**: Confiar solo en botones ocultos (falla SC-029); dejar `ejecutivo_asignado` como texto libre (contradice FR-096); vincular integrantes por nombre visible (rompe FR-097 al renombrar usuarios).
+- **Justificación**: FR-095 exige validar en la capa de datos y SC-035 comprueba una llamada directa a `storage.js`; FR-099 y FR-100 exigen que ejecutivo e integrante provengan de usuarios activos válidos. Reutilizar la configuración evita crear un esquema paralelo.
+- **Alternativas consideradas**: Confiar solo en botones ocultos (falla SC-035); dejar `ejecutivo_asignado` como texto libre (contradice FR-099); vincular integrantes por nombre visible (rompe FR-100 al renombrar usuarios).
 
 ### Decisión: Autenticación local simulada con limitación explícita
 
@@ -319,3 +319,29 @@
 - **Decisión**: La vista se resuelve desde `location.search` en carga, recarga y Back/Forward con `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`; sin parámetro `view` se abre el Panel y no existe `?view=panel`. La construcción de URLs usa solo `window.location.pathname`, sin host ni ruta de servidor, y cada resolución aplica la matriz de permisos.
 - **Justificación**: I1 exige rutas relativas verificables en un despliegue estático; una resolución única evita que el estado de la vista y la barra de direcciones divergan al recargar o usar el historial.
 - **Alternativas consideradas**: Rutas absolutas con prefijo de servidor (rompen el despliegue estático); estado solo en memoria (se pierde al recargar); hash propio (duplica el mecanismo de `location.search` ya usado por `?view=capture`).
+
+## Decisiones de aclaración (sesión 2026-11-24: atajos y terminología de Marketing)
+
+### Decisión: Marketing sustituye los atajos del panel por sus propias secciones
+
+- **Decisión**: `renderDashboardHtml()` recibe una opción para omitir únicamente el bloque `.quick-actions`; `renderMarketingHtml()` la activa y conserva las tarjetas, el embudo y la lista de seguimientos. Los cinco atajos de Marketing se derivan de una tabla local de secciones con claves internas estables (`team`, `campaigns`, `performance`, `chat`, `social`).
+- **Justificación**: El usuario pidió que los atajos de creación y gestión aparezcan solo en el panel principal. Una opción en el renderizador compartido evita duplicar la lógica de tarjetas y mantiene una sola fuente de cálculo (FR-091, FR-073).
+- **Alternativas consideradas**: Crear un componente de Marketing separado sin reutilizar el panel (duplica tarjetas y cálculos); ocultar los botones con CSS (deja el marcado accesible y no cumple «solo en el panel»); eliminar las tarjetas de Marketing (contradice FR-073).
+
+### Decisión: Cinco atajos exactos y en orden explícito
+
+- **Decisión**: El orden visible es «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales». La etiqueta del equipo pasa de singular a plural en todo texto visible.
+- **Justificación**: El usuario enumeró las etiquetas en ese orden; hacerlo explícito en la tabla de secciones permite verificarlo con una sola prueba de interfaz y evita que el orden heredado (`team`, `social`, `chat`, `campaigns`, `performance`) se considere correcto (FR-093, SC-029).
+- **Alternativas consideradas**: Conservar el orden actual del componente (no respeta la enumeración); dejar el orden sin definir (genera pruebas ambiguas); añadir atajos adicionales del panel (contradice FR-091).
+
+### Decisión: «Dudas y consultas» renombra solo la capa visible
+
+- **Decisión**: El encabezado del componente compartido, la pestaña de Marketing, las etiquetas de consentimiento y el mensaje de error de consentimiento muestran «Dudas y consultas». Se conservan `data-section="chat"`, `#chat-form`, `.chat-*`, `canal: 'chat'`, `ChatConsentError`, nombres de archivo, funciones y datos ya persistidos.
+- **Justificación**: El usuario pidió un nuevo nombre para el apartado, no una migración de esquema. Un cambio exclusivamente visible satisface FR-092 y SC-028 sin romper selectores, historiales ni reglas de atribución existentes.
+- **Alternativas consideradas**: Renombrar claves y archivos (migración innecesaria y riesgo de perder documentos); mantener «Chat» solo en la captura pública (deja dos nombres para el mismo apartado); mostrar ambos nombres juntos (no es un renombramiento).
+
+### Decisión: Cobertura de integración para la nueva presentación
+
+- **Decisión**: Las pruebas de integración comprueban que el panel conserva cinco `.quick-actions button`, que Marketing no contiene `.quick-actions`, que `.marketing-sections [data-action="marketing-section"]` devuelve cinco elementos con el texto y orden exactos, y que «Dudas y consultas» aparece como encabezado y en el texto de consentimiento de la captura pública y de Marketing.
+- **Justificación**: Los cambios son visibles y susceptibles de regresión por compartir componentes entre panel, Marketing y captura; la verificación debe hacerse sobre marcado real, no solo sobre cadenas de código.
+- **Alternativas consideradas**: Solo pruebas unitarias de las listas de etiquetas (no detectan que el panel sigue renderizando los botones en Marketing); snapshots completos de HTML (frágiles ante cambios de estilo no relacionados).

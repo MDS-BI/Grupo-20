@@ -56,7 +56,7 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `detailPolicy.entity`                                             | object          | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058).                                                                                                                                  |
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067).                                                                                                                                                        |
 | `options` (en campos `select`)                                    | array           | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063).                                                                                                                                                 |
-| `marketing`                                                       | object \| null  | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-090).                                                                                                       |
+| `marketing`                                                       | object \| null  | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-093).                                                                                                       |
 | `theme.accentColor`                                               | string          | Color de acento opcional (FR-038).                                                                                                                                                                                                                                                    |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
@@ -157,9 +157,11 @@ Cada ejecución se persiste como un `Documento` con `notes = label`, `status = '
 
 ### 3.5 Navegación
 
-Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cuarta opción de `NAV_ITEMS` en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la ruta se resuelve desde `location.search` en cada carga, Back/Forward y recarga: sin parámetro es Panel, `?view=capture` es pública y no existe `?view=panel`. La captura pública no altera datos hasta que se envía el formulario. El chat aparece tanto en la captura pública como en Marketing usando los mismos documentos.
+Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cuarta opción de `NAV_ITEMS` en `src/components/shell.js`. El estado de la vista (`state.view`) sigue siendo en memoria y no se persiste; la ruta se resuelve desde `location.search` en cada carga, Back/Forward y recarga: sin parámetro es Panel, `?view=capture` es pública y no existe `?view=panel`. La captura pública no altera datos hasta que se envía el formulario. «Dudas y consultas» aparece tanto en la captura pública como en Marketing usando los mismos documentos; su identificador interno sigue siendo `chat`.
 
-## 4. Equipo de ventas y logros
+Marketing no renderiza los botones de acción rápida del panel: solo ofrece cinco atajos de sección en este orden —«Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales»—, derivados de claves internas estables `team`, `campaigns`, `performance`, `chat` y `social` (FR-091 a FR-093, SC-027 a SC-029). El panel conserva sus cinco acciones rápidas como único punto de creación y gestión.
+
+## 4. Equipos de ventas y logros
 
 `marketing.salesTeams` es un arreglo opcional de equipos y sirve de semilla. Cada equipo y sus integrantes se capturan en la interfaz y las definiciones editadas se guardan en `erp_marketing_config`; las métricas se calculan, no se persisten.
 
@@ -170,20 +172,20 @@ Clientes e Interacciones no figuran en la barra lateral; Marketing sí es la cua
 | Integrante            | `name`            | string         | Nombre editable del integrante (FR-077).                                                                                                      |
 | Integrante            | `role`            | string         | Cargo editable del integrante (FR-077).                                                                                                       |
 | Integrante            | `active`          | boolean        | Estado «Activo»/«Inactivo» editable (FR-077).                                                                                                 |
-| Integrante            | `userId`          | string \| null | Usuario activo vinculado de rango Nivel 2 o Nivel 4; obligatorio desde la octava tanda (FR-096, FR-097).                                      |
-| Integrante (derivado) | `realMensual`     | number         | Suma de importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al `userId` vinculado (FR-078, FR-097). |
+| Integrante            | `userId`          | string \| null | Usuario activo vinculado de rango Nivel 2 o Nivel 4; obligatorio desde la octava tanda (FR-099, FR-100).                                      |
+| Integrante (derivado) | `realMensual`     | number         | Suma de importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al `userId` vinculado (FR-078, FR-100). |
 | Integrante (derivado) | `objetivoMensual` | number         | `ventasAcumuladas / díasTranscurridos * díasDelMes`; cero sin ventas o sin días transcurridos (FR-079).                                       |
 
 La relación se resuelve por el `userId` del usuario activo vinculado, no por el texto visible del integrante; el campo `ejecutivo_asignado` de las entidades guarda ese mismo identificador. No se crea una entidad separada para el ejecutivo. Un equipo sin integrantes muestra un estado vacío.
 
-## 5. Redes sociales y chat
+## 5. Redes sociales y «Dudas y consultas»
 
-| Concepto                   | Se implementa como                           | Campos/ reglas                                                                                                                               |
-| -------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Interacción en redes       | `Documento` vinculado al prospecto o cliente | `plataforma`, `tipo_interaccion`, `nota`, `enlace`, `campaña` opcional, `startDate = fecha` (FR-080, FR-081).                                |
-| Mensaje o consulta de chat | `Documento` vinculado al prospecto o cliente | `canal = 'chat'`, `mensaje`, `tipo_interaccion`, `campaña` opcional y marcas de tiempo (FR-081, FR-083).                                     |
-| Pregunta frecuente         | Entrada de configuración `marketing.faq`     | `{ pregunta, respuesta }`; la coincidencia se resuelve sobre texto normalizado (FR-082).                                                     |
-| Consentimiento del chat    | Campos de la entidad                         | Reutiliza `consentimiento`, `consentimiento_fecha` y `consentimiento_version`; sin consentimiento no se registra el primer mensaje (FR-085). |
+| Concepto                                  | Se implementa como                           | Campos/ reglas                                                                                                                                                                                 |
+| ----------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interacción en redes                      | `Documento` vinculado al prospecto o cliente | `plataforma`, `tipo_interaccion`, `nota`, `enlace`, `campaña` opcional, `startDate = fecha` (FR-080, FR-081).                                                                                  |
+| Mensaje o consulta de «Dudas y consultas» | `Documento` vinculado al prospecto o cliente | `canal = 'chat'`, `mensaje`, `tipo_interaccion`, `campaña` opcional y marcas de tiempo (FR-081, FR-083). El valor interno `chat` no cambia.                                                    |
+| Pregunta frecuente                        | Entrada de configuración `marketing.faq`     | `{ pregunta, respuesta }`; la coincidencia se resuelve sobre texto normalizado (FR-082).                                                                                                       |
+| Consentimiento de «Dudas y consultas»     | Campos de la entidad                         | Reutiliza `consentimiento`, `consentimiento_fecha` y `consentimiento_version`; sin consentimiento no se registra el primer mensaje (FR-085). La etiqueta visible usa el nuevo nombre (FR-092). |
 
 Las interacciones se ordenan por fecha en el apartado «Redes sociales» y en la ficha de la entidad. Las consultas sin coincidencia se registran como `Documento` con un acuse visible para el visitante.
 
@@ -206,20 +208,20 @@ Acciones internas permitidas (FR-089): crear un `Documento` de seguimiento, asig
 
 `computeMarketingPerformance({ entities, documents, campaigns })` deriva indicadores sin persistirlos:
 
-| Indicador                  | Definición                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| `prospectosCapturados`     | Entidades con `estado_comercial = prospecto` o creadas desde la captura.       |
-| `conversionesPorEtapa`     | Conteo de entidades por estado comercial objetivo de campaña.                  |
-| `tasaDeConversion`         | Proporción de entidades que alcanzaron `ganado`.                               |
-| `interaccionesRegistradas` | Documentos de redes y otras interacciones vinculados a entidades.              |
-| `consultasRespondidas`     | Mensajes de chat que recibieron respuesta rápida.                              |
-| `ventasGanadas`            | Cantidad de documentos «Cerrado ganado», coincidente con la tarjeta del panel. |
+| Indicador                  | Definición                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| `prospectosCapturados`     | Entidades con `estado_comercial = prospecto` o creadas desde la captura.            |
+| `conversionesPorEtapa`     | Conteo de entidades por estado comercial objetivo de campaña.                       |
+| `tasaDeConversion`         | Proporción de entidades que alcanzaron `ganado`.                                    |
+| `interaccionesRegistradas` | Documentos de redes y otras interacciones vinculados a entidades.                   |
+| `consultasRespondidas`     | Mensajes de «Dudas y consultas» (`canal = 'chat'`) que recibieron respuesta rápida. |
+| `ventasGanadas`            | Cantidad de documentos «Cerrado ganado», coincidente con la tarjeta del panel.      |
 
 Cuando se selecciona una campaña, los indicadores se filtran por el campo `campaña` o `campaignId`. Los registros sin campaña aparecen bajo el grupo «Sin campaña» (FR-088). Una campaña sin registros muestra cero con una explicación clara (SC-026).
 
 ## 8. Autenticación, sesión y permisos
 
-La autenticación es local y simulada (FR-091 a FR-099, US22, US23). No introduce una base de datos ni un servicio externo: persiste en las claves `erp_users` y `erp_session` de `localStorage`. `erp_users` es la fuente de verdad de identidad, rango y estado activo; `erp_session` solo referencia al usuario, de modo que un cambio de rango o una desactivación se refleje en la siguiente acción sin depender de datos copiados en la sesión.
+La autenticación es local y simulada (FR-094 a FR-102, US22, US23). No introduce una base de datos ni un servicio externo: persiste en las claves `erp_users` y `erp_session` de `localStorage`. `erp_users` es la fuente de verdad de identidad, rango y estado activo; `erp_session` solo referencia al usuario, de modo que un cambio de rango o una desactivación se refleje en la siguiente acción sin depender de datos copiados en la sesión.
 
 ### 8.1 `Usuario`
 
@@ -230,8 +232,8 @@ La autenticación es local y simulada (FR-091 a FR-099, US22, US23). No introduc
 | `usernameKey`             | string         | Sí          | `username` recortado y en minúsculas; garantiza unicidad sin distinguir mayúsculas ni espacios (aclaración 2026-11-24). |
 | `passwordHash`            | string         | Sí          | Digest PBKDF2-SHA-256 en hexadecimal; nunca se guarda la contraseña en texto plano.                                     |
 | `salt`                    | string         | Sí          | Sal aleatoria de 16 bytes en hexadecimal, distinta por usuario.                                                         |
-| `rank`                    | string         | Sí          | Uno de `n4_manager`, `n3_marketing`, `n2_sales`, `n1_support`; equivale a los rangos de la matriz (FR-091).             |
-| `active`                  | boolean        | Sí          | `true` permite iniciar sesión; `false` revoca la sesión existente (FR-095, FR-099).                                     |
+| `rank`                    | string         | Sí          | Uno de `n4_manager`, `n3_marketing`, `n2_sales`, `n1_support`; equivale a los rangos de la matriz (FR-094).             |
+| `active`                  | boolean        | Sí          | `true` permite iniciar sesión; `false` revoca la sesión existente (FR-098, FR-102).                                     |
 | `failedAttempts`          | number         | Sí          | Número de intentos fallidos dentro de la ventana de bloqueo; se reinicia con un login correcto.                         |
 | `lockedUntil`             | string \| null | No          | Marca ISO que indica hasta cuándo está bloqueado el usuario.                                                            |
 | `createdAt` / `updatedAt` | string         | Sí          | Marcas de tiempo ISO de auditoría.                                                                                      |
@@ -247,7 +249,7 @@ Usuarios semilla demostrativos: `camila.ramirez` (Nivel 4), `lucia.fernandez` (N
 | `lastActivityAt` | string | Sí          | Marca ISO de la última acción verificada; se actualiza en cada verificación.                 |
 | `expiresAt`      | string | Sí          | `lastActivityAt + 8 horas`; al expirar se elimina la sesión y se redirige a login.           |
 
-La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven desde `erp_users` cada vez que `getCurrentUser()` o `assertPermission()` los necesitan. Por eso un cambio de rango se aplica en la siguiente acción o recarga, y una desactivación cierra la sesión de inmediato (FR-099).
+La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven desde `erp_users` cada vez que `getCurrentUser()` o `assertPermission()` los necesitan. Por eso un cambio de rango se aplica en la siguiente acción o recarga, y una desactivación cierra la sesión de inmediato (FR-102).
 
 ### 8.3 `Rango` y matriz de permisos
 

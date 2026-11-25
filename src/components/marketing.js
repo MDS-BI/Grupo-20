@@ -6,13 +6,14 @@ import { renderMarketingTeamHtml } from './marketing-team.js';
 import { renderMarketingSocialHtml } from './marketing-social.js';
 import { renderMarketingChatHtml } from './marketing-chat.js';
 import { MESSAGES } from '../utils/messages.js';
+import { can } from '../auth/permissions.js';
 
 const SECTIONS = [
-  { key: 'team', label: 'Equipo de ventas y logros' },
-  { key: 'social', label: 'Redes sociales' },
-  { key: 'chat', label: 'Chat' },
+  { key: 'team', label: 'Equipos de ventas y logros' },
   { key: 'campaigns', label: 'Campañas' },
   { key: 'performance', label: 'Rendimiento de campañas' },
+  { key: 'chat', label: 'Dudas y consultas' },
+  { key: 'social', label: 'Redes sociales' },
 ];
 
 function optionsFromCampaigns(campaigns, selected) {
@@ -154,10 +155,21 @@ export function renderMarketingHtml(config, stats, options = {}) {
     chat = {},
     campaigns = {},
     selectedCampaignId = 'all',
+    role = 'visitor',
+    authEnabled = false,
   } = options;
+  const hasMarketingAccess =
+    !authEnabled ||
+    can(role, 'marketing:view') ||
+    can(role, 'marketing:manage') ||
+    can(role, 'team:manage');
+  if (!hasMarketingAccess) {
+    return `<section class="marketing-view marketing-panel" role="alert"><p class="empty-state">${MESSAGES.accessDenied}</p></section>`;
+  }
   const dashboard = renderDashboardHtml(config, stats, {
     title: 'Marketing',
     sectionClass: 'marketing-view',
+    showQuickActions: false,
   });
   const navigation = `
     <div class="marketing-sections" role="tablist" aria-label="Secciones de Marketing">
@@ -183,6 +195,8 @@ export function renderMarketingHtml(config, stats, options = {}) {
                 faq: marketingConfig.faq || [],
                 entities,
                 campaigns: marketingConfig.campaigns || [],
+                role,
+                authEnabled,
               })
             : section === 'campaigns'
               ? renderCampaignsHtml({ marketingConfig, documents, ...campaigns })

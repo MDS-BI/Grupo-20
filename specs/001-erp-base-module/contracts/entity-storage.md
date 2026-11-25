@@ -145,16 +145,16 @@ Desde la octava tanda, `src/storage.js` depende de `src/auth/permissions.js` ant
 
 - Las acciones son las del catálogo canónico de `spec.md` y [`auth.md`](auth.md): `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `campaign:create`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `team:manage` y `users:manage`, entre otras. No se introducen identificadores propios como `entity:edit` o `interaction:manage`.
 - `context.ownerId` se compara con el `id` del usuario resuelto para las reglas «solo mis clientes»; `context.campaignOwnerId` cumple la misma función para campañas.
-- Una operación denegada se rechaza con el mensaje exacto `No tienes permiso para realizar esta acción` y no escribe en `localStorage`; esto cubre también llamadas directas desde consola o enlaces profundos (FR-092, FR-093, SC-029).
+- Una operación denegada se rechaza con el mensaje exacto `No tienes permiso para realizar esta acción` y no escribe en `localStorage`; esto cubre también llamadas directas desde consola o enlaces profundos (FR-095, FR-096, SC-035).
 - `Sistema` está exento del rango del usuario conectado únicamente para las automatizaciones declaradas; cada ejecución conserva la identidad «Sistema» y el creador de la campaña.
-- La resolución del usuario se hace desde `erp_users`, no desde una copia caches en la sesión, para que desactivaciones y cambios de rango se apliquen de inmediato (FR-099).
+- La resolución del usuario se hace desde `erp_users`, no desde una copia caches en la sesión, para que desactivaciones y cambios de rango se apliquen de inmediato (FR-102).
 - Ocultar botones en `app.js`, `shell.js` o `dashboard.js` es una ayuda de experiencia de usuario, no el mecanismo de seguridad; la capa de datos sigue siendo la última barrera.
 
 ## Contrato del Campo `ejecutivo_asignado`
 
-- En el perfil de clientes, `ejecutivo_asignado` deja de ser texto libre y se resuelve como un `select` con los usuarios activos cuyo rango es Nivel 2 o Nivel 4 (FR-096).
+- En el perfil de clientes, `ejecutivo_asignado` deja de ser texto libre y se resuelve como un `select` con los usuarios activos cuyo rango es Nivel 2 o Nivel 4 (FR-099).
 - El valor persistido es el `id` del usuario; la interfaz muestra su `username`.
-- Usuarios inactivos o con otro rango no aparecen como opciones. Los clientes que quedaron con un ejecutivo desactivado se muestran como «Sin asignar» hasta que el Gerente los reasigne; sus ventas históricas siguen contando para el integrante vinculado al usuario (FR-097).
+- Usuarios inactivos o con otro rango no aparecen como opciones. Los clientes que quedaron con un ejecutivo desactivado se muestran como «Sin asignar» hasta que el Gerente los reasigne; sus ventas históricas siguen contando para el integrante vinculado al usuario (FR-100).
 - Cada integrante de `marketing.salesTeams` guarda `userId` apuntando al mismo usuario activo, y el real y objetivo mensuales se calculan desde los clientes asignados a ese identificador.
 
 ## Contrato de Búsqueda Canónica (D1)

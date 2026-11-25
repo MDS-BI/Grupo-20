@@ -72,4 +72,41 @@ describe('Navegación a Marketing desde la barra lateral (T044/T131)', () => {
     expect(marketingHtml).not.toContain('estado_comercial');
     expect(document.querySelector('[data-role="marketing-stage"]')).toBeNull();
   });
+
+  it('ofrece cinco atajos de Marketing en el orden acordado (T138)', () => {
+    app.navigate('marketing');
+    const tabs = [
+      ...document.querySelectorAll('.marketing-sections [data-action="marketing-section"]'),
+    ];
+
+    expect(tabs.map((tab) => tab.dataset.section)).toEqual([
+      'team',
+      'campaigns',
+      'performance',
+      'chat',
+      'social',
+    ]);
+    expect(tabs.map((tab) => tab.textContent.trim())).toEqual([
+      'Equipos de ventas y logros',
+      'Campañas',
+      'Rendimiento de campañas',
+      'Dudas y consultas',
+      'Redes sociales',
+    ]);
+  });
+
+  it('reserva las acciones rápidas al panel y elimina etiquetas obsoletas (T144)', () => {
+    app.navigate('dashboard');
+    expect(document.querySelectorAll('.dashboard .quick-actions button')).toHaveLength(5);
+    expect(document.body.textContent).not.toContain('Abrir Marketing');
+
+    app.navigate('marketing');
+    const marketingView = document.querySelector('.marketing-view');
+    const marketingText = document.getElementById('app').textContent;
+    expect(marketingView.querySelector('.quick-actions')).toBeNull();
+    expect(marketingText).toContain('Equipos de ventas y logros');
+    expect(marketingText).toContain('Dudas y consultas');
+    expect(marketingText).not.toContain('Equipo de ventas y logros');
+    expect(marketingText).not.toContain('Chat');
+  });
 });

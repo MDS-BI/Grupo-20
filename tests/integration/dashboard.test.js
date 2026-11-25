@@ -21,11 +21,13 @@ function createClient() {
   });
 }
 
-describe('Panel de inicio con acciones rápidas y estadísticas (T048/T050/T051)', () => {
+describe('Panel de inicio con acciones rápidas y estadísticas (T048/T050/T051/T134)', () => {
   beforeEach(() => mount());
 
   it('ofrece exactamente cinco acciones rápidas sin «Abrir Marketing» ni datos demo', () => {
-    const actions = [...document.querySelectorAll('.quick-actions button')];
+    const quickActions = document.querySelector('.dashboard .quick-actions');
+    expect(quickActions).toBeTruthy();
+    const actions = [...quickActions.querySelectorAll('button')];
     expect(actions).toHaveLength(5);
     expect(document.body.textContent).not.toContain('Abrir Marketing');
     expect(document.querySelector('.demo-note')).toBeNull();

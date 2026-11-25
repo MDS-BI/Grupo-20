@@ -84,14 +84,22 @@ La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/enti
 
 La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/marketing.md) y su efecto en el modelo en [`data-model.md`](data-model.md#3-perfil-de-marketing-historias-de-usuario-16-a-21).
 
-## Validación del Equipo de Ventas, Redes y Chat
+## Validación de Atajos y Terminología de Marketing
 
-1. Abra «Equipo de ventas y logros», cree un equipo y un integrante con nombre, cargo y estado, confirme que no hay casillas para capturar objetivo mensual ni real mensual, y recargue la página para verificar que la definición persiste.
+1. Abra el panel principal y confirme que sigue ofreciendo cinco acciones rápidas: nueva entidad, nuevo documento, gestionar entidades, gestionar documentos y buscar registros.
+2. Abra Marketing y confirme que no aparece ninguna de esas cinco acciones rápidas ni el marcado `.quick-actions`, pero que las cinco tarjetas y el embudo siguen mostrando los mismos valores que en el panel.
+3. Compruebe que Marketing ofrece exactamente cinco atajos en este orden: «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales».
+4. Active cada atajo y verifique que abre su sección de Marketing sin llevar a las vistas de gestión del panel; vuelva al panel para confirmar que sus cinco acciones rápidas siguen disponibles.
+5. Confirme que «Dudas y consultas» sustituye a «Chat» en el encabezado de Marketing, en `?view=capture` y en el texto de consentimiento y de error; envíe una consulta con consentimiento y compruebe que el documento sigue visible en la ficha de la entidad tras recargar.
+
+## Validación de Equipos de ventas y logros, Redes y Dudas y consultas
+
+1. Abra «Equipos de ventas y logros», cree un equipo y un integrante con nombre, cargo y estado, confirme que no hay casillas para capturar objetivo mensual ni real mensual, y recargue la página para verificar que la definición persiste.
 2. Registre documentos «Cerrado ganado» del mes para el ejecutivo asignado y confirme que el real mensual es la suma de sus importes y que el objetivo mensual es la proyección `ventas ÷ días transcurridos × días del mes`; sin ventas, ambos muestran cero.
 3. Abra «Redes sociales», registre una interacción de Instagram vinculada a un prospecto con plataforma, fecha, tipo, nota y enlace, y compruebe que aparece ordenada por fecha en la vista y en la ficha de la entidad.
-4. Abra el chat desde `?view=capture` y desde Marketing; confirme que una pregunta configurada recibe su respuesta rápida sin recarga y que una pregunta sin coincidencia muestra exactamente `Consulta registrada; un ejecutivo hará seguimiento.` y queda guardada como documento para seguimiento.
-5. Intente enviar el primer mensaje sin marcar el consentimiento del chat: el envío debe bloquearse y no debe registrarse ningún mensaje.
-6. Compruebe que los mensajes del chat y las interacciones de redes aparecen en la ficha de la entidad vinculada y permanecen intactos al navegar entre vistas.
+4. Abra «Dudas y consultas» desde `?view=capture` y desde Marketing; confirme que una pregunta configurada recibe su respuesta rápida sin recarga y que una pregunta sin coincidencia muestra el acuse exacto `Consulta registrada; un ejecutivo hará seguimiento.` y queda guardada como documento para seguimiento.
+5. Intente enviar el primer mensaje sin marcar el consentimiento de «Dudas y consultas»: el envío debe bloquearse y no debe registrarse ningún mensaje.
+6. Compruebe que los mensajes de «Dudas y consultas» (con `canal: 'chat'`) y las interacciones de redes aparecen en la ficha de la entidad vinculada y permanecen intactos al navegar entre vistas.
 
 ## Validación de Campañas y Rendimiento
 

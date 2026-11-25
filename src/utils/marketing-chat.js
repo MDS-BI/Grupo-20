@@ -5,10 +5,10 @@ import { MESSAGES } from './messages.js';
 
 export class ChatConsentError extends Error {
   constructor() {
-    super('El chat requiere consentimiento explícito');
+    super('Dudas y consultas requiere consentimiento explícito');
     this.name = 'ChatConsentError';
     this.errors = {
-      consentimiento: MESSAGES.required,
+      consentimiento: `${MESSAGES.required} Debes marcar el consentimiento explícito antes de enviar una consulta en Dudas y consultas.`,
     };
   }
 }
