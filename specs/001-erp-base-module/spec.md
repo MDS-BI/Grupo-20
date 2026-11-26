@@ -91,459 +91,755 @@ Este proyecto sirve como módulo base reutilizable para construir módulos ERP p
 
 ## Escenarios de Usuario y Pruebas _(obligatorio)_
 
+> **Convención de actores**: los roles operativos con sesión son `n4_manager` (Gerente Comercial), `n3_marketing` (Ejecutivo de Marketing), `n2_sales` (Ejecutivo de Ventas), `n1_support` (Atención al Cliente) y `visitor` (Visitante sin sesión; solo formulario público y «Dudas y consultas»). Las historias de configuración se ejecutan antes del despliegue: el actor es el desarrollador de módulos, rol técnico que edita `MODULE_CONFIG` y que no aparece en la matriz de permisos ni realiza acciones comerciales en la aplicación.
+>
+> **Convención de desglose**: cuando una historia agrupaba varias necesidades, se conserva su identificador original como epígrafe y se numeran las partes como `USna`, `USnb`, etc. Los identificadores originales `US1`–`US23` y las etiquetas `[USn]` de `tasks.md` siguen siendo la trazabilidad oficial.
+
 ### Historia de Usuario 1 - Definir datos compatibles con el ERP (Prioridad: P1)
 
-Como analista de sistemas ERP, quiero definir un modelo de datos con identificadores y campos comunes para facilitar futuras integraciones del CRM.
+**Como** desarrollador de módulos (rol técnico que prepara `MODULE_CONFIG`; sin rango N1–N4 en la aplicación), **quiero** declarar la relación entre `Entidad` y `Documento` con identificadores generados y un vínculo `entity_id` obligatorio, **para** que cada cliente y cada interacción del CRM queden asociados al registro correcto en la ficha y en el resumen.
 
-**Por qué esta prioridad**: Se registra en esta prioridad dado que establece cómo se organizarán y relacionarán los clientes, las interacciones y los seguimientos. Las demás funciones necesitan esa base para guardar y consultar la información correctamente.
+**Contexto comercial**: el perfil CRM Comercial representa al cliente como Entidad y a la llamada, correo, reunión, interacción de redes, consulta o venta como Documento. Sin esta relación, el historial que consulta Atención al Cliente y las cifras que revisa Gerencia no podrían atribuirse a un cliente concreto.
 
-**Prueba Independiente**: un analista registra un cliente de prueba y le asocia una interacción; el sistema guarda la relación y asigna un código interno único a cada cliente sin solicitarlo al usuario.
+**Por qué esta prioridad**: define la base de datos compartida que usan US2, US3, US4, US6, US16 y US20 antes de cualquier registro comercial.
 
-**Escenarios de Aceptación**:
+**Prueba independiente**: con el perfil CRM activo, un Ejecutivo de Ventas registra el cliente «Comercial Andina SpA» y una llamada asociada; tras recargar, el documento conserva el `entity_id` del cliente, el cliente tiene un código `CLI-###` distinto del de otro cliente y un documento con `entity_id` inexistente es rechazado sin mutar los registros.
 
-1. **Dado** que el cliente tiene los datos obligatorios, **cuando** se registra, **entonces** se guarda con un identificador único.
-2. **Dado** que existe un cliente registrado, **cuando** se registra otro cliente, **entonces** el sistema le asigna un código interno único y distinto sin pedirlo al usuario (FR-052).
-3. **Dado** que existe un cliente, **cuando** se registra una interacción o un seguimiento asociado a él, **entonces** queda vinculado al cliente correcto.
-4. **Dado** que un identificador no corresponde a ningún cliente, **cuando** se intenta asociarle una interacción o un seguimiento, **entonces** se rechaza con un mensaje claro.
-5. **Dado** que están documentados los campos comunes del ERP, **cuando** el analista revisa el modelo del CRM, **entonces** los nombres, tipos de datos e identificadores coinciden con lo acordado.
+**Criterios de aceptación**:
+
+1. **Dado** un formulario de cliente con los datos obligatorios, **cuando** lo guarda un usuario con `entity:create`, **entonces** se persiste con `id` único, `code` generado con formato `CLI-###` y marcas `createdAt`/`updatedAt` en ISO (FR-001, FR-052).
+2. **Dados** dos clientes guardados, **cuando** se comparan sus códigos normalizados, **entonces** son distintos y ningún campo de captura pide el código al usuario (FR-052).
+3. **Dado** el cliente «Comercial Andina SpA», **cuando** se guarda una llamada con su `entity_id`, **entonces** la ficha del cliente muestra esa llamada tras recargar `erp_entities` y `erp_documents` (FR-009, FR-041).
+4. **Dado** un `entity_id` que no existe en `erp_entities`, **cuando** se intenta guardar un documento desde la interfaz o desde `storage.js`, **entonces** la operación se rechaza, se muestra un error visible y el número de documentos almacenados no cambia (FR-009).
+5. **Dado** un cliente con 3 documentos, **cuando** un usuario con `entity:delete` confirma su eliminación, **entonces** los 3 documentos se eliminan en la misma operación y no queda ningún registro con ese `entity_id` (FR-003, FR-009).
 
 ---
 
 ### Historia de Usuario 2 - Registrar clientes y contactos comerciales (Prioridad: P2)
 
-Como ejecutivo de ventas, quiero registrar clientes y sus interacciones para organizar la información comercial y dejar constancia de cada contacto.
+Esta historia se divide en cuatro necesidades verificables: identidad del cliente (US2a), canal de contacto (US2b), responsable comercial (US2c) y saneamiento de fichas heredadas (US2d). El identificador `US2` se conserva como agrupador de trazabilidad.
 
-**Por qué esta prioridad**: Se encuentra en este nivel de prioridad dado que permite ingresar la información principal del CRM, una vez definida la estructura de datos en la Historia de Usuario 1. Sin los registros no sería posible consultar antecedentes ni gestionar seguimientos.
+#### US2a - Registrar la identidad comercial del cliente
 
-**Prueba Independiente**: Un ejecutivo registra un cliente y una llamada asociada a él; comprueba que el registro queda guardado y es localizable (mediante búsqueda, selectores o su ficha) sin requerir una lista de entidades en la pantalla de gestión, y que la llamada queda guardada en su ficha.
+**Como** Ejecutivo de Ventas (rango `n2_sales`, con `entity:create` y `entity:edit_own`), **quiero** registrar el nombre, el RUT, la fecha de nacimiento y el tipo de actividad de un cliente nuevo, **para** que Gerencia y Atención al Cliente puedan identificarlo sin ambigüedad y vincular sus futuras interacciones al contribuyente correcto.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que el ejecutivo completa los datos obligatorios del cliente, **cuando** los guarda, **entonces** el registro se guarda y queda disponible para búsqueda, selección y consulta en su ficha (la pantalla de gestión no muestra una lista de entidades, FR-016).
-2. **Dado** que existe un cliente, **cuando** registra una llamada con fecha y descripción, **entonces** queda guardada en la ficha de ese cliente.
-3. **Dado** que faltan datos obligatorios del cliente, **cuando** se intenta guardar, **entonces** el sistema rechaza el registro con `Completa los campos obligatorios.`.
-4. **Dado** el perfil de clientes, **cuando** se muestra el formulario de registro, **entonces** no se muestran los campos «Código», «Categoría», «Descripción» ni «Nº de pedidos» (FR-051).
-5. **Dado** el perfil de clientes, **cuando** se guarda un cliente, **entonces** el sistema genera automáticamente su código interno único sin solicitarlo ni mostrarlo (FR-052).
-6. **Dado** el perfil de clientes, **cuando** se carga la configuración, **entonces** no incluye el campo personalizado «Nº de pedidos» y el sistema no lo registra (FR-053).
-7. **Dado** el perfil de clientes, **cuando** se intenta guardar un cliente sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», **entonces** el sistema rechaza el guardado con `Completa los campos obligatorios.` (FR-056).
-8. **Dado** el perfil de clientes, **cuando** se introduce un RUT con dígito verificador inválido o ya usado por otro cliente, **entonces** el sistema rechaza el guardado con `El RUT es inválido.` o `El RUT ya está registrado.` según corresponda (FR-057).
-9. **Dado** el formulario de registro de un cliente, **cuando** se abre, **entonces** «Canal de Contacto» aparece sin opción preseleccionada y el guardado se rechaza hasta que el usuario elija una (FR-059).
-10. **Dado** un cliente con un canal de contacto elegido, **cuando** se muestra el formulario, **entonces** aparece solo la casilla adicional correspondiente a ese canal y, al guardar, no se conservan los valores de los otros canales (FR-060).
-11. **Dado** el perfil de clientes, **cuando** se deja vacía la casilla adicional de contacto o se introduce un valor con formato inválido para el canal elegido, **entonces** el sistema rechaza el guardado con `Revisa el dato de contacto según el canal elegido.` (FR-061).
-12. **Dado** el formulario de registro de un cliente, **cuando** se muestra la casilla «RUT», **entonces** aparece en color gris la pista `Ej: 11.111.111-1` sin contarse como valor capturado (FR-062).
-13. **Dado** el formulario de registro de un cliente, **cuando** se despliega «Canal de Contacto», **entonces** se muestran las opciones «Llamada», «Correo», «Reunión» y «WhatsApp» con la primera letra en mayúscula (FR-063).
-14. **Dado** el perfil de clientes, **cuando** se abre el formulario de registro o la acción rápida de creación, **entonces** el título y la acción muestran «Nuevo Cliente» (FR-064).
-15. **Dado** el formulario de registro o edición de un cliente, **cuando** se muestran las casillas, **entonces** aparecen en el orden «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado», siendo este último un `select` con los usuarios activos de rango Ejecutivo de Ventas o Gerente Comercial (FR-065, FR-099).
-16. **Dado** el perfil de clientes, **cuando** se despliega «Tipo de actividad», **entonces** se muestran únicamente las opciones «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante» (FR-066).
-17. **Dado** un canal de contacto elegido en el formulario de un cliente, **cuando** se muestra su casilla adicional, **entonces** aparece en color gris la pista «Ej: +56 9 1234 5678» para «Llamada» y «WhatsApp», «Ej: nombre@ejemplo.cl» para «Correo» o «Ej: Sala 2 o enlace» para «Reunión», sin contarse como valor capturado (FR-067).
+1. **Dado** el formulario «Nuevo Cliente», **cuando** se abre, **entonces** muestra exactamente las casillas «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado», en ese orden, y no muestra «Código», «Categoría», «Descripción» ni «Nº de pedidos» (FR-051, FR-065).
+2. **Dado** el desplegable «Tipo de actividad», **cuando** se abre, **entonces** ofrece solo las diez opciones de FR-066 y conserva la clave de almacenamiento `rubro`.
+3. **Dado** un cliente sin nombre, RUT, fecha de nacimiento o canal de contacto, **cuando** se intenta guardar, **entonces** el guardado se rechaza con `Completa los campos obligatorios.` y el número de clientes no aumenta (FR-056).
+4. **Dado** el RUT `12.345.678-9` o `12345678-9` con dígito verificador válido, **cuando** se guarda, **entonces** se normaliza sin puntos y se conserva en el registro; con dígito inválido se rechaza con `El RUT es inválido.` (FR-057).
+5. **Dado** un cliente ya registrado con ese RUT normalizado, **cuando** se intenta registrar otro con puntos o sin ellos, **entonces** se rechaza con `El RUT ya está registrado.` (FR-057).
+6. **Dado** un cliente válido, **cuando** se guarda, **entonces** el sistema genera un `code` único `CLI-###` que no se captura ni se muestra y la configuración activa no declara el campo `pedidos` (FR-052, FR-053).
+7. **Dada** la pista de RUT, **cuando** se abre el formulario, **entonces** aparece en gris `Ej: 11.111.111-1` y no se guarda como valor (FR-062).
+
+#### US2b - Registrar el canal de contacto preferido del cliente
+
+**Como** Ejecutivo de Ventas (rango `n2_sales`), **quiero** elegir explícitamente el canal de contacto del cliente y capturar solo el dato correspondiente a ese canal, **para** que Atención al Cliente sepa por dónde contactarlo y no use un teléfono, correo o enlace obsoleto de otro canal.
+
+**Criterios de aceptación**:
+
+1. **Dado** el formulario de cliente, **cuando** se despliega «Canal de Contacto», **entonces** aparecen exactamente «Llamada», «Correo», «Reunión» y «WhatsApp», con mayúscula inicial y sin opción preseleccionada; guardar sin elegir muestra `Completa los campos obligatorios.` (FR-059, FR-063).
+2. **Dado** el canal «Llamada» o «WhatsApp», **cuando** se muestra su casilla, **entonces** aparece «Teléfono» con la pista gris `Ej: +56 9 1234 5678` y el guardado valida formato telefónico (FR-060, FR-061, FR-067).
+3. **Dado** el canal «Correo», **cuando** se muestra su casilla, **entonces** aparece «Correo electrónico» con la pista gris `Ej: nombre@ejemplo.cl` y el guardado valida formato de correo (FR-060, FR-061, FR-067).
+4. **Dado** el canal «Reunión», **cuando** se muestra su casilla, **entonces** aparece «Lugar/Enlace de reunión» con la pista gris `Ej: Sala 2 o enlace` y el guardado exige un valor no vacío (FR-060, FR-061, FR-067).
+5. **Dado** un valor vacío o con formato inválido para el canal elegido, **cuando** se guarda, **entonces** se rechaza con `Revisa el dato de contacto según el canal elegido.` (FR-061).
+6. **Dado** un cliente con valores introducidos en «Llamada» y «Correo», **cuando** se guarda con canal final «Correo», **entonces** `erp_entities` conserva solo el correo y no conserva el teléfono anterior (FR-060).
+
+#### US2c - Asignar al ejecutivo responsable del cliente
+
+**Como** Gerente Comercial (rango `n4_manager`, con `entity:edit_any`), **quiero** asignar el «Ejecutivo Asignado» de cada cliente entre los usuarios activos de ventas o gerencia, **para** que el real mensual del equipo y los permisos de edición se apliquen al responsable real de la cuenta.
+
+**Criterios de aceptación**:
+
+1. **Dado** el `select` «Ejecutivo Asignado» en el formulario de cliente, **cuando** se abre, **entonces** solo lista usuarios activos de rango `n2_sales` o `n4_manager` y excluye a `atencion` y `marketing` (FR-065, FR-099).
+2. **Dado** el usuario `ventas` creando «Ferretería Central», **cuando** se guarda con `ventas` como responsable, **entonces** `ventas` puede editarlo posteriormente porque `ownerId` coincide con su usuario (FR-094, FR-099).
+3. **Dado** un cliente asignado a `ana.munoz`, **cuando** `ventas` intenta editarlo, **entonces** la operación se rechaza con `No tienes permiso para realizar esta acción` y el cliente permanece sin cambios (FR-094, FR-095).
+4. **Dado** un ejecutivo desactivado con clientes asignados, **cuando** se abre el `select`, **entonces** ya no aparece como opción y esos clientes muestran «Sin asignar» hasta que Gerencia los reasigne (FR-077, FR-099).
+5. **Dado** un cliente con ventas cerradas antes de la reasignación, **cuando** se calcula el real mensual, **entonces** se usa `assignedUserIdAtSale` y no el responsable vigente (FR-078).
+
+#### US2d - Saneamiento de fichas de clientes heredados incompletos
+
+**Como** Gerente Comercial (rango `n4_manager`, con `entity:edit_any`) o Ejecutivo de Ventas responsable (rango `n2_sales`, con `entity:edit_own`), **quiero** completar los campos obligatorios que faltan en un cliente heredado, **para** que su ficha deje de estar bloqueada y pueda volver a usarse en una atención comercial.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente guardado sin fecha de nacimiento, canal de contacto o RUT, o con RUT inválido o repetido, **cuando** cualquier usuario con `search:view` intenta abrir su ficha, **entonces** la consulta se bloquea y se enumeran exactamente los campos pendientes (FR-058).
+2. **Dada** una ficha bloqueada, **cuando** la abre un usuario sin permiso de edición sobre ese cliente, **entonces** ve la explicación de los campos pendientes y no ve un botón que permita guardar cambios (FR-058, FR-094).
+3. **Dada** una ficha bloqueada, **cuando** la abre un usuario con `entity:edit_own` o `entity:edit_any` sobre ese cliente, **entonces** puede editar solo los campos necesarios y el guardado con valores válidos desbloquea la consulta (FR-058).
+4. **Dado** un cliente heredado con fecha de nacimiento fuera de rango, **cuando** se edita, **entonces** el sistema conserva el valor anterior hasta que se corrija y no permite guardar mientras siga siendo inválido (FR-050, FR-058).
 
 ---
 
 ### Historia de Usuario 3 - Consultar antecedentes del cliente (Prioridad: P1)
 
-Como ejecutivo de atención al cliente, quiero buscar clientes y consultar su ficha e historial para brindar una atención informada y continua.
+Se desglosa en localización de la ficha (US3a) y revisión cronológica del historial (US3b), porque responder una consulta y analizar la relación comercial requieren verificaciones distintas.
 
-**Por qué esta prioridad**: Permite al ejecutivo de atención al cliente acceder de forma centralizada a la información del cliente, garantizando una atención oportuna, trazable e informada con base en los registros comerciales existentes.
+#### US3a - Localizar la ficha de un cliente desde la búsqueda
 
-**Prueba Independiente**: Un ejecutivo de atención al cliente busca un cliente registrado, accede a su ficha y revisa su historial de interacciones y documentos asociados, verificando que la información corresponde a los registros creados en la Historia de Usuario 2 y refleja las actualizaciones realizadas en la Historia de Usuario 4.
+**Como** Atención al Cliente (rango `n1_support`, con `search:view` y `entity:view_any`), **quiero** encontrar a un cliente por su nombre visible o por un dato de contacto ya registrado, **para** responder su consulta usando los datos correctos sin pedirle que repita su información.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que existen clientes registrados conforme a la Historia de Usuario 2, **cuando** el ejecutivo de atención al cliente busca por nombre o palabra clave visible, **entonces** el sistema muestra únicamente los clientes coincidentes, sin usar categoría, descripción ni código (FR-055).
-2. **Dado** que el ejecutivo selecciona un cliente de los resultados de búsqueda, **cuando** accede a su ficha, **entonces** se muestra la información del cliente junto a su historial de interacciones y documentos asociados.
-3. **Dado** que esta vista consulta los registros de la Historia de Usuario 2, **cuando** se carga la ficha o el historial, **entonces** el sistema debe obtener la información desde dichos registros, manteniendo la consistencia con lo ingresado por el ejecutivo de ventas.
-4. **Dado** que se han realizado actualizaciones a la ficha del cliente o a sus documentos desde la pantalla de gestión (Historia de Usuario 4), **cuando** el ejecutivo de atención al cliente consulta nuevamente dicha ficha e historial, **entonces** la vista refleja dichas actualizaciones.
-5. **Dada** una búsqueda sin coincidencias, **cuando** el ejecutivo envía la búsqueda, **entonces** el sistema muestra exactamente `No se encontraron resultados.` y permite volver a intentarlo.
-6. **Dado** que el ejecutivo necesita dar una atención informada y continua, **cuando** consulta la ficha del cliente, **entonces** el historial se presenta de forma ordenada (por fecha) para facilitar la revisión de los antecedentes del cliente.
-7. **Dado** un cliente guardado sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», o con RUT inválido, **cuando** se intenta abrir su ficha, **entonces** la consulta se bloquea con una explicación de los campos pendientes y se ofrece editarlo para completarlos (FR-058).
+1. **Dado** el cliente «Comercial Andina SpA» registrado, **cuando** busco `Comercial`, **entonces** el resultado contiene ese cliente y ningún otro que no coincida (FR-004, FR-055).
+2. **Dada** una búsqueda por un valor de «Categoría», «Descripción» o por el código oculto `CLI-###`, **cuando** se envía, **entonces** no se devuelve ningún cliente y se muestra exactamente `No se encontraron resultados.` (FR-051, FR-055).
+3. **Dado** un resultado de búsqueda, **cuando** selecciono «Ver ficha», **entonces** se abren los datos del cliente y su historial sin abrir el formulario de edición (FR-041).
+4. **Dado** un cliente heredado incompleto, **cuando** intento abrir su ficha, **entonces** veo los nombres de los campos pendientes y no se muestran sus datos comerciales como si estuvieran validados (FR-058).
+
+#### US3b - Revisar el historial comercial del cliente
+
+**Como** Atención al Cliente (rango `n1_support`, con `document:read`), **quiero** consultar en la ficha las llamadas, correos, consultas, reuniones y ventas asociadas al cliente en orden de fecha, **para** dar una respuesta continua basada en lo que ya se conversó con él.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente con una llamada del 3 de noviembre y un correo del 10 de noviembre, **cuando** abro su ficha, **entonces** la llamada aparece antes que el correo y ambos muestran fecha, tipo y nota (FR-042).
+2. **Dado** que Gerencia edita la nota de una interacción en la pantalla de gestión, **cuando** vuelvo a abrir la ficha, **entonces** aparece la nota actualizada sin recargar el registro desde otra fuente (FR-043).
+3. **Dado** un cliente sin documentos, **cuando** abro su ficha, **entonces** sus datos siguen visibles y el historial muestra un estado vacío explícito (FR-041).
+4. **Dado** un cliente con documentos de redes sociales y «Dudas y consultas», **cuando** consulto su ficha, **entonces** esos documentos aparecen junto al resto del historial con la plataforma o el canal que corresponde (FR-081).
+5. **Dado** un usuario de Marketing con `document:read`, **cuando** abre la misma ficha, **entonces** ve el mismo historial; un usuario sin `document:read` no puede abrirlo (FR-094).
 
 ---
 
 ### Historia de Usuario 4 - Gestionar entidades y documentos en una pantalla dedicada (Prioridad: P1)
 
-Como usuario de negocio, quiero una pantalla dedicada donde pueda añadir, editar y eliminar entidades y sus documentos, para poder gestionar los datos del módulo en un lugar enfocado.
+Se desglosa en acceso desde el panel (US4a), alta/edición/baja de clientes (US4b) y gestión de sus documentos desde la misma pantalla (US4c). US11 detalla los campos de la interacción; aquí se especifica quién puede operarlos y desde dónde.
 
-**Por qué esta prioridad**: Esto preserva el valor central de las capacidades de gestión del módulo, presentado como una única pantalla de gestión accesible únicamente desde las acciones rápidas del panel.
+#### US4a - Acceder a la gestión de clientes e interacciones desde el panel
 
-**Prueba Independiente**: Un usuario puede navegar a la pantalla de gestión mediante una acción rápida del panel, alternar entre la gestión de entidades y documentos, y volver al panel, añadiendo, editando y eliminando con éxito una entidad y un documento.
+**Como** Ejecutivo de Ventas (rango `n2_sales`) o Gerente Comercial (rango `n4_manager`), **quiero** abrir las pestañas «Clientes» e «Interacciones» desde las acciones rápidas del panel, **para** realizar altas y correcciones sin confundir la gestión con la búsqueda de fichas.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** el panel principal, **cuando** el usuario mira la navegación, **entonces** ofrece accesos a la gestión de entidades y documentos y la barra lateral NO ofrece botones para esos apartados.
-2. **Dado** el panel principal, **cuando** el usuario activa el acceso a entidades, **entonces** se muestra el contenido de gestión de entidades.
-3. **Dado** el panel principal, **cuando** el usuario activa el acceso a documentos, **entonces** se muestra el contenido de gestión de documentos.
-4. **Dado** que el usuario está en la pantalla de gestión, **cuando** mira la pantalla, **entonces** la lista de entidades no se muestra.
-5. **Dado** que el usuario está en la pantalla de gestión, **cuando** crea una nueva entidad, **entonces** la entidad se guarda.
-6. **Dada** una entidad existente, **cuando** el usuario edita sus detalles, **entonces** la información actualizada se guarda.
-7. **Dada** una entidad que ya no es relevante, **cuando** el usuario la elimina, **entonces** se elimina junto con sus documentos.
-8. **Dada** una entidad existente, **cuando** el usuario añade, edita o elimina un documento, **entonces** los cambios del documento se guardan y quedan asociados a esa entidad.
-9. **Dado** que el usuario está en la pantalla de gestión, **cuando** activa el botón Panel en la barra lateral, **entonces** vuelve al panel de inicio.
+1. **Dado** el panel principal, **cuando** lo abre un usuario con `entity:create`, **entonces** ve las acciones «Nuevo Cliente», «Nueva interacción», «Gestionar clientes» y «Gestionar interacciones», sin «Abrir Marketing» (FR-033, FR-091).
+2. **Dado** un usuario con `search:view` pero sin `entity:create` (Atención al Cliente), **cuando** abre el panel, **entonces** no ve «Nuevo Cliente», «Nueva interacción» ni las acciones de gestión, y solo ve «Buscar registros» (FR-033, FR-094).
+3. **Dado** el panel, **cuando** activo «Gestionar clientes» o «Gestionar interacciones», **entonces** se abre la pantalla de gestión en la pestaña correspondiente y la barra lateral NO muestra esos apartados (FR-013, FR-014, FR-016).
+4. **Dado** un enlace profundo `?view=manage-entity` o `?view=manage-document`, **cuando** se abre, **entonces** se muestra la misma pantalla de gestión y no la lista de búsqueda (FR-097).
+5. **Dado** el botón «Panel» de la barra lateral, **cuando** se activa desde gestión, **entonces** vuelve al panel y el número de clientes e interacciones almacenados no cambia (FR-015, FR-022).
+
+#### US4b - Corregir y dar de baja clientes en la pantalla de gestión
+
+**Como** Gerente Comercial (rango `n4_manager`, con `entity:edit_any` y `entity:delete`), **quiero** editar o eliminar cualquier cliente y confirmar cuántas interacciones se borrarán con él, **para** retirar cuentas cerradas o corregir datos sin dejar documentos huérfanos.
+
+**Criterios de aceptación**:
+
+1. **Dado** el cliente «Comercial Andina SpA» con 4 interacciones, **cuando** intento eliminarlo, **entonces** la confirmación indica exactamente `4` documentos y, sin confirmación, no se elimina nada (FR-003).
+2. **Dada** la confirmación aceptada, **cuando** se ejecuta la baja, **entonces** se eliminan el cliente y sus 4 interacciones en una sola operación y `erp_documents` no conserva su `entity_id` (FR-009).
+3. **Dada** una orden de edición sobre un cliente inexistente, **cuando** se envía desde la interfaz o desde `storage.js`, **entonces** falla sin mutar datos y muestra un error visible (FR-007, FR-095).
+4. **Dado** un Ejecutivo de Ventas con `entity:edit_own`, **cuando** edita su cliente «Ferretería Central», **entonces** el cambio se guarda; al intentar eliminarlo, la operación se rechaza con `No tienes permiso para realizar esta acción` (FR-094, FR-096).
+
+#### US4c - Operar documentos vinculados desde la pestaña de gestión
+
+**Como** Gerente Comercial (rango `n4_manager`, con `document:edit_any` y `document:delete`), **quiero** crear, editar y eliminar documentos seleccionando el cliente al que pertenecen desde la pestaña «Interacciones», **para** que cada llamada, correo o venta quede atribuida a la cuenta correcta.
+
+**Criterios de aceptación**:
+
+1. **Dado** el cliente «Comercial Andina SpA», **cuando** creo una interacción desde la pestaña de documentos, **entonces** el formulario exige seleccionar ese cliente y el documento guardado queda con su `entity_id` (FR-008, FR-009).
+2. **Dado** un documento existente, **cuando** edito su fecha, nota o estado permitido, **entonces** el cambio aparece en la ficha del cliente al consultarla de nuevo (FR-008, FR-043).
+3. **Dada** una interacción vacía en campos obligatorios, **cuando** se guarda, **entonces** se rechaza con `Completa los campos obligatorios.` (FR-006).
+4. **Dado** un usuario sin `document:delete` que intenta borrar una interacción desde la interfaz o desde `storage.js`, **cuando** ejecuta la acción, **entonces** recibe `No tienes permiso para realizar esta acción` y el documento permanece (FR-095, FR-096).
 
 ---
 
 ### Historia de Usuario 5 - Definir un perfil de configuración del módulo (Prioridad: P1)
 
-Como desarrollador de módulos, quiero declarar un único archivo de configuración que defina la identidad, terminología, campos personalizados y reglas de mi módulo, para adaptar el módulo base en un módulo específico sin modificar su código central.
+**Como** desarrollador de módulos (rol técnico que edita `src/module-config.js`; sin rango N1–N4 en la aplicación), **quiero** declarar en un único `MODULE_CONFIG` la identidad «CRM Comercial», las etiquetas Cliente/Interacción, los campos propios y el ciclo de vida del módulo, **para** que el equipo comercial trabaje con la terminología de su negocio sin que el equipo modifique el código central.
 
-**Por qué esta prioridad**: La adaptación mediante configuración es lo que convierte este proyecto de una aplicación fija en una base reutilizable. Sin ella, cada módulo personalizado requeriría editar archivos fuente centrales, lo que frustra el propósito de la plantilla; todas las historias de personalización posteriores dependen de que este mecanismo exista primero.
+**Contexto comercial**: US7, US8 y US13 detallan cada clase de personalización; esta historia solo garantiza que el perfil se cargue al arrancar, se aplique en todas las vistas y retroceda con aviso cuando sea inválido.
 
-**Prueba Independiente**: Un desarrollador proporciona un archivo de configuración que define un perfil de Ventas (nombre del módulo, mapeos Entidad→Cliente, campos personalizados, ciclo de vida), y la aplicación se presenta plenamente como un módulo de Ventas; al quitar el archivo se restauran los valores predeterminados de la base sin errores.
+**Por qué esta prioridad**: es prerrequisito de las historias de terminología, campos, fecha y estados, y evita que cada cambio comercial obligue a tocar archivos fuente compartidos.
 
-**Escenarios de Aceptación**:
+**Prueba independiente**: con `MODULE_CONFIG` del perfil CRM activo, el marco y el panel muestran «CRM Comercial» y «Cliente/Interacción»; al dejar `MODULE_CONFIG = null`, la aplicación arranca con «Entidad/Documento» sin errores; con una configuración conflictiva, muestra un banner y sigue operable con los valores integrados.
 
-1. **Dado** que un archivo de configuración define el nombre del módulo, **cuando** la aplicación carga, **entonces** el panel de inicio y el marco del espacio de trabajo muestran el nombre configurado.
-2. **Dada** una configuración completa (nombre, mapeos de términos, campos personalizados, ciclo de vida), **cuando** la aplicación carga, **entonces** el módulo se presenta plenamente bajo la identidad configurada sin que se vean términos del módulo base en ningún sitio.
-3. **Dado** que no se proporciona configuración, **cuando** la aplicación carga, **entonces** la aplicación retrocede a los valores predeterminados integrados Entidad/Documento sin errores.
-4. **Dada** una configuración con valores inválidos o conflictivos, **cuando** la aplicación carga, **entonces** el sistema informa del problema con claridad en lugar de fallar silenciosamente.
+**Criterios de aceptación**:
+
+1. **Dado** el perfil CRM activo, **cuando** carga la aplicación, **entonces** el título del documento, la barra superior y el panel muestran el `moduleName` configurado y las etiquetas «Cliente» e «Interacción» en todas las vistas (FR-023, FR-029).
+2. **Dado** un perfil con `labels`, `customFields`, `statusLifecycle` y `theme.accentColor`, **cuando** arranca la aplicación, **entonces** los cuatro bloques se aplican sin editar `src/app.js`, `src/storage.js` ni componentes (FR-023, XR-001–XR-005).
+3. **Dado** `MODULE_CONFIG = null`, **cuando** arranca la aplicación, **entonces** se usan «Entidad» y «Documento», sin campos personalizados ni ciclo de vida, y la búsqueda y la gestión siguen disponibles (FR-024).
+4. **Dada** una configuración con clave de campo personalizado que choca con un campo base, tipo desconocido o transición a un estado no declarado, **cuando** arranca, **entonces** muestra `#config-warning` con el motivo, aplica `DEFAULT_CONFIG` y no bloquea la aplicación (FR-025).
+5. **Dado** un color de acento ausente o inválido, **cuando** arranca, **entonces** se aplica el color integrado sin error y el resto del perfil CRM permanece activo (FR-038).
 
 ---
 
-### Historia de Usuario 6 - Consultar indicadores de Gestión Comercial (Prioridad: P6)
+### Historia de Usuario 6 - Consultar indicadores de Gestión Comercial (Prioridad: P2)
 
-Como Gerente Comercial, quiero visualizar un resumen de clientes, interacciones y seguimientos pendientes para identificar necesidades de atención y organizar el trabajo del equipo.
+> La prioridad se corrige de `P6` a `P2`: el rango permitido es P1/P2 y el resumen depende de US2, US3, US11 y US13.
 
-> Nota: Esta historia describe una vista de perfil (p. ej. CRM con etiquetas configuradas) sobre el comportamiento genérico del resumen de indicadores definido en FR-044 a FR-046 (entidades, documentos y documentos pendientes).
+Se desglosa en lectura de pendientes del equipo (US6a) y acceso al detalle del cliente (US6b). US15 mantiene las tarjetas del panel; aquí se trata del resumen de seguimientos que usa Gerencia.
 
-**Por qué esta prioridad**: Se ubica en este nivel porque entrega al Gerente Comercial una vista consolidada para priorizar la gestión del equipo, apoyándose en los clientes e historiales ya registrados en las Historias de Usuario 2 y 3. Sin esos registros, los indicadores no tendrían información que resumir.
+#### US6a - Priorizar los seguimientos pendientes del equipo
 
-**Prueba Independiente**: Un Gerente Comercial accede al resumen de Gestión Comercial y comprueba que el total de clientes, las interacciones registradas y los seguimientos pendientes coinciden con los datos de las fichas de los clientes; luego registra un nuevo seguimiento y verifica que el indicador correspondiente se actualiza.
+**Como** Gerente Comercial (rango `n4_manager`, con `summary:view_all`), **quiero** ver el total de clientes, el total de interacciones y los documentos pendientes agrupados por cliente en el resumen, **para** decidir qué cuenta requiere atención hoy y comprobar el trabajo de `ventas` y `ana.munoz`.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que existen clientes e interacciones registrados en sus fichas (Historias de Usuario 2 y 3), **cuando** el Gerente Comercial abre el resumen de Gestión Comercial, **entonces** visualiza el total de clientes y el número de interacciones registradas.
-2. **Dado** que existen seguimientos con estado pendiente asociados a los clientes, **cuando** el Gerente Comercial consulta el resumen, **entonces** el sistema muestra la cantidad de seguimientos pendientes y los identifica por cliente.
-3. **Dado** que se completó un seguimiento pendiente o se registró uno nuevo en la ficha de un cliente, **cuando** el Gerente Comercial vuelve a consultar el resumen, **entonces** los indicadores reflejan la información actualizada.
-4. **Dado** que el Gerente Comercial identifica clientes con seguimientos pendientes, **cuando** selecciona uno de ellos, **entonces** accede a su ficha e historial para revisar el detalle y organizar la atención del equipo.
-5. **Dado** que no existen clientes, interacciones ni seguimientos registrados, **cuando** el Gerente Comercial abre el resumen, **entonces** el sistema muestra un estado vacío claro, con los indicadores en cero, e indica cómo comenzar a registrar información.
-6. **Dado** que el módulo está configurado como CRM, **cuando** se muestra el resumen de Gestión Comercial, **entonces** todas las etiquetas utilizan "Clientes" e "Historial/Ficha" en lugar de "Entidades" y "Documentos".
+1. **Dado** 47 clientes, 120 interacciones y 47 seguimientos pendientes —12 de `ventas` y 35 de `ana.munoz`—, **cuando** abre el resumen, **entonces** ve exactamente `47`, `120` y `47`, y cada pendiente aparece identificado por cliente (FR-044, FR-045).
+2. **Dado** que se crea una interacción con estado «pendiente», **cuando** se vuelve a abrir el resumen, **entonces** el total de interacciones aumenta en 1 y el de pendientes aumenta en 1 sin recarga (FR-045).
+3. **Dado** que se cambia un seguimiento a «Cerrado ganado», **cuando** se consulta el resumen, **entonces** el total de pendientes baja en 1 y el documento no se cuenta dos veces (FR-044).
+4. **Dado** un `statusLifecycle` que marca `en_recontacto` como pendiente, **cuando** se calcula el resumen, **entonces** se cuentan esos estados y no solo el texto `pendiente`; sin ciclo de vida, se cuenta el estado normalizado `pendiente` (FR-044).
+5. **Dado** el perfil CRM activo, **cuando** se muestra el resumen, **entonces** las etiquetas son «Clientes» e «Historial/Ficha» y no aparecen «Entidades» ni «Documentos» (FR-029).
+6. **Dado** un resumen vacío, **cuando** se abre, **entonces** los tres indicadores muestran `0` y se indica registrar el primer cliente (FR-046).
+7. **Dado** un Ejecutivo de Marketing o Atención al Cliente, **cuando** intenta abrir `?view=summary`, **entonces** ve «Acceso denegado» y vuelve al Panel (FR-097).
+
+#### US6b - Revisar el detalle de un cliente con seguimiento pendiente
+
+**Como** Gerente Comercial (rango `n4_manager`, con `summary:view_all` y `entity:view_any`), **quiero** abrir la ficha de un cliente listado como pendiente en el resumen, **para** revisar su historial y asignar la siguiente acción comercial sin buscarlo de nuevo.
+
+**Criterios de aceptación**:
+
+1. **Dado** el cliente «Comercial Andina SpA» con un seguimiento pendiente en el resumen, **cuando** selecciono su fila, **entonces** se abre su ficha con los mismos datos y documentos que muestra la búsqueda (FR-041, FR-045).
+2. **Dado** el Ejecutivo de Ventas `ventas` con `summary:view_own`, **cuando** abre el resumen, **entonces** ve solo sus 12 pendientes y no los 35 de `ana.munoz` (FR-094).
+3. **Dado** un cliente sin pendientes, **cuando** se abre desde el resumen, **entonces** su historial se muestra igual que desde la búsqueda y el contador de pendientes de ese cliente es `0` (FR-044, FR-045).
 
 ---
 
 ### Historia de Usuario 7 - Reetiquetar pantallas desde la configuración (Prioridad: P1)
 
-Como desarrollador de módulos, quiero que todas las etiquetas visibles para el usuario deriven de la configuración, para que un módulo adaptado hable su idioma de dominio de forma consistente en todo momento.
+**Como** desarrollador de módulos (rol técnico que edita `MODULE_CONFIG`; sin rango N1–N4), **quiero** que las pestañas, botones, encabezados y mensajes del CRM deriven de `labels` y de la regla de fecha activa, **para** que un Ejecutivo de Ventas vea siempre «Cliente», «Interacción» y «Fecha de nacimiento» en lugar de términos del módulo base.
 
-**Por qué esta prioridad**: Los usuarios confían en un módulo que dice consistentemente "Cliente" y "Pedido de Venta" en lugar de dejar filtrarse una "Entidad" genérica por media interfaz; la terminología inconsistente hace que los módulos adaptados parezcan rotos. Esta historia depende del perfil de configuración (Historia de Usuario 5).
+**Por qué esta prioridad**: depende de US5 y evita que la terminología cambie según la pantalla, lo que produciría instrucciones contradictorias al registrar o buscar clientes.
 
-**Prueba Independiente**: Un desarrollador mapea Entidad→Cliente y Documento→Pedido de Venta en la configuración, y cada pestaña, botón, etiqueta de formulario, encabezado y mensaje en las tres pantallas usa los términos mapeados.
+**Prueba independiente**: con `Entidad→Cliente` y `Documento→Interacción`, las cinco vistas permitidas (Panel, Buscar, Resumen, Marketing y gestión) muestran esos términos, «Nuevo Cliente» y «Fecha de nacimiento», y navegar entre ellas no cambia ningún registro.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dados** mapeos de términos definidos en la configuración, **cuando** cualquier pantalla carga, **entonces** pestañas, botones, etiquetas de formulario, encabezados y mensajes de estado vacío muestran los términos configurados.
-2. **Dado** que las etiquetas han sido remapeadas, **cuando** el usuario navega entre pantallas, **entonces** el comportamiento de navegación no cambia.
-3. **Dado** que no se proporcionan mapeos, **cuando** cualquier pantalla carga, **entonces** se muestran los términos predeterminados Entidad/Documento.
-4. **Dado** el perfil de clientes, **cuando** carga cualquier pantalla, **entonces** "Fecha de nacimiento" reemplaza a "Fecha objetivo" en formularios, listas, ficha, búsqueda y filtros.
+1. **Dado** el perfil CRM activo, **cuando** cargo Panel, Buscar, gestión, ficha y Resumen, **entonces** no aparece el texto «Entidad» ni «Documento» en pestañas, botones, encabezados ni estados vacíos (FR-029).
+2. **Dado** un mapeo alternativo `Documento→Pedido de Venta`, **cuando** carga la vista de gestión, **entonces** pestañas y mensajes usan «Pedido de Venta» y la navegación entre Panel y búsqueda sigue igual (XR-002).
+3. **Dado** `MODULE_CONFIG = null`, **cuando** carga cualquier pantalla, **entonces** aparecen los términos integrados «Entidad» y «Documento» (FR-024).
+4. **Dado** el perfil de clientes, **cuando** se muestran formulario, lista de resultados, ficha, búsqueda y filtros, **entonces** los cinco lugares dicen «Fecha de nacimiento» y ninguno dice «Fecha objetivo» (FR-047).
+5. **Dado** el botón de creación de clientes, **cuando** se muestra en el panel o en el formulario, **entonces** dice exactamente «Nuevo Cliente» y no «Nueva cliente» (FR-064).
 
 ---
 
 ### Historia de Usuario 8 - Declarar campos personalizados para los registros (Prioridad: P1)
 
-Como desarrollador de módulos, quiero declarar campos adicionales para entidades y documentos en la configuración, para que aparezcan automáticamente en formularios, listas, validación y búsqueda sin escribir código de interfaz.
+Se desglosa en declaración y uso de campos (US8a) y conservación de valores históricos retirados (US8b), porque el riesgo comercial es distinto: capturar datos nuevos y no borrar los antiguos.
 
-**Por qué esta prioridad**: Los módulos personalizados existen porque sus registros contienen datos específicos del dominio (el límite de crédito de un cliente, la fecha de vencimiento de una factura). Si añadir campos requiere editar formularios y validación a mano, la adaptación es propensa a errores y no escala. Esta historia depende del perfil de configuración (Historia de Usuario 5).
+#### US8a - Capturar y consultar campos propios del cliente y de la interacción
 
-**Prueba Independiente**: Un desarrollador declara un campo numérico obligatorio personalizado en las entidades; se muestra como entrada numérica en el formulario, bloquea el guardado cuando está en blanco, muestra los valores guardados en las listas y coincide en las búsquedas.
+**Como** desarrollador de módulos (rol técnico que edita `MODULE_CONFIG`; sin rango N1–N4), **quiero** declarar campos adicionales —por ejemplo, `rut`, `canal_contacto`, `tipo_interaccion`, `plataforma` o `importe`— con tipo, obligatoriedad y visibilidad, **para** que el Ejecutivo de Ventas capture los datos que el negocio necesita y Gerencia los consulte en fichas, listas y búsqueda sin código nuevo.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** un campo personalizado de entidad de tipo número declarado como obligatorio, **cuando** el usuario crea o edita una entidad, **entonces** el campo se muestra como entrada numérica y un valor en blanco impide guardar con `Completa los campos obligatorios.`.
-2. **Dado** un campo personalizado con un valor guardado, **cuando** el usuario ve la lista o la vista de detalle, **entonces** el valor se muestra.
-3. **Dados** campos personalizados declarados, **cuando** el usuario busca usando un término que coincide con un valor de campo personalizado, **entonces** se devuelven los registros coincidentes.
-4. **Dado** que no hay campos personalizados declarados, **cuando** la aplicación se ejecuta, **entonces** el comportamiento es idéntico al del módulo base sin modificar.
+1. **Dado** un campo numérico obligatorio declarado en `customFields.entity`, **cuando** se abre el formulario de cliente, **entonces** aparece como entrada numérica y dejarlo vacío muestra `Completa los campos obligatorios.` al guardar (FR-026, FR-027).
+2. **Dado** un campo con valor guardado, **cuando** se abre la lista de resultados o la ficha, **entonces** el valor aparece con su etiqueta configurada (FR-028).
+3. **Dado** un campo declarado como buscable, **cuando** se busca un término que coincide con su valor, **entonces** se devuelve el cliente correspondiente y no los que solo coinciden con campos ocultos (FR-004, FR-028).
+4. **Dado** un grupo condicional declarado con `when`/`group`, **cuando** cambia el canal seleccionado, **entonces** solo se valida y se guarda el campo activo del grupo (FR-060, FR-061).
+5. **Dado** `MODULE_CONFIG = null`, **cuando** se ejecuta la aplicación, **entonces** no se renderiza ningún campo personalizado y el comportamiento es el del módulo base (FR-024).
+
+#### US8b - Conservar los valores de campos retirados de la configuración
+
+**Como** desarrollador de módulos (rol técnico que edita `MODULE_CONFIG`; sin rango N1–N4), **quiero** que los valores de campos que dejan de declararse permanezcan en `localStorage` pero dejen de mostrarse y buscarse, **para** que una corrección del perfil no destruya el historial comercial de los clientes ya registrados.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente con valor en `categoria` y `descripcion`, **cuando** el perfil CRM deja de declararlos, **entonces** los valores siguen en `erp_entities` y no aparecen en formulario, lista, ficha ni búsqueda (FR-040, FR-054).
+2. **Dado** el campo `pedidos` eliminado de `customFields.entity`, **cuando** se guarda un cliente, **entonces** el sistema no lo registra ni lo valida como campo del cliente (FR-053).
+3. **Dada** una búsqueda por el valor oculto de `categoria` o `descripcion`, **cuando** se envía, **entonces** se muestra exactamente `No se encontraron resultados.` y el registro oculto no se devuelve (FR-055).
+4. **Dado** un campo retirado que vuelve a declararse, **cuando** se recarga la aplicación, **entonces** su valor histórico vuelve a mostrarse sin haber sido borrado (FR-040).
 
 ---
 
 ### Historia de Usuario 9 - Buscar y encontrar entidades rápidamente (Prioridad: P2)
 
-Como usuario de negocio, quiero buscar mis entidades por detalles clave para encontrar rápidamente el registro que necesito.
+**Como** Atención al Cliente (rango `n1_support`, con `search:view`) o Ejecutivo de Ventas (rango `n2_sales`), **quiero** introducir un término y obtener solo los clientes cuyos campos visibles coinciden, **para** localizar la ficha correcta durante una llamada sin revisar uno por uno los registros de la cartera.
 
-**Por qué esta prioridad**: La recuperación rápida mejora la utilidad cuando el conjunto de datos crece más allá de un pequeño número de entradas.
+**Por qué esta prioridad**: depende de US2 y US7; con 500 clientes y 500 interacciones, SC-004 exige que la búsqueda termine en menos de 2 segundos.
 
-**Prueba Independiente**: Un usuario puede introducir un término de búsqueda y ver solo las entidades coincidentes.
+**Prueba independiente**: con 500 clientes y 500 interacciones cargados, buscar `Andina` devuelve solo «Comercial Andina SpA» en menos de 2 segundos; buscar `CategoríaX` muestra exactamente `No se encontraron resultados.`
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dadas** múltiples entidades almacenadas, **cuando** el usuario busca con un término coincidente, **entonces** solo se muestran las entidades coincidentes.
-2. **Dada** una búsqueda sin coincidencias, **cuando** el usuario envía la búsqueda, **entonces** el sistema muestra exactamente `No se encontraron resultados.` y permite volver a intentarlo.
-3. **Dadas** cientos de entidades almacenadas, **cuando** el usuario busca, **entonces** los resultados coincidentes aparecen con prontitud sin retraso perceptible.
+1. **Dados** 500 clientes, **cuando** busco `Andina`, **entonces** el resultado contiene solo los clientes con ese texto en nombre, fecha de nacimiento o campo personalizado visible (FR-004, FR-055).
+2. **Dada** una búsqueda por «Categoría», «Descripción» o código `CLI-###`, **cuando** se envía, **entonces** no se devuelve ningún cliente aunque el valor exista oculto en almacenamiento (FR-051, FR-055).
+3. **Dada** una búsqueda sin coincidencias, **cuando** se envía, **entonces** se muestra exactamente `No se encontraron resultados.` y puedo volver a intentarlo sin que cambie ningún registro (FR-005, FR-006).
+4. **Dado** el conjunto de 500 entidades y 500 documentos, **cuando** busco y renderizo resultados, **entonces** la operación termina en menos de 2 segundos y al menos el 95% de las mediciones en escritorio terminan en 200 ms o menos (FR-032, SC-004).
+5. **Dado** un visitante sin sesión, **cuando** intenta usar la búsqueda interna, **entonces** se le redirige al inicio de sesión y solo conserva el formulario público y «Dudas y consultas» (FR-097).
 
 ---
 
 ### Historia de Usuario 10 - Registrar una fecha objetivo (Prioridad: P2)
 
-Como usuario de negocio, quiero adjuntar una fecha objetivo opcional a una entidad para planificar y ordenar los registros según cuándo vence algo.
+Se desglosa en fecha opcional del módulo base (US10a), fecha de nacimiento del cliente (US10b) y corrección de fechas heredadas (US10c), porque las reglas de validación cambian según el perfil activo.
 
-**Por qué esta prioridad**: La planificación consciente de fechas mejora el valor central cuando el conjunto de datos crece, pero no es necesaria para la gestión básica.
+#### US10a - Registrar una fecha objetivo opcional en el módulo base
 
-**Prueba Independiente**: Un usuario puede fijar una fecha en una entidad y verla mostrada en la lista.
+**Como** Ejecutivo de Ventas (rango `n2_sales`) usando un perfil del módulo base donde la fecha no es obligatoria, **quiero** fijar una fecha objetivo en una entidad, **para** identificar en la lista qué registro tiene un vencimiento pendiente y cuál no.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que un usuario está creando o editando una entidad, **cuando** introduce una fecha objetivo, **entonces** la fecha se guarda y se muestra en la lista.
-2. **Dada** una entidad con fecha fijada, **cuando** el usuario ve la lista, **entonces** las entidades con fechas pueden identificarse de un vistazo.
-3. **Dado** que un usuario deja la fecha en blanco, **cuando** guarda la entidad, **entonces** la entidad igualmente se guarda sin fecha (campo opcional). En el perfil de clientes, la «Fecha de nacimiento» es obligatoria y el guardado se rechaza si está vacía (FR-056).
-4. **Dado** el perfil de clientes, **cuando** se muestra el formulario de creación o edición, **entonces** el campo de fecha se denomina "Fecha de nacimiento" y admite fechas válidas desde el 1 de enero de 1910 hasta la fecha actual, inclusive.
-5. **Dado** el perfil de clientes, **cuando** se introduce una fecha con un día inexistente para su mes, anterior al 1 de enero de 1910 o posterior a la fecha actual, **entonces** el sistema rechaza el valor con una explicación clara.
-6. **Dado** el formulario de cliente abierto antes de cambiar de día según la hora local del dispositivo, **cuando** llega el siguiente día local, **entonces** el límite máximo de "Fecha de nacimiento" pasa a ser la nueva fecha actual sin recargar la página.
-7. **Dado** un cliente con una fecha de nacimiento almacenada fuera del rango o inválida, **cuando** se consulta su ficha, **entonces** el valor se muestra igual; y **cuando** se edita, **entonces** no se permite guardar hasta corregirlo.
+1. **Dado** el formulario de una entidad del perfil base, **cuando** dejo la fecha objetivo vacía y guardo, **entonces** la entidad se guarda sin fecha (FR-047, XR-003).
+2. **Dada** una fecha válida introducida, **cuando** guardo, **entonces** aparece en la lista junto a esa entidad y se conserva tras recargar (FR-004).
+3. **Dado** un día inexistente para el mes elegido, **cuando** guardo, **entonces** el sistema rechaza el valor con una explicación clara y la entidad permanece sin cambios.
+
+#### US10b - Registrar la fecha de nacimiento del cliente
+
+**Como** Ejecutivo de Ventas (rango `n2_sales`, con `entity:create`), **quiero** capturar la «Fecha de nacimiento» del cliente dentro del rango permitido, **para** cumplir el perfil CRM y evitar que una ficha quede bloqueada por un dato inválido.
+
+**Criterios de aceptación**:
+
+1. **Dado** el formulario de cliente, **cuando** se muestra la casilla de fecha, **entonces** dice «Fecha de nacimiento» y exige un valor (FR-047, FR-056).
+2. **Dada** la fecha `1910-01-01` o la fecha local actual, **cuando** guardo, **entonces** ambas se aceptan; `1909-12-31`, una fecha futura o `2026-02-30` se rechazan con una explicación clara (FR-047).
+3. **Dado** el formulario abierto antes de la medianoche local, **cuando** cambia el día según la hora del dispositivo, **entonces** el límite máximo pasa a ser la nueva fecha local sin recargar y sin borrar el borrador (FR-048, FR-049).
+4. **Dado** un cliente sin fecha de nacimiento, **cuando** se guarda, **entonces** se rechaza con `Completa los campos obligatorios.` (FR-056).
+
+#### US10c - Corregir fechas heredadas fuera de rango
+
+**Como** Gerente Comercial (rango `n4_manager`, con `entity:edit_any`), **quiero** conservar la fecha de nacimiento histórica de un cliente mientras corrijo su ficha, **para** no perder el dato original pero dejar el registro válido antes de seguir usándolo comercialmente.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente con fecha anterior a 1910 o inválida, **cuando** se consulta su ficha, **entonces** el valor se muestra igual y se indica que debe corregirse al editar (FR-050).
+2. **Dado** ese mismo cliente, **cuando** intento guardar sin corregir la fecha, **entonces** el guardado se rechaza y no se modifica ningún otro campo (FR-050).
+3. **Dado** un Ejecutivo de Ventas sin permiso sobre ese cliente, **cuando** intenta corregirlo desde `storage.js`, **entonces** recibe `No tienes permiso para realizar esta acción` y la fecha permanece sin cambios (FR-095, FR-096).
 
 ---
 
 ### Historia de Usuario 11 - Registrar los detalles de documentos de una entidad (Prioridad: P2)
 
-Como usuario de negocio, quiero registrar detalles de documentos para una entidad, para mantener la actividad transaccional organizada junto a cada registro de datos maestros.
+Se desglosa en captura de la interacción (US11a) y corrección según rango (US11b). US4c especifica el acceso desde la pantalla de gestión; aquí se especifican los datos y quién puede modificarlos.
 
-**Por qué esta prioridad**: Los documentos aportan valor operativo práctico una vez que las entidades están gestionadas, pero no son necesarios para la gestión central.
+#### US11a - Registrar una interacción comercial con el cliente
 
-**Prueba Independiente**: Un usuario puede añadir un documento a una entidad y ver los detalles del documento mostrados junto a esa entidad.
+**Como** Atención al Cliente (rango `n1_support`, con `document:create`) o Ejecutivo de Ventas (rango `n2_sales`, con `document:create`), **quiero** guardar tipo de interacción, fecha, nota y, cuando corresponde, importe y moneda vinculados al cliente, **para** dejar constancia de cada contacto y que Gerencia pueda contabilizar las ventas cerradas.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dada** una entidad en la lista, **cuando** el usuario añade un documento con detalles, **entonces** el documento se guarda y queda asociado a esa entidad.
-2. **Dado** un documento existente para una entidad, **cuando** el usuario selecciona esa entidad en la pantalla de gestión, **entonces** los detalles del documento se muestran en la vista de gestión de documentos.
-3. **Dada** una entidad eliminada, **cuando** se confirma la eliminación, **entonces** sus documentos asociados también se eliminan.
-4. **Dado** que un usuario está creando un documento, **cuando** deja la información obligatoria del documento en blanco, **entonces** el sistema impide guardar con `Completa los campos obligatorios.`.
+1. **Dado** el cliente «Comercial Andina SpA», **cuando** registramos una «Llamada» el 3 de noviembre con nota «Confirmación de horario de entrega», **entonces** el documento queda guardado con `entity_id` de ese cliente y aparece en su ficha (FR-008, FR-009).
+2. **Dado** un documento de venta, **cuando** se capturan serie/folio, importe, moneda, condiciones y tipo de interacción, **entonces** esos valores se guardan como campos personalizados declarados y no alteran la estructura base del Documento (XR-001).
+3. **Dado** `startDate` y `endDate`, **cuando** `endDate` es anterior a `startDate`, **entonces** el guardado se rechaza con un error visible y el documento permanece sin cambios.
+4. **Dado** un documento sin campos obligatorios, **cuando** se guarda, **entonces** se rechaza con `Completa los campos obligatorios.` (FR-006).
+5. **Dado** un usuario `atencion`, **cuando** intenta registrar una interacción de tipo «Reunión», **entonces** la acción se rechaza con `No tienes permiso para realizar esta acción` y solo puede registrar «Llamada» o «Correo» (matriz de permisos).
+
+#### US11b - Corregir y cambiar el estado de una interacción según el rango
+
+**Como** Ejecutivo de Ventas (rango `n2_sales`, con `document:edit_own` y `document:transition_own`), **quiero** editar las interacciones de mis clientes y cambiar su estado a «Cerrado ganado», **para** que el real mensual del equipo y el embudo comercial reflejen las ventas realmente ganadas.
+
+**Criterios de aceptación**:
+
+1. **Dado** el cliente «Ferretería Central» asignado a `ventas`, **cuando** cambio una interacción a «Cerrado ganado», **entonces** el cambio se guarda y el importe entra en el real mensual de `ventas` (FR-078).
+2. **Dado** el cliente «Transportes del Norte Ltda.» asignado a `ana.munoz`, **cuando** `ventas` intenta cambiar el estado, **entonces** recibe `No tienes permiso para realizar esta acción` y el estado no cambia (FR-094, FR-096).
+3. **Dado** un usuario `atencion`, **cuando** intenta cambiar el estado de una interacción existente, **entonces** la acción se bloquea con el mismo mensaje exacto (matriz de permisos).
+4. **Dado** un Gerente Comercial, **cuando** elimina una interacción de cualquier cliente, **entonces** la ficha deja de mostrarla y el contador de documentos baja en 1 (FR-008, FR-094).
+5. **Dado** un ciclo de vida configurado, **cuando** se intenta una transición no permitida desde la interfaz o desde `storage.js`, **entonces** se rechaza con una explicación y el estado no cambia (FR-030).
 
 ---
 
 ### Historia de Usuario 12 - Buscar entidades en una pantalla dedicada (Prioridad: P2)
 
-Como usuario de negocio, quiero una pantalla de búsqueda dedicada para encontrar rápidamente entidades sin que los formularios de edición saturen la vista.
+**Como** Atención al Cliente (rango `n1_support`, con `search:view`), **quiero** abrir una pantalla de búsqueda separada de la gestión y ver solo resultados con acceso a la ficha, **para** atender una consulta telefónica sin que los formularios de alta o edición ocupen la vista.
 
-**Por qué esta prioridad**: La recuperación rápida es valiosa cuando el conjunto de datos crece, y una pantalla separada mantiene enfocada la experiencia de gestión, pero la búsqueda no es necesaria para la gestión básica.
+**Por qué esta prioridad**: US9 define qué coincide; esta historia define dónde se muestra el resultado y garantiza que la búsqueda no se convierta en edición accidental.
 
-**Prueba Independiente**: Un usuario puede abrir la pantalla de búsqueda desde la barra lateral o una acción rápida, introducir un término de búsqueda y ver solo las entidades coincidentes.
+**Prueba independiente**: desde la barra lateral y desde la acción rápida del panel se abre `Buscar`, se busca `Ferretería Central`, se abre su ficha y se vuelve al Panel sin que cambie ningún registro.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que el usuario está en la pantalla de búsqueda, **cuando** introduce un término coincidente, **entonces** solo se muestran las entidades coincidentes.
-2. **Dada** una búsqueda sin coincidencias, **cuando** el usuario envía la búsqueda, **entonces** se muestra exactamente `No se encontraron resultados.` y puede volver a intentarlo.
-3. **Dadas** cientos de entidades almacenadas, **cuando** el usuario busca desde la pantalla de búsqueda, **entonces** los resultados aparecen con prontitud sin retraso perceptible.
-4. **Dado** que el usuario está en la pantalla de búsqueda, **cuando** activa el botón Panel en la barra lateral, **entonces** vuelve al panel de inicio.
-5. **Dado** el perfil de clientes, **cuando** se busca un término que solo coincide con la categoría o la descripción ocultas, **entonces** no se devuelve ningún cliente (FR-055).
+1. **Dado** el botón «Buscar» de la barra lateral, **cuando** se activa, **entonces** se abre la pantalla dedicada sin formularios de creación ni edición de clientes (FR-019).
+2. **Dada** la acción rápida «Buscar registros» del panel, **cuando** se activa, **entonces** abre la misma pantalla y deja el campo de búsqueda enfocado (FR-021, FR-034).
+3. **Dado** el término `Ferretería`, **cuando** se busca, **entonces** solo aparecen clientes coincidentes con botón «Ver ficha» y sin opciones de editar o eliminar en la lista (FR-005, FR-041).
+4. **Dado** un término que solo coincide con `categoria` o `descripcion` ocultas, **cuando** se busca, **entonces** se muestra exactamente `No se encontraron resultados.` (FR-055).
+5. **Dado** el botón «Panel», **cuando** se activa desde búsqueda, **entonces** vuelve al panel de inicio y el número de clientes e interacciones es idéntico al anterior (FR-015, FR-022).
 
 ---
 
 ### Historia de Usuario 13 - Configurar el ciclo de vida de estados de documentos (Prioridad: P2)
 
-Como desarrollador de módulos, quiero definir los estados permitidos de los documentos y las transiciones permitidas, para que los documentos sigan el ciclo de vida del dominio en lugar de aceptar texto de estado arbitrario.
+Se desglosa en declaración del ciclo (US13a, rol técnico) y aplicación del estado por el usuario comercial (US13b), porque la regla se define antes del despliegue pero se verifica al registrar una venta.
 
-**Por qué esta prioridad**: Los módulos reales necesitan ciclos de vida controlados (p. ej., cotización → pedido → facturado), pero el estado de texto libre sigue siendo aceptable para extensiones simples, así que esto mejora la base sin ser necesario para la adaptación básica. Esta historia depende del perfil de configuración (Historia de Usuario 5).
+#### US13a - Declarar estados y transiciones de las interacciones
 
-**Prueba Independiente**: Un desarrollador configura un ciclo de vida cotización→pedido→facturado; el control de estado ofrece solo estados siguientes válidos, las transiciones inválidas se rechazan con una explicación, y el estado es visible de un vistazo en las listas.
+**Como** desarrollador de módulos (rol técnico que edita `MODULE_CONFIG`; sin rango N1–N4), **quiero** declarar los estados permitidos, sus transiciones y qué estados cuentan como pendientes, **para** que el embudo y el resumen coincidan con el proceso comercial real de la empresa.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** un ciclo de vida configurado, **cuando** el usuario edita el estado de un documento, **entonces** solo se ofrecen los estados alcanzables mediante transiciones permitidas.
-2. **Dado** que se intenta una transición inválida por cualquier vía, **cuando** se envía, **entonces** el sistema la rechaza con una explicación clara.
-3. **Dado** un ciclo de vida configurado, **cuando** el usuario ve listas o detalles de documentos, **entonces** el estado actual es identificable de un vistazo.
-4. **Dado** que no hay ciclo de vida configurado, **cuando** se editan documentos, **entonces** el estado permanece como texto libre igual que en el módulo base sin modificar.
+1. **Dado** un `statusLifecycle` con estados `cotizacion`, `pedido`, `facturado` y transiciones `cotizacion→pedido`, `pedido→facturado`, **cuando** carga la aplicación, **entonces** solo esos estados pueden asignarse a un documento (FR-030).
+2. **Dado** `pendingStates: ['pendiente']`, **cuando** se calcula el resumen, **entonces** solo ese estado declarado se cuenta como pendiente (FR-044).
+3. **Dado** un ciclo sin `pendingStates`, **cuando** se calcula el resumen, **entonces** el contador de pendientes es `0` a menos que exista coincidencia con el texto configurable declarado (FR-044).
+4. **Dada** una transición que referencia un estado no declarado, **cuando** arranca la aplicación, **entonces** se aplica `DEFAULT_CONFIG`, aparece `#config-warning` y no se permite la transición inválida (FR-025).
+5. **Dado** `MODULE_CONFIG = null`, **cuando** se edita el estado de un documento, **entonces** se mantiene texto libre sin lista fija (FR-031).
+
+#### US13b - Cambiar el estado de una interacción dentro del ciclo permitido
+
+**Como** Ejecutivo de Ventas (rango `n2_sales`, con `document:transition_own`), **quiero** avanzar el estado de las interacciones de mis clientes solo a los estados siguientes permitidos, **para** que una cotización no aparezca como venta ganada antes de cerrarse.
+
+**Criterios de aceptación**:
+
+1. **Dado** un documento en `cotizacion`, **cuando** abro el selector de estado, **entonces** solo aparece `pedido` como estado alcanzable y no aparece `facturado` (FR-030).
+2. **Dado** un intento de pasar de `cotizacion` a `facturado` desde la consola o desde `storage.js`, **cuando** se envía, **entonces** se rechaza con una explicación clara y el documento sigue en `cotizacion` (FR-030, FR-095).
+3. **Dado** un documento en `facturado`, **cuando** se muestra en lista o ficha, **entonces** el estado actual es visible sin abrir el formulario (SC-022).
+4. **Dado** un usuario con `atencion` que intenta cambiar cualquier estado, **cuando** ejecuta la acción, **entonces** recibe `No tienes permiso para realizar esta acción` (matriz de permisos).
 
 ---
 
 ### Historia de Usuario 14 - Marco de espacio de trabajo ERP con marca (Prioridad: P1)
 
-Como usuario de negocio, quiero un espacio de trabajo estilo ERP consistente, con una barra superior con marca y una barra lateral de módulos presentes en cada pantalla, para que la aplicación se sienta como un sistema empresarial coherente en lugar de páginas sueltas.
+Se desglosa en navegación por rango (US14a) e identidad visual accesible (US14b), porque un empleado necesita llegar a sus módulos y la empresa necesita reconocer el CRM en todas las vistas.
 
-**Por qué esta prioridad**: El marco aporta la marca y la navegación de todas las demás pantallas; construirlo como envoltorio evita tocar cada historia por separado y da al módulo su identidad ERP. Depende del perfil de configuración (Historia de Usuario 5) para el nombre del módulo y la terminología, y reestructura la navegación antes proporcionada por los botones de bienvenida y las pestañas de gestión (Historias de Usuario 15 y 4).
+#### US14a - Navegar por los módulos permitidos según el rango
 
-**Prueba Independiente**: En cada pantalla, una barra superior muestra un logotipo derivado del nombre del módulo junto al nombre del módulo, una barra lateral ofrece botones de módulo para Panel, Buscar, Resumen y Marketing con el módulo activo resaltado visualmente, los apartados «Clientes» (entidades) e «Interacciones» (documentos) solo se acceden desde el panel principal sin que este muestre «Abrir Marketing», y navegar entre módulos nunca pierde datos.
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** tener en cada pantalla una barra lateral con Panel, Buscar, Resumen y Marketing, con el módulo activo resaltado, **para** pasar de la atención de un cliente al resumen del equipo sin perder el registro en el que trabajaba.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la página, **entonces** es visible una barra superior que contiene un logotipo SVG en línea derivado del nombre del módulo y el nombre del módulo configurado.
-2. **Dada** cualquier pantalla mostrada, **cuando** el usuario mira la barra lateral, **entonces** se muestran los botones de módulo permitidos por su rango —Panel, Buscar, Resumen y Marketing, con la etiqueta «Marketing»— usando la terminología configurada, y NO aparecen «Clientes» ni «Interacciones» (entidades y documentos) ni la gestión de usuarios (FR-012, FR-094, FR-098).
-3. **Dado** que el usuario está en cualquier pantalla, **cuando** mira la barra lateral, **entonces** el botón del módulo activo está resaltado visualmente.
-4. **Dado** que la ventana gráfica es estrecha, **cuando** se usa la aplicación en una pantalla pequeña, **entonces** la barra lateral se contrae a una columna de iconos manteniéndose utilizable y etiquetada de forma accesible.
-5. **Dada** una configuración que define un color de acento, **cuando** cualquier pantalla carga, **entonces** el marco lo usa consistentemente para resaltados y controles principales; sin valor configurado o con un valor inválido, se usan los valores predeterminados integrados sin errores.
-6. **Dado** que el usuario navega entre módulos mediante la barra lateral, **cuando** inspecciona sus datos después, **entonces** todas las entidades y documentos almacenados permanecen intactos.
+1. **Dado** `gerente` con sesión, **cuando** abre cualquier pantalla, **entonces** ve Panel, Buscar, Resumen y Marketing, con «Marketing» en la barra lateral y sin botón «Abrir Marketing» en el panel (FR-012, FR-091).
+2. **Dado** `ventas`, **cuando** abre la barra lateral, **entonces** ve Panel, Buscar y Resumen, pero no Marketing; `atencion` ve Panel y Buscar, pero no Resumen ni Marketing (FR-012, FR-094).
+3. **Dado** `marketing`, **cuando** abre la barra lateral, **entonces** ve Panel, Buscar y Marketing, pero no Resumen ni «Gestionar usuarios» (FR-012, FR-094, FR-098).
+4. **Dado** un módulo activo, **cuando** se navega a otro, **entonces** el botón correspondiente queda resaltado y el número de clientes e interacciones en `localStorage` no cambia (FR-037, FR-022).
+5. **Dado** un formulario con cambios sin guardar, **cuando** intento cambiar de módulo, **entonces** aparece una confirmación y solo navego si confirmo descartar los cambios (FR-022).
+
+#### US14b - Identificar el CRM y usar la barra en pantallas estrechas
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`) que abre el CRM desde un equipo portátil, **quiero** ver el nombre «CRM Comercial», su monograma y el color de acento en todas las vistas, además de una barra contraíble con etiquetas accesibles, **para** reconocer la aplicación y seguir usando la navegación en una ventana de 640 px o menos.
+
+**Criterios de aceptación**:
+
+1. **Dada** cualquier pantalla, **cuando** se muestra la barra superior, **entonces** contiene un logotipo SVG en línea derivado de `moduleName` y el texto «CRM Comercial» (FR-036).
+2. **Dado** `theme.accentColor` válido, **cuando** carga cualquier vista, **entonces** el color se aplica a resaltados y controles principales; con valor inválido se usa el color integrado y aparece `#config-warning` (FR-038).
+3. **Dada** una ventana de 640 px o menos, **cuando** se usa la barra lateral, **entonces** se contrae a una columna de iconos con nombres accesibles y los cuatro módulos permitidos siguen alcanzables (FR-039, SC-020).
+4. **Dado** un usuario con `marketing` que abre `?view=users-admin`, **cuando** se resuelve la ruta, **entonces** ve «Acceso denegado» y vuelve al Panel sin ver la administración de usuarios (FR-097, FR-098).
 
 ---
 
 ### Historia de Usuario 15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
 
-Como usuario de negocio, quiero un panel de inicio con accesos directos a las tareas clave y estadísticas de registros, para empezar a trabajar de inmediato sin buscar la acción correcta.
+Se desglosa en acciones rápidas filtradas por rango (US15a) y cifras derivadas de los registros (US15b). Los atajos propios de Marketing se especifican en US16d.
 
-**Por qué esta prioridad**: El panel es la pantalla de entrada de todo el espacio de trabajo (Historia de Usuario 14); sin accesos rápidos ni estadísticas visibles, un usuario nuevo no tiene un punto de partida claro para crear, gestionar o buscar registros.
+#### US15a - Iniciar la jornada con las acciones permitidas
 
-**Prueba Independiente**: Un usuario abre la aplicación, ve el panel con al menos cinco acciones rápidas y tarjetas de estadísticas, y cada acción lo lleva al destino correcto con un formulario vacío o la búsqueda enfocada.
+**Como** Ejecutivo de Ventas (rango `n2_sales`), **quiero** encontrar en el panel «Nuevo Cliente», «Nueva interacción», «Gestionar clientes», «Gestionar interacciones» y «Buscar registros», **para** registrar una visita comercial o localizar una ficha sin abrir primero otros módulos.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** que la aplicación carga, **cuando** un usuario con permisos completos la abre, **entonces** aterriza en el panel de inicio con al menos cinco botones de acción rápida (nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos, buscar registros), sin «Abrir Marketing» y sin que la barra lateral ofrezca accesos a esos apartados; un usuario con menos permisos ve solo las acciones rápidas autorizadas por su rango (FR-033, FR-094).
-2. **Dado** que el usuario activa la acción rápida de nueva entidad o nuevo documento, **cuando** se ejecuta, **entonces** se abre el área de gestión correspondiente con un formulario vacío listo para introducir datos.
-3. **Dado** que existen entidades y documentos almacenados, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas reflejan el número actual de cada uno.
-4. **Dado** que no existen entidades ni documentos, **cuando** el panel se muestra, **entonces** las tarjetas de estadísticas muestran cero sin errores.
-5. **Dado** el apartado de Marketing, **cuando** el usuario abre la vista, **entonces** no se muestran los cinco botones de acción rápida del panel principal; estos solo están disponibles en el panel (FR-091).
-6. **Dado** el apartado de Marketing, **cuando** el usuario mira sus atajos, **entonces** aparecen exactamente los cinco indicados y en el orden definido en FR-093.
+1. **Dado** un usuario con permisos completos, **cuando** abre la URL raíz, **entonces** el panel contiene exactamente cinco acciones rápidas y no contiene «Abrir Marketing» (FR-033, FR-091).
+2. **Dado** `ventas`, **cuando** abre el panel, **entonces** ve las cinco acciones; dado `atencion`, ve solo «Buscar registros» porque carece de `entity:create` y `document:create` (FR-033, FR-094).
+3. **Dado** `marketing`, **cuando** abre el panel, **entonces** no ve «Nuevo Cliente», «Nueva interacción» ni las acciones de gestión; crea prospectos desde Marketing, no desde el panel (FR-033, FR-094).
+4. **Dada** la acción «Nuevo Cliente», **cuando** se activa, **entonces** se abre el área de gestión con el formulario vacío; dada «Buscar registros», el foco queda en `#search-input` (FR-034, FR-021).
+5. **Dado** que un usuario sin permiso intenta ejecutar una acción oculta mediante un enlace profundo, **cuando** se resuelve la ruta, **entonces** ve «Acceso denegado» y el registro no se crea (FR-095, FR-097).
+
+#### US15b - Consultar las cifras de la cartera al abrir el CRM
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** ver en el panel el total de clientes, el total de interacciones, «Cerrado ganado», «Tasa de conversión», «Pipeline (USD)», el embudo por estado y las últimas interacciones, **para** comprobar de un vistazo si la cartera avanzó antes de reunirme con el equipo.
+
+**Criterios de aceptación**:
+
+1. **Dado** 47 clientes y 120 interacciones almacenados, **cuando** se abre el panel, **entonces** las dos primeras tarjetas muestran `47` y `120` y coinciden con `erp_entities` y `erp_documents` (FR-035, SC-010).
+2. **Dado** un documento «Cerrado ganado» por $250.000, **cuando** se abre el panel, **entonces** «Pipeline (USD)» aumenta en $250.000 y el embudo cuenta ese documento una sola vez en su estado (FR-035, FR-074).
+3. **Dado** un resumen vacío, **cuando** se abre el panel, **entonces** las cinco tarjetas y el embudo muestran `0` sin errores y la lista de últimas interacciones está vacía (FR-046).
+4. **Dado** que se crea, edita o elimina una interacción, **cuando** se vuelve a mostrar el panel, **entonces** las cifras se recalculan sin recarga y sin escribir valores derivados en `localStorage` (FR-045, FR-072).
+5. **Dado** un Ejecutivo de Ventas, **cuando** abre el panel, **entonces** ve las mismas tarjetas de registro; su resumen propio de pendientes se consulta por separado con `summary:view_own` (FR-035, FR-094).
 
 ---
 
 ### Historia de Usuario 16 - Capturar y convertir prospectos desde Marketing (Prioridad: P2)
 
-Como ejecutivo de marketing, quiero capturar las visitas como prospectos, automatizar su seguimiento y medir su conversión a clientes, para convertir visitas en clientes de forma trazable.
+Esta historia se divide en captura pública (US16a), automatización (US16b), conversión (US16c) y panel de Marketing (US16d), porque intervienen actores y permisos distintos: el visitante captura, Marketing programa, Gerencia convierte y Marketing consulta las cifras.
 
-**Por qué esta prioridad**: El apartado de Marketing completa el ciclo comercial del módulo al aprovechar las entidades, documentos e indicadores ya existentes para transformar cada visita en un registro gestionable y medible.
+#### US16a - Capturar un prospecto desde el formulario público
 
-**Prueba Independiente**: Un visitante envía el formulario web con consentimiento explícito; el sistema crea un prospecto, una regla por evento registra una interacción automática, el prospecto avanza a Cliente conservando su historial y el resumen muestra las mismas tarjetas y el mismo embudo que el panel principal, actualizados con los registros.
+**Como** Visitante del sitio web (sin sesión, con permiso `chat:create_query` y acceso a `?view=capture`), **quiero** enviar mis datos y marcar el consentimiento explícito en el formulario público, **para** que el Ejecutivo de Marketing tenga un prospecto registrado al que pueda dar seguimiento sin que yo tenga que crear una cuenta.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** un visitante en el formulario web embebible, **cuando** envía sus datos con el consentimiento explícito marcado, **entonces** se crea una Entidad en estado «Prospecto» con la fecha y la versión del aviso aceptado y se muestra exactamente `Prospecto registrado correctamente.` (FR-068, FR-069, FR-071).
-2. **Dado** un visitante que no marca el consentimiento explícito, **cuando** envía el formulario, **entonces** el prospecto no se crea y se muestra `Completa los campos obligatorios.` (FR-071).
-3. **Dado** el prospecto «Visita 2026-11-23» con una regla configurada en la «Campaña Primavera 2026», **cuando** se captura, cambia de etapa en otro flujo o se registra una interacción, **entonces** la interacción y la ejecución se registran como «Sistema» con independencia de quién esté conectado, y el historial identifica a `marketing` como creadora de la campaña (FR-070, FR-086, FR-101).
-4. **Dado** un prospecto que avanza a la etapa de Cliente, **cuando** se consulta su ficha, **entonces** conserva su identificador, sus documentos y sus campos personalizados (FR-068).
-5. **Dado** el apartado de Marketing, **cuando** se consulta tras crear, editar o eliminar un documento, **entonces** el embudo muestra los mismos estados y conteos que el embudo del panel principal, sin requerir recarga (FR-072).
-6. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** se muestran las mismas cinco tarjetas de estadísticas que en el panel principal —entidades, documentos, cerrado ganado, tasa de conversión y pipeline— con idénticos valores y presentación, y se actualizan con los registros almacenados (FR-073).
-7. **Dado** el apartado de Marketing, **cuando** se comparan sus cifras con las del panel principal, **entonces** coinciden y cada documento se contabiliza como máximo una vez en su estado según las reglas del panel (FR-074).
-8. **Dado** el apartado de Marketing, **cuando** se abre, **entonces** no se muestran la torta «Estado comercial de la cartera» ni el selector de etapas, y se presenta la misma lista de «Últimas Interacciones / Próximos Seguimientos» del panel con acceso a las fichas (FR-075).
+1. **Dado** `?view=capture` abierto sin sesión, **cuando** envío mis datos con el consentimiento marcado, **entonces** se crea una Entidad en estado «Prospecto», se guarda la fecha y la versión del aviso aceptado y veo exactamente `Prospecto registrado correctamente.` (FR-068, FR-069, FR-071).
+2. **Dado** el mismo formulario sin consentimiento, **cuando** intento enviarlo, **entonces** no se crea la entidad y veo `Completa los campos obligatorios.` (FR-071).
+3. **Dado** un campo obligatorio del formulario vacío, **cuando** envío, **entonces** el sistema rechaza el envío y no modifica `erp_entities` (FR-069).
+4. **Dada** la limitación sin backend, **cuando** se incrusta el formulario en otro dominio, **entonces** no se crea el prospecto; el formulario solo funciona en el mismo origen del CRM (limitación documentada en README).
+
+#### US16b - Ejecutar reglas automáticas sobre el prospecto
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `marketing:manage`), **quiero** configurar reglas por captura, cambio de etapa o interacción que creen un seguimiento, asignen un ejecutivo o actualicen el estado comercial interno, **para** que ningún prospecto quede sin acción inicial aunque nadie esté conectado en ese momento.
+
+**Criterios de aceptación**:
+
+1. **Dado** el prospecto «Visita 2026-11-23» y una regla de captura, **cuando** se envía el formulario, **entonces** se crea un documento de seguimiento vinculado al prospecto y la ejecución queda en su historial (FR-070, FR-089).
+2. **Dada** una regla de cambio de etapa ejecutada desde otro flujo, **cuando** ocurre el evento, **entonces** la acción se registra como actor «Sistema» aunque `atencion` tenga la sesión iniciada (FR-101).
+3. **Dada** una regla que proviene de la «Campaña Primavera 2026», **cuando** se consulta el historial, **entonces** identifica a `marketing` como creadora de la campaña en `createdByUserId` y la ejecución como «Sistema» (FR-086, FR-101).
+4. **Dado** un cambio de etapa interno, **cuando** se abre Marketing, **entonces** `estado_comercial` no se muestra ni se puede cambiar allí (FR-075).
+5. **Dada** una regla con acción no declarada en `marketing.campaigns.actions`, **cuando** arranca la aplicación, **entonces** se aplica `DEFAULT_CONFIG` con `#config-warning` y la acción no se ejecuta (FR-025).
+
+#### US16c - Convertir un prospecto en cliente conservando su historial
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** convertir un prospecto en cliente desde su ficha, **para** que el negocio cerrado conserve toda la conversación previa y pueda contabilizarse sin crear un registro duplicado.
+
+**Criterios de aceptación**:
+
+1. **Dado** el prospecto «Visita 2026-11-23» con 3 documentos y campos personalizados, **cuando** se convierte, **entonces** conserva su `id`, sus 3 documentos y sus campos, y `estado_comercial` pasa a `ganado` con auditoría de la transición (FR-068).
+2. **Dado** el estado `ganado`, **cuando** se muestra el resultado visible, **entonces** dice «Cliente ganado» y no se confunde con el estado de documento «Cerrado ganado» (FR-068).
+3. **Dado** un usuario sin permiso de edición sobre la entidad, **cuando** intenta la conversión desde `storage.js`, **entonces** recibe `No tienes permiso para realizar esta acción` y el prospecto sigue en estado inicial (FR-095, FR-096).
+
+#### US16d - Consultar el panel de Marketing con las mismas cifras del panel principal
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `marketing:view`), **quiero** abrir Marketing y ver las cinco tarjetas, el embudo, la lista de últimas interacciones y mis cinco atajos en orden fijo, **para** preparar la campaña del día con los mismos datos que usa Gerencia en el panel.
+
+**Criterios de aceptación**:
+
+1. **Dado** el panel principal con 47 clientes, 120 interacciones y un embudo determinado, **cuando** abro Marketing, **entonces** las cinco tarjetas y el embudo muestran los mismos valores y estados sin recarga (FR-072, FR-073, FR-074).
+2. **Dado** Marketing, **cuando** creo, edito o elimino un documento, **entonces** tarjetas y embudo se actualizan y cada documento se cuenta una sola vez (FR-074).
+3. **Dado** Marketing, **cuando** se abre, **entonces** no aparece la torta «Estado comercial de la cartera», ni el selector de etapas, ni los cinco botones de acción rápida del panel (FR-075, FR-091).
+4. **Dado** Marketing, **cuando** miro sus atajos, **entonces** aparecen exactamente «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales», en ese orden (FR-093, SC-029).
+5. **Dado** Marketing, **cuando** consulto «Últimas Interacciones / Próximos Seguimientos», **entonces** veo las mismas entradas y botones «Ver ficha» del panel principal (FR-075).
 
 ---
 
 ### Historia de Usuario 17 - Consultar los Equipos de ventas y logros (Prioridad: P2)
 
-Como gerente comercial, quiero abrir desde Marketing un apartado de «Equipos de ventas y logros» con los equipos de trabajo, sus integrantes, cargos, estados, objetivo mensual y real mensual calculados por el sistema, para seguir el desempeño comercial del equipo.
+Se desglosa en administración de equipos (US17a) y cálculo del desempeño (US17b), porque crear la estructura es una acción de Gerencia y leer las cifras también interesa a Marketing y al propio ejecutivo.
 
-**Por qué esta prioridad**: Complementa los indicadores de Marketing con la información de las personas que realizan las ventas; depende de los clientes, documentos y accesos de Marketing ya definidos en las Historias de Usuario 2, 14, 15 y 16.
+#### US17a - Registrar equipos e integrantes de ventas
 
-**Prueba Independiente**: Un usuario abre Marketing, activa el acceso «Equipos de ventas y logros», crea un equipo y un integrante con nombre, cargo y estado, y comprueba que el objetivo mensual y el real mensual se muestran calculados por el sistema según las ventas del ejecutivo, sin casillas para capturarlos manualmente.
+**Como** Gerente Comercial (rango `n4_manager`, con `team:manage`), **quiero** crear, editar y eliminar equipos e integrantes con nombre, cargo, estado «Activo/Inactivo» y usuario vinculado, **para** que el seguimiento del desempeño use la estructura real del equipo y no una lista improvisada de nombres.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** el apartado de Marketing, **cuando** el usuario activa el acceso «Equipos de ventas y logros» —antes denominado «Equipo de ventas y logros»—, **entonces** se muestra la lista de equipos de trabajo con sus integrantes (FR-076).
-2. **Dado** un equipo existente —p. ej. «Equipo Norte»—, **cuando** el usuario crea, edita o elimina integrantes, **entonces** se guardan su nombre, cargo y estado «Activo» o «Inactivo» (FR-077); el Gerente Comercial puede crear el integrante «María González» con cargo «Ejecutivo de Ventas», estado «Activo» y usuario vinculado `ventas`, sin campos para capturar el real ni el objetivo mensual (FR-077, FR-100).
-3. **Dado** un integrante vinculado a un ejecutivo con ventas registradas —p. ej. «María González» vinculada a `ventas`, que tiene como «Ejecutivo Asignado» los clientes «Comercial Andina SpA» y «Ferretería Central»—, **cuando** se consulta el apartado, **entonces** su real mensual muestra la suma de los importes de sus documentos «Cerrado ganado» del mes y su objetivo mensual muestra la proyección de esas ventas al cierre del mes, sin captura manual (FR-078, FR-079, FR-100).
-4. **Dado** que cambian las ventas del ejecutivo —p. ej. se agrega un documento «Cerrado ganado» por $250.000 a «Comercial Andina SpA»—, **cuando** se vuelve a consultar el apartado, **entonces** el real mensual y el objetivo mensual del integrante se actualizan sin recarga; en el ejemplo, el real mensual de «María González» pasa de $1.250.000 a $1.500.000 y su objetivo mensual se recalcula (FR-078, FR-079, FR-100).
-5. **Dado** que no hay equipos ni integrantes registrados, **cuando** se abre el apartado, **entonces** se muestra un estado vacío claro que permite crear el primer equipo (FR-076).
+1. **Dado** el atajo «Equipos de ventas y logros» de Marketing, **cuando** lo activa `gerente`, **entonces** se muestra la lista de equipos o un estado vacío que permite crear el primero (FR-076).
+2. **Dado** el equipo «Equipo Norte», **cuando** creo el integrante «María González» con cargo «Ejecutivo de Ventas», estado «Activo» y usuario vinculado `ventas`, **entonces** se guardan esos cuatro datos y no aparecen casillas para capturar real ni objetivo mensual (FR-077, FR-100).
+3. **Dado** el `select` de usuario vinculado, **cuando** se abre, **entonces** solo ofrece usuarios activos de rango `n2_sales` o `n4_manager` (FR-077, FR-099).
+4. **Dado** `marketing`, **cuando** abre el apartado, **entonces** puede leer equipos e integrantes pero no ve botones para crear, editar ni eliminarlos (FR-094).
+5. **Dado** un integrante con ventas históricas, **cuando** se desactiva al usuario vinculado, **entonces** el integrante sigue mostrando esas ventas mediante `assignedUserIdAtSale` (FR-077).
+
+#### US17b - Consultar el real y el objetivo mensuales calculados
+
+**Como** Gerente Comercial (rango `n4_manager`, con `team:view_all`), **quiero** ver el real mensual y el objetivo mensual de cada integrante calculados desde los documentos «Cerrado ganado» del mes, **para** detectar desviaciones de la proyección y reasignar clientes antes de fin de mes.
+
+**Criterios de aceptación**:
+
+1. **Dado** «María González» vinculada a `ventas` con clientes «Comercial Andina SpA» y «Ferretería Central», **cuando** consulto el apartado, **entonces** el real mensual es la suma de sus documentos «Cerrado ganado» del mes y el objetivo es `real ÷ días transcurridos × días del mes` (FR-078, FR-079).
+2. **Dado** un documento «Cerrado ganado» adicional por $250.000, **cuando** se consulta de nuevo, **entonces** el real pasa de $1.250.000 a $1.500.000 y el objetivo se recalcula sin recarga (FR-078, FR-079).
+3. **Dado** un ejecutivo sin ventas en el mes, **cuando** se consulta, **entonces** real y objetivo muestran `$0` y no se capturan manualmente (FR-079).
+4. **Dado** `ventas`, **cuando** abre el apartado, **entonces** ve únicamente su real de $1.250.000 y su objetivo de $1.800.000; dado `marketing`, ve el real de todos los integrantes en modo solo lectura (FR-094, US23).
+5. **Dado** un cambio en la vinculación del integrante, **cuando** se consulta el apartado, **entonces** real y objetivo se recalculan con el usuario vinculado vigente sin editar importes a mano (FR-078, FR-079).
 
 ---
 
 ### Historia de Usuario 18 - Registrar interacciones en redes sociales (Prioridad: P2)
 
-Como ejecutivo de marketing, quiero registrar y consultar las interacciones de los prospectos en Twitter, Instagram, YouTube y otras redes, para atenderlos en su canal preferido.
+Se desglosa en registro (US18a) y revisión/corrección (US18b), porque capturar una interacción y corregir el historial son operaciones con verificaciones distintas.
 
-**Por qué esta prioridad**: Permite concentrar en Marketing el seguimiento de los canales donde los clientes potenciales están activos, aprovechando los prospectos y clientes ya registrados en las Historias de Usuario 2 y 16.
+#### US18a - Registrar una interacción de redes vinculada al prospecto
 
-**Prueba Independiente**: Un ejecutivo abre el apartado «Redes sociales» desde Marketing, registra una interacción de Instagram vinculada a un prospecto con plataforma, fecha, tipo, nota y enlace, y comprueba que queda guardada, visible y vinculada a ese prospecto.
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `marketing:manage` y `document:create`), **quiero** registrar en «Redes sociales» la plataforma, fecha, tipo de interacción, nota y enlace de un contacto con un prospecto o cliente, **para** continuar la conversación por el canal donde el cliente potencial respondió.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1.  **Dado** el apartado de Marketing, **cuando** el usuario abre «Redes sociales», **entonces** se muestran las interacciones registradas o un estado vacío claro si no hay ninguna (FR-080).
-2.  **Dado** un prospecto o cliente existente, **cuando** se registra una interacción con plataforma, fecha, tipo, nota y enlace, **entonces** queda guardada como Documento vinculado a ese registro (FR-080, FR-081).
-3.  **Dada** una interacción registrada, **cuando** el usuario la edita o elimina, **entonces** los cambios se reflejan en el apartado y en la ficha de la entidad sin perder la relación con el prospecto o cliente (FR-080, FR-081).
-4.  **Dado** un prospecto con interacciones en varias plataformas, **cuando** se consulta su ficha, **entonces** aparecen ordenadas por fecha junto al resto de sus documentos (FR-080, FR-081).
+1. **Dado** el atajo «Redes sociales» de Marketing, **cuando** se abre, **entonces** se listan las interacciones registradas o un estado vacío claro (FR-080).
+2. **Dado** el prospecto «Visita 2026-11-23», **cuando** registro una interacción de Instagram el 24 de noviembre con tipo, nota y enlace, **entonces** se guarda como Documento con `entity_id` de ese prospecto y aparece en el apartado (FR-080, FR-081).
+3. **Dado** un prospecto sin consentimiento guardado, **cuando** intento registrar la interacción, **entonces** la operación se rechaza porque las interacciones usan el consentimiento ya registrado del prospecto o cliente (FR-085).
+4. **Dado** un documento creado por una campaña, **cuando** se consulta su historial, **entonces** el actor de ejecución es «Sistema» y no el usuario conectado (FR-101).
+
+#### US18b - Consultar y corregir el historial de redes
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `document:edit_any` y `document:delete`), **quiero** editar o eliminar una interacción de redes sin perder su vínculo con el prospecto, **para** corregir un enlace erróneo antes de usarlo en una campaña.
+
+**Criterios de aceptación**:
+
+1. **Dado** un prospecto con interacciones en Instagram, YouTube y Twitter, **cuando** consulto su ficha, **entonces** aparecen ordenadas por fecha junto al resto de documentos (FR-080, FR-081).
+2. **Dada** una interacción con enlace mal copiado, **cuando** edito el enlace, **entonces** el cambio se refleja en «Redes sociales» y en la ficha sin crear otro documento (FR-080).
+3. **Dada** una interacción eliminada, **cuando** consulto el apartado y la ficha, **entonces** deja de aparecer en ambos y el vínculo con el prospecto se elimina sin afectar sus otros documentos (FR-081).
+4. **Dado** un usuario de Atención al Cliente, **cuando** consulta la ficha, **entonces** ve las interacciones por su permiso `document:read`, pero no puede editarlas ni eliminarlas (FR-094).
 
 ---
 
 ### Historia de Usuario 19 - Ofrecer «Dudas y consultas» con respuestas rápidas (Prioridad: P2)
 
-Como visitante del sitio web, quiero hacer preguntas en «Dudas y consultas» y recibir respuestas rápidas, para obtener información sin esperar la atención de un ejecutivo.
+Se desglosa en atención al visitante (US19a) y seguimiento por el equipo (US19b), porque el acuse de recibo se evalúa en el sitio público y la trazabilidad se evalúa en Marketing y en la ficha.
 
-**Por qué esta prioridad**: Permite atender consultas en el canal preferido del cliente potencial dentro del sitio, aprovechando las preguntas frecuentes configuradas y registrando las consultas que requieren seguimiento (Historias de Usuario 16 y 18).
+#### US19a - Responder y registrar la consulta del visitante
 
-**Prueba Independiente**: Un visitante escribe una pregunta que coincide con una pregunta frecuente y recibe la respuesta configurada de inmediato; después escribe una pregunta sin coincidencia y comprueba que recibe exactamente `Consulta registrada; un ejecutivo hará seguimiento.` y que la consulta queda guardada como Documento para seguimiento.
+**Como** Visitante del sitio web (sin sesión, con permiso `chat:create_query`), **quiero** escribir una pregunta en «Dudas y consultas» y recibir la respuesta configurada o un acuse de registro, **para** saber si aceptan pagos en cuotas sin esperar a que un ejecutivo esté disponible.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** el apartado «Dudas y consultas» disponible —chat integrado, identificador interno `chat`—, **cuando** el visitante escribe una pregunta configurada, **entonces** se muestra la respuesta rápida correspondiente sin recarga (FR-082).
-2. **Dado** el apartado «Dudas y consultas», **cuando** la pregunta no coincide con ninguna respuesta configurada, **entonces** se muestra exactamente `Consulta registrada; un ejecutivo hará seguimiento.` como acuse de recibo claro y la consulta queda registrada como Documento para seguimiento (FR-083).
-3. **Dado** un visitante identificado como prospecto o cliente, **cuando** conversa en «Dudas y consultas» (`chat`), **entonces** cada mensaje y respuesta quedan vinculados a su entidad (FR-081).
-4. **Dado** que no hay preguntas frecuentes configuradas, **cuando** se abre «Dudas y consultas», **entonces** se muestra un estado vacío claro y el visitante puede dejar su consulta para seguimiento (FR-082, FR-083).
-5. **Dado** el formulario público de captura y el apartado de Marketing, **cuando** se abre «Dudas y consultas» (`chat`) en cualquiera de ellos, **entonces** se muestran los mismos mensajes y documentos vinculados a la entidad (FR-084).
-6. **Dado** un visitante que no marca la casilla de consentimiento, **cuando** intenta enviar el primer mensaje de «Dudas y consultas» (`chat`), **entonces** el envío se bloquea, se explica el motivo y no se registra ningún mensaje (FR-085).
+1. **Dado** el apartado «Dudas y consultas» (`chat`) en el formulario público, **cuando** escribo «¿Aceptan pagos en cuotas?» y coincide con una pregunta frecuente, **entonces** veo la respuesta configurada sin recarga (FR-082).
+2. **Dado** una pregunta sin coincidencia, **cuando** la envío, **entonces** veo exactamente `Consulta registrada; un ejecutivo hará seguimiento.` y la consulta queda guardada como Documento vinculado al prospecto identificado (FR-083).
+3. **Dado** el primer mensaje sin consentimiento explícito y sin datos mínimos de prospecto, **cuando** intento enviarlo, **entonces** el envío se bloquea, se explica el motivo y no se persiste ningún mensaje (FR-085).
+4. **Dado** un consentimiento aceptado, **cuando** se guarda el primer mensaje, **entonces** la entidad conserva la fecha y la versión del aviso aceptado (FR-085).
+5. **Dado** que no hay preguntas frecuentes configuradas, **cuando** abro el apartado, **entonces** veo un estado vacío claro y puedo dejar la consulta para seguimiento (FR-082, FR-083).
+6. **Dado** el identificador interno `chat`, **cuando** se muestra cualquier etiqueta en Marketing o en el formulario público, **entonces** dice «Dudas y consultas» y no «Chat» (FR-092).
+
+#### US19b - Dar seguimiento a las consultas registradas
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `chat:view` y `chat:answer`) o Atención al Cliente (rango `n1_support`, con las mismas acciones), **quiero** ver las consultas sin respuesta y continuar la conversación vinculada al prospecto, **para** responder con el contexto de lo que el visitante ya preguntó.
+
+**Criterios de aceptación**:
+
+1. **Dado** el formulario público y Marketing abiertos, **cuando** consulto «Dudas y consultas» en ambos, **entonces** veo los mismos mensajes y documentos de la entidad (FR-084).
+2. **Dada** una consulta sin coincidencia, **cuando** la respondo desde Marketing, **entonces** la respuesta queda vinculada a la misma entidad y aparece en su ficha (FR-081, FR-083).
+3. **Dada** una consulta respondida, **cuando** se filtra el rendimiento de campañas, **entonces** cuenta como «consulta respondida» solo una vez (FR-087).
+4. **Dado** un visitante sin consentimiento, **cuando** intento registrar una respuesta sobre su mensaje bloqueado, **entonces** no existe documento al que vincularla y la operación se rechaza (FR-085).
 
 ---
 
 ### Historia de Usuario 20 - Programar campañas de marketing internas (Prioridad: P2)
 
-Como ejecutivo de marketing, quiero programar campañas por etapa del prospecto y ejecutar las reglas automáticas existentes, para mantener el seguimiento sin depender de servicios externos.
+Se desglosa en programación (US20a), ejecución y solapamiento (US20b) y cierre con trazabilidad (US20c), porque planificar, ejecutar y detener son decisiones comerciales distintas.
 
-**Por qué esta prioridad**: Ordena la automatización ya definida en Marketing en campañas programadas, aprovechando los prospectos, documentos, interacciones y reglas por evento de las Historias de Usuario 16, 18 y 19.
+#### US20a - Programar una campaña por etapa y periodo
 
-**Prueba Independiente**: Un ejecutivo crea una campaña con nombre, etapa objetivo «En proceso» y fechas de inicio y fin, y comprueba que los prospectos de esa etapa reciben la acción automática configurada, que cada ejecución queda en el historial y que no se envían correos ni se publica en redes.
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `campaign:create` y `campaign:edit_own`), **quiero** crear una campaña con nombre, etapa objetivo «En proceso» y fechas de inicio y fin, **para** concentrar el seguimiento de los prospectos de esa etapa durante el periodo definido sin servicios externos.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1.  **Dado** el apartado de Marketing, **cuando** el usuario abre la vista de campañas, **entonces** se muestran las campañas programadas o un estado vacío claro (FR-086).
-2.  **Dado** un usuario de Marketing, **cuando** crea una campaña con nombre, etapa objetivo y fechas de inicio y fin, **entonces** la campaña queda guardada y lista para ejecutarse (FR-086).
-3.  **Dado** un prospecto en la etapa objetivo de una campaña activa, **cuando** ocurre un evento de captura, cambio de etapa o interacción, **entonces** se ejecuta la regla configurada sobre ese prospecto creando un documento de seguimiento, asignando un ejecutivo o actualizando su estado comercial interno (FR-070, FR-086, FR-089).
-4.  **Dada** una ejecución automática, **cuando** se consulta la campaña, **entonces** el historial muestra la fecha, el prospecto y la acción realizada (FR-070, FR-086).
-5.  **Dada** la «Campaña Primavera 2026» creada por `marketing`, **cuando** termina su fecha fin, o la detiene `marketing` o `gerente`, **entonces** deja de ejecutar acciones nuevas y conserva su historial; si `ventas` intenta detenerla, la acción se rechaza con «No tienes permiso para realizar esta acción» (FR-086, FR-094, FR-096).
-6.  **Dado** dos campañas activas para el mismo prospecto y evento, **cuando** se evalúan las reglas, **entonces** solo se ejecuta la más reciente y la otra queda registrada como «omitida por solapamiento» sin acciones duplicadas (FR-090).
-7.  **Dada** la «Campaña Primavera 2026» creada por `marketing` y ejecutándose mientras `atencion` tiene la sesión iniciada, **cuando** la regla crea el documento de seguimiento del prospecto «Visita 2026-11-23», **entonces** el documento se registra como creado por «Sistema» y no por `atencion`, y el historial de la campaña muestra a `marketing` como usuaria creadora (FR-070, FR-086, FR-101).
+1. **Dado** el atajo «Campañas» de Marketing, **cuando** se abre, **entonces** se listan las campañas programadas o un estado vacío claro (FR-086).
+2. **Dado** el nombre «Campaña Primavera 2026», etapa «En proceso» e inicio y fin válidos, **cuando** guardo, **entonces** la campaña queda lista para ejecutar reglas solo dentro de ese periodo (FR-086).
+3. **Dada** una fecha fin anterior a la de inicio, **cuando** guardo, **entonces** la campaña no se crea y se muestra un error visible (FR-086).
+4. **Dado** el historial de la campaña, **cuando** se consulta, **entonces** identifica a `marketing` como creadora en `createdByUserId` y ese dato no es editable (FR-086).
+5. **Dado** un usuario `ventas`, **cuando** intenta crear una campaña desde la interfaz o desde `storage.js`, **entonces** recibe `No tienes permiso para realizar esta acción` (FR-094, FR-096).
+
+#### US20b - Ejecutar reglas de campaña sin duplicar acciones
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`), **quiero** que las reglas de una campaña activa creen documentos de seguimiento, asignen ejecutivos o actualicen el estado interno del prospecto, **para** que cada visita capturada reciba una acción concreta y verificable sin depender de correos ni publicaciones externas.
+
+**Criterios de aceptación**:
+
+1. **Dado** un prospecto en la etapa objetivo, **cuando** ocurre captura, cambio de etapa o interacción, **entonces** se ejecuta la regla configurada y se crea exactamente una acción sobre ese prospecto (FR-070, FR-086, FR-089).
+2. **Dada** una ejecución, **cuando** consulto el historial de la campaña, **entonces** aparecen fecha, prospecto y acción realizada (FR-086).
+3. **Dadas** dos campañas activas para el mismo prospecto y evento, **cuando** se evalúan, **entonces** solo se ejecuta la más reciente y la otra queda registrada como «omitida por solapamiento» con campaña y motivo (FR-090).
+4. **Dada** una campaña fuera de su periodo de fechas, **cuando** ocurre un evento, **entonces** no se ejecuta ninguna acción nueva (FR-086).
+5. **Dada** una campaña ejecutándose mientras `atencion` tiene sesión, **cuando** se crea el documento de seguimiento, **entonces** el creador del documento es «Sistema» y no `atencion` (FR-101).
+6. **Dada** una regla que intenta enviar correo, mensaje externo o publicación, **cuando** se evalúa, **entonces** no se ejecuta porque el alcance solo permite las tres acciones internas de FR-089 (FR-086).
+
+#### US20c - Detener una campaña y conservar su historial
+
+**Como** Gerente Comercial (rango `n4_manager`, con `campaign:stop_any`), **quiero** detener cualquier campaña activa, incluida la creada por `marketing`, **para** frenar acciones automáticas que ya no corresponden a la estrategia comercial sin borrar lo ocurrido.
+
+**Criterios de aceptación**:
+
+1. **Dada** la «Campaña Primavera 2026» creada por `marketing`, **cuando** la detiene `gerente`, **entonces** deja de generar ejecuciones nuevas y su historial permanece visible con fecha, prospecto y acción (FR-086, FR-094).
+2. **Dado** un usuario `marketing` que creó la campaña, **cuando** la detiene, **entonces** la operación se permite por `campaign:stop_own` (FR-094).
+3. **Dado** un usuario `marketing` que intenta detener una campaña de otro usuario, **cuando** ejecuta la acción, **entonces** recibe `No tienes permiso para realizar esta acción` y la campaña sigue activa (FR-094, FR-096).
+4. **Dado** un usuario `ventas` que intenta detenerla, **cuando** ejecuta la acción desde consola o `storage.js`, **entonces** recibe el mismo mensaje exacto y no se muta la campaña (FR-096).
+5. **Dada** una campaña finalizada por fecha, **cuando** se consulta, **entonces** muestra su historial completo y no ejecuta reglas nuevas (FR-086).
 
 ---
 
 ### Historia de Usuario 21 - Medir el rendimiento de Marketing (Prioridad: P2)
 
-Como ejecutivo de marketing, quiero consultar indicadores derivados de los registros de Marketing, para evaluar el resultado de las campañas sin capturar ni importar datos manualmente.
+Se desglosa en lectura de indicadores globales (US21a) y filtro por campaña (US21b), porque evaluar el total y atribuir resultados a una campaña requieren verificaciones distintas.
 
-**Por qué esta prioridad**: Convierte la información ya registrada de prospectos, interacciones, «Dudas y consultas» y ventas en una lectura accionable del rendimiento, junto a las campañas y al equipo de ventas.
+#### US21a - Consultar los indicadores globales de rendimiento
 
-**Prueba Independiente**: Un ejecutivo abre «Rendimiento de campañas», selecciona una campaña activa y comprueba que los indicadores de prospectos, conversión, interacciones, consultas respondidas y ventas ganadas coinciden con los registros almacenados y se actualizan sin recarga tras un cambio.
+**Como** Ejecutivo de Marketing (rango `n3_marketing`, con `marketing:view`), **quiero** ver prospectos capturados, conversión por etapa, interacciones, consultas respondidas y ventas «Cerrado ganado» derivados de los registros, **para** decidir si la campaña actual está generando resultados sin capturar cifras a mano.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1. **Dado** el apartado de Marketing, **cuando** el usuario abre «Rendimiento de campañas», **entonces** se muestran los indicadores globales o, si no hay registros, cero con un estado vacío claro y el mensaje exacto `Sin registros para esta campaña.` (FR-087).
-2. **Dado** un usuario de Marketing, **cuando** selecciona una campaña, **entonces** los indicadores se filtran a los registros vinculados a esa campaña (FR-086, FR-087, FR-088).
-3. **Dado** un cambio en entidades, documentos, interacciones, mensajes de «Dudas y consultas» (`chat`) o ejecuciones de campaña, **cuando** se consulta nuevamente el rendimiento, **entonces** los indicadores se actualizan sin recarga (FR-087).
-4. **Dado** que una campaña no tiene registros vinculados, **cuando** se consulta su rendimiento, **entonces** los indicadores muestran cero con una explicación clara y el mensaje exacto `Sin registros para esta campaña.` (FR-087).
-5. **Dado** que los indicadores coinciden con el panel y las tarjetas cuando aplica, **cuando** se comparan ambas vistas, **entonces** no hay discrepancias en los valores derivados de los mismos registros (FR-074, FR-087).
-6. **Dado** un prospecto, una interacción o una venta sin campaña seleccionada, **cuando** se consulta el filtro de campañas, **entonces** aparece agrupado bajo «Sin campaña» (FR-088).
+1. **Dado** el atajo «Rendimiento de campañas», **cuando** se abre, **entonces** se muestran los cinco indicadores calculados desde entidades, documentos, interacciones, mensajes de «Dudas y consultas» y ejecuciones (FR-087).
+2. **Dado** un resumen vacío, **cuando** se abre, **entonces** los indicadores muestran `0` con un estado vacío claro y el mensaje exacto `Sin registros para esta campaña.` (FR-087).
+3. **Dado** un cambio en una entidad, documento, interacción o consulta, **cuando** se consulta de nuevo, **entonces** los indicadores se actualizan sin recarga y sin importar datos externos (FR-087).
+4. **Dado** un indicador que coincide con una tarjeta del panel, **cuando** comparo ambas vistas, **entonces** los valores son idénticos porque se derivan de los mismos registros (FR-074, FR-087).
+5. **Dado** un Ejecutivo de Ventas, **cuando** intenta abrir `?view=marketing`, **entonces** ve «Acceso denegado» y vuelve al Panel sin ver el rendimiento (FR-097).
+
+#### US21b - Atribuir los resultados a una campaña
+
+**Como** Ejecutivo de Marketing (rango `n3_marketing`), **quiero** filtrar el rendimiento por campaña y revisar los registros sin campaña bajo «Sin campaña», **para** saber qué campaña generó cada prospecto, interacción o venta.
+
+**Criterios de aceptación**:
+
+1. **Dado** un prospecto capturado con la «Campaña Primavera 2026», **cuando** filtro por esa campaña, **entonces** el indicador de prospectos incluye solo los registros con ese valor (FR-088).
+2. **Dadas** una interacción de redes y una venta vinculadas a la campaña, **cuando** se filtra, **entonces** ambos se cuentan en sus respectivos indicadores y no se duplican (FR-087, FR-088).
+3. **Dado** un prospecto sin campaña seleccionada, **cuando** se consulta el filtro, **entonces** aparece agrupado bajo «Sin campaña» y no se pierde (FR-088).
+4. **Dada** una campaña sin registros vinculados, **cuando** se consulta su rendimiento, **entonces** muestra `0` y `Sin registros para esta campaña.` (FR-087).
+5. **Dado** el campo «Campaña» opcional, **cuando** se crea un prospecto, interacción o venta, **entonces** puede quedar vacío sin bloquear el guardado y se contabiliza en «Sin campaña» (FR-088).
 
 ---
 
 ### Historia de Usuario 22 - Iniciar sesión en modo demostración (Prioridad: P1)
 
-Como usuario interno del CRM, quiero iniciar sesión con mi usuario para que el sistema sepa quién soy y qué puedo hacer.
+Se desglosa en autenticación (US22a), vigencia de la sesión (US22b) y acceso público (US22c), porque la identidad, la continuidad de la sesión y las vistas sin sesión se prueban por separado.
 
-**Por qué esta prioridad**: El sistema debe conocer la identidad del usuario antes de aplicar cualquier permiso (Historia de Usuario 23) y antes de mostrar el espacio de trabajo de las Historias de Usuario 14 y 15. Sin sesión no es posible distinguir al Gerente Comercial del Ejecutivo de Ventas ni registrar quién creó o modificó cada cliente o documento.
+**Usuarios del modo demostración**: `gerente` (`n4_manager`, Gerente Comercial), `marketing` (`n3_marketing`), `ventas` (`n2_sales`) y `atencion` (`n1_support`, Atención al Cliente). El nombre no distingue mayúsculas ni espacios; cualquier contraseña no vacía permite entrar. No hay hash, contraseña incorrecta ni bloqueo por intentos (FR-098).
 
-**Usuarios del modo demostración**: `gerente` (n4, Gerente Comercial), `marketing` (n3, Ejecutivo de Marketing), `ventas` (n2, Ejecutivo de Ventas) y `atencion` (n1, Atencion al Cliente). El nombre de usuario no distingue mayúsculas ni espacios al inicio o al final. Cualquier contraseña no vacía permite el ingreso; no se verifica hash, no hay contraseñas incorrectas y no existe bloqueo por intentos fallidos.
+#### US22a - Identificar al empleado que entra al CRM
 
-**Prueba Independiente**: Un visitante sin sesión abre la aplicación y solo ve la pantalla de inicio de sesión, pero puede usar el formulario público de captura y «Dudas y consultas» (`chat`) del sitio; al iniciar sesión como `gerente` con cualquier contraseña, ve el panel con su nombre, su rango «Nivel 4 - Gerente Comercial» y el botón «Cerrar sesión», y al cerrarla vuelve a la pantalla de inicio de sesión.
+**Como** Visitante sin sesión que necesita usar una vista interna del CRM, **quiero** iniciar sesión con uno de los cuatro usuarios demostrativos, **para** que el sistema aplique su rango y registre quién crea o modifica cada cliente o interacción.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1.  **Dado** que no hay ninguna sesión iniciada, **cuando** se abre la aplicación en la URL raíz sin parámetro `?view=` (Panel), **entonces** se muestra únicamente la pantalla de inicio de sesión con los campos «Usuario» y «Contraseña», sin Panel, Buscar, Resumen ni Marketing.
-2.  **Dado** un visitante sin sesión, **cuando** abre el formulario público de captura `?view=capture` (FR-069), **entonces** el formulario sigue disponible y al enviarlo se crea el prospecto «Visita 2026-11-23» en estado «Prospecto» sin exigir inicio de sesión.
-3.  **Dado** un visitante sin sesión, **cuando** abre «Dudas y consultas» (`chat`) integrado en el sitio (FR-084), **entonces** puede escribir la consulta «¿Aceptan pagos en cuotas?» y recibir la respuesta rápida configurada, o dejarla registrada para seguimiento, sin iniciar sesión.
-4.  **Dado** uno de los cuatro usuarios demostrativos —`gerente`, `marketing`, `ventas` o `atencion`—, **cuando** inicia sesión con cualquier contraseña no vacía y con el nombre en mayúsculas o con espacios, **entonces** accede al panel con su usuario y su rango exacto, y `gerente` ve además el menú con «Gestionar usuarios» y «Cerrar sesión» (FR-006, FR-098).
-5.  **Dado** un usuario demostrativo, **cuando** deja el campo «Contraseña» vacío, **entonces** no se crea la sesión y se muestra exactamente «Ingresa una contraseña» (FR-006).
-6.  **Dado** un nombre que no corresponde a los cuatro usuarios demostrativos, **cuando** intenta iniciar sesión, **entonces** no se crea la sesión y se muestra exactamente «Usuario no encontrado» (FR-006).
-7.  **Dado** el usuario `ventas` con una sesión iniciada, **cuando** pulsa «Cerrar sesión», **entonces** la sesión finaliza, la barra superior desaparece y vuelve a mostrarse solo la pantalla de inicio de sesión.
-8.  **Dado** un visitante sin sesión, **cuando** abre directamente el enlace `?view=summary`, **entonces** se redirige a la pantalla de inicio de sesión y, tras autenticarse como `gerente`, se muestra el resumen solicitado (FR-097).
-9.  **Dado** el usuario `atencion` con rango «Nivel 1 - Atencion al Cliente» y sesión iniciada, **cuando** abre el menú del usuario en la barra superior, **entonces** ve «Cerrar sesión» pero NO ve la opción «Gestionar usuarios» (FR-098).
-10. **Dado** el usuario `gerente` con sesión iniciada, **cuando** recarga la URL raíz sin parámetro `?view=` (Panel) o cierra y vuelve a abrir el navegador, **entonces** la sesión se conserva, la barra superior sigue mostrando su usuario y su rango, y solo «Cerrar sesión» o su desactivación como usuario la finalizan (FR-102).
+1. **Dado** un visitante en la URL raíz sin `?view=`, **cuando** abre la aplicación, **entonces** ve solo «Usuario» y «Contraseña», sin Panel, Buscar, Resumen ni Marketing (FR-097).
+2. **Dado** `gerente` con cualquier contraseña no vacía, **cuando** inicia sesión, **entonces** ve el panel con el usuario `gerente`, el rango exacto «Nivel 4 - Gerente Comercial» y las opciones «Gestionar usuarios» y «Cerrar sesión» en el menú (FR-006, FR-098).
+3. **Dado** `GERENTE` con espacios y contraseña no vacía, **cuando** inicia sesión, **entonces** entra como `gerente` y conserva el rango Nivel 4 (FR-098).
+4. **Dado** el campo «Contraseña» vacío, **cuando** intenta entrar, **entonces** no se crea la sesión y ve exactamente `Ingresa una contraseña` (FR-006).
+5. **Dado** un usuario distinto de los cuatro, **cuando** intenta entrar, **entonces** no se crea la sesión y ve exactamente `Usuario no encontrado` (FR-006).
+6. **Dado** `atencion` con sesión iniciada, **cuando** abre el menú del usuario, **entonces** ve «Cerrar sesión» y no ve «Gestionar usuarios» (FR-098).
+
+#### US22b - Mantener y revocar la sesión del empleado
+
+**Como** Ejecutivo de Ventas (rango `n2_sales`) con sesión iniciada, **quiero** que mi identidad y mi rango permanezcan al recargar o reabrir el navegador y que la sesión termine al cerrarla o al ser desactivado, **para** no tener que iniciar sesión en cada pantalla y para que Gerencia pueda revocar el acceso de inmediato.
+
+**Criterios de aceptación**:
+
+1. **Dado** `ventas` con sesión iniciada, **cuando** recarga la URL raíz o cierra y reabre el navegador, **entonces** la barra superior sigue mostrando `ventas` y su rango sin volver al login (FR-102).
+2. **Dado** `ventas`, **cuando** pulsa «Cerrar sesión», **entonces** la barra superior desaparece y vuelve a mostrarse solo la pantalla de inicio de sesión (FR-102).
+3. **Dado** `ventas` desactivado por `gerente`, **cuando** realiza su siguiente acción o recarga, **entonces** se redirige a inicio de sesión y ya no puede crear ni editar clientes (FR-098, FR-102).
+4. **Dado** un cambio de rango de `n2_sales` a `n3_marketing` hecho por `gerente`, **cuando** el usuario realiza su siguiente acción, **entonces** la barra muestra el nuevo rango y se aplican los permisos Nivel 3 (FR-102).
+5. **Dado** un visitante sin sesión que abre `?view=summary`, **cuando** inicia sesión como `gerente`, **entonces** se restaura el resumen solicitado (FR-097).
+
+#### US22c - Usar el sitio público sin iniciar sesión
+
+**Como** Visitante del sitio web (sin sesión), **quiero** usar el formulario de captura y «Dudas y consultas» sin entrar al CRM, **para** dejar mis datos y mis preguntas antes de hablar con un ejecutivo.
+
+**Criterios de aceptación**:
+
+1. **Dado** `?view=capture` sin sesión, **cuando** envío el formulario con consentimiento, **entonces** se crea el prospecto «Visita 2026-11-23» en estado «Prospecto» sin exigir login (FR-069).
+2. **Dado** «Dudas y consultas» (`chat`) sin sesión, **cuando** escribo «¿Aceptan pagos en cuotas?», **entonces** recibo la respuesta rápida configurada o dejo la consulta registrada para seguimiento (FR-084).
+3. **Dado** un enlace directo a una vista interna sin sesión, **cuando** se abre, **entonces** se redirige al login y no se muestran datos de clientes (FR-097).
 
 ---
 
 ### Historia de Usuario 23 - Acceso según rango (Prioridad: P1)
 
-Como administrador del CRM, quiero que cada usuario acceda solo a las pantallas y acciones de su rango para proteger la información de los clientes y del equipo.
+Se desglosa en permisos sobre datos (US23a), administración de usuarios (US23b) y cumplimiento en rutas y capa de datos (US23c). La matriz de FR-094 es la única fuente de verdad y no se edita desde la interfaz.
 
-**Por qué esta prioridad**: La identidad obtenida en la Historia de Usuario 22 solo tiene valor si determina qué puede verse y modificarse. Sin esta historia, un usuario de Atencion al Cliente podría eliminar al cliente «Comercial Andina SpA» o un Ejecutivo de Marketing podría detener la «Campaña Primavera 2026» de otro usuario, rompiendo la trazabilidad de los registros.
+#### US23a - Limitar acciones sobre clientes e interacciones según el cargo
 
-**Prueba Independiente**: Cuatro usuarios con rangos distintos —`gerente` (Nivel 4), `marketing` (Nivel 3), `ventas` (Nivel 2) y `atencion` (Nivel 1)— inician sesión y comprueban que sus accesos a clientes, resumen, Marketing y «Equipo de ventas y logros» coinciden exactamente con los permitidos para su rango, mientras un visitante sin sesión solo utiliza el formulario público y «Dudas y consultas» (`chat`).
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** que cada empleado vea y modifique solo los clientes e interacciones que su cargo requiere, **para** impedir que Atención borre una cuenta o que Marketing elimine clientes.
 
-**Escenarios de Aceptación**:
+**Criterios de aceptación**:
 
-1.  **Dado** el usuario `gerente` con rango «Nivel 4 - Gerente Comercial», **cuando** inicia sesión, **entonces** tiene acceso total: puede eliminar el cliente «Comercial Andina SpA» (FR-003), ver en el resumen los 47 seguimientos pendientes de todo el equipo —12 de `ventas` y 35 de `ana.munoz`— (US6), crear, editar y eliminar el equipo «Equipo Norte» y sus integrantes (US17), detener la «Campaña Primavera 2026» creada por `marketing` y gestionar usuarios desde el menú del usuario de la barra superior (FR-094, FR-098).
-2.  **Dado** el usuario `marketing` con rango «Nivel 3 - Ejecutivo de Marketing», **cuando** abre Marketing, **entonces** puede capturar el prospecto «Visita 2026-11-23» (US16), registrar la interacción de Instagram del prospecto (US18), responder la conversación de «Dudas y consultas» (`chat`) (US19), crear la «Campaña Primavera 2026» (US20) y consultar su rendimiento (US21).
-3.  **Dado** el usuario `marketing` con rango «Nivel 3 - Ejecutivo de Marketing», **cuando** busca el cliente «Comercial Andina SpA» y el prospecto «Visita 2026-11-23», **entonces** puede ver ambas fichas; y **cuando** abre «Equipo de ventas y logros», **entonces** solo puede leer el real mensual de $1.250.000 de `ventas` sin botones para crear, editar ni eliminar equipos o integrantes.
-4.  **Dado** el usuario `marketing` con rango «Nivel 3 - Ejecutivo de Marketing», **cuando** intenta eliminar el cliente «Comercial Andina SpA», abrir el resumen o crear un integrante en «Equipo Norte», **entonces** cada acción se bloquea con el mensaje exacto «No tienes permiso para realizar esta acción» (FR-094, FR-096).
-5.  **Dado** el usuario `ventas` con rango «Nivel 2 - Ejecutivo de Ventas», **cuando** crea el cliente «Ferretería Central» seleccionando a `ventas` en el `select` «Ejecutivo Asignado», **entonces** puede editarlo y cambiar el estado de sus interacciones a «Cerrado ganado» (FR-099).
-6.  **Dado** el usuario `ventas` con rango «Nivel 2 - Ejecutivo de Ventas» y el cliente «Transportes del Norte Ltda.» asignado a `ana.munoz`, **cuando** lo busca y abre su ficha, **entonces** ve el cliente y su historial sin poder editarlo ni cambiar el estado de sus interacciones.
-7.  **Dado** el usuario `ventas` con rango «Nivel 2 - Ejecutivo de Ventas», **cuando** abre el resumen, **entonces** ve solo sus 12 seguimientos pendientes y no los 35 de `ana.munoz`; y **cuando** abre «Equipo de ventas y logros», **entonces** ve únicamente su real mensual de $1.250.000 y su objetivo mensual de $1.800.000.
-8.  **Dado** el usuario `atencion` con rango «Nivel 1 - Atencion al Cliente», **cuando** busca el cliente «Comercial Andina SpA», **entonces** ve su ficha y su historial y registra una interacción de tipo «Llamada» con la nota «Confirmación de horario de entrega»; y **cuando** abre la consulta de «Dudas y consultas» (`chat`) sin respuesta «¿Aceptan pagos en cuotas?» (FR-083) desde la ficha, **entonces** puede darle seguimiento.
-9.  **Dado** el usuario `atencion` con rango «Nivel 1 - Atencion al Cliente», **cuando** intenta registrar una interacción de tipo «Reunión», cambiar el estado de una interacción existente, eliminar un cliente o abrir Resumen, Marketing u «Equipo de ventas y logros», **entonces** todas esas acciones se bloquean con el mensaje exacto «No tienes permiso para realizar esta acción» (FR-094, FR-096).
-10. **Dado** un visitante sin sesión, **cuando** intenta abrir la URL raíz sin parámetro `?view=` (Panel), **entonces** no accede al espacio de trabajo y solo le quedan disponibles el formulario público de captura (FR-069) y «Dudas y consultas» (`chat`) del sitio (FR-084).
-11. **Dado** el usuario `atencion` con rango «Nivel 1 - Atencion al Cliente», **cuando** abre directamente el enlace `?view=summary`, **entonces** ve «Acceso denegado» y vuelve al Panel sin ver los 47 seguimientos pendientes (FR-097).
-12. **Dado** el usuario `ventas` con rango «Nivel 2 - Ejecutivo de Ventas», **cuando** intenta eliminar el cliente «Transportes del Norte Ltda.» mediante una llamada directa a `storage.js` sin pasar por la interfaz, **entonces** la capa de datos rechaza la operación con «No tienes permiso para realizar esta acción» y el cliente permanece almacenado (FR-095, FR-096).
-13. **Dado** el formulario de cliente abierto por `ventas`, **cuando** despliega «Ejecutivo Asignado», **entonces** solo aparecen `ventas`, `ana.munoz` y `gerente` por ser usuarios activos de rango Ejecutivo de Ventas o Gerente Comercial, y NO aparece `atencion` ni `marketing` (FR-099).
-14. **Dado** el usuario `ventas` con sesión iniciada, **cuando** `gerente` lo desactiva desde «Gestionar usuarios», **entonces** su sesión se revoca de inmediato; en la siguiente acción o recarga se le redirige a inicio de sesión y ya no puede crear ni editar clientes (FR-098, FR-102).
-15. **Dado** el usuario `ventas` con sesión iniciada y rango «Nivel 2 - Ejecutivo de Ventas», **cuando** `gerente` le asigna el rango «Nivel 3 - Ejecutivo de Marketing» desde «Gestionar usuarios», **entonces** en la siguiente acción o recarga la barra superior muestra el nuevo rango y se aplican los permisos de la matriz correspondientes a Nivel 3 (FR-094, FR-098, FR-102).
-16. **Dado** el usuario `ventas` ya creado, **cuando** `gerente` intenta crear otro usuario con el nombre `VENTAS` desde «Gestionar usuarios», **entonces** el guardado se rechaza por duplicado y el usuario original conserva su identidad, su rango y sus clientes asignados (FR-098).
+1. **Dado** `gerente`, **cuando** elimina «Comercial Andina SpA», edita «Equipo Norte» y detiene la «Campaña Primavera 2026», **entonces** las tres operaciones se permiten y quedan registradas (FR-094).
+2. **Dado** `marketing`, **cuando** busca «Comercial Andina SpA» y «Visita 2026-11-23», **entonces** ve ambas fichas; al crear la campaña y consultar su rendimiento también puede; al intentar eliminar el cliente o abrir el resumen recibe `No tienes permiso para realizar esta acción` (FR-094, FR-096).
+3. **Dado** `marketing` en «Equipos de ventas y logros», **cuando** consulta el real de $1.250.000 de `ventas`, **entonces** solo puede leerlo y no ve botones de alta, edición ni baja de integrantes (FR-094).
+4. **Dado** `ventas` con «Ferretería Central» como cliente propio, **cuando** lo edita y cambia una interacción a «Cerrado ganado», **entonces** puede; con «Transportes del Norte Ltda.» asignado a `ana.munoz`, ve la ficha pero no puede editarla ni cambiar estados (FR-094, FR-099).
+5. **Dado** `ventas`, **cuando** abre el resumen, **entonces** ve solo sus 12 pendientes y no los 35 de `ana.munoz`; en equipo ve solo su real de $1.250.000 y su objetivo de $1.800.000 (FR-094).
+6. **Dado** `atencion`, **cuando** registra una «Llamada» con nota «Confirmación de horario de entrega» en «Comercial Andina SpA» y responde una consulta de «Dudas y consultas», **entonces** puede; al intentar «Reunión», cambiar estados, eliminar clientes o abrir Resumen/Marketing/Equipo recibe `No tienes permiso para realizar esta acción` (matriz de permisos).
+7. **Dado** el `select` «Ejecutivo Asignado», **cuando** lo abre `ventas`, **entonces** aparecen `ventas`, `ana.munoz` y `gerente` por ser activos N2/N4, y no aparecen `atencion` ni `marketing` (FR-099).
+
+#### US23b - Administrar usuarios y rangos
+
+**Como** Gerente Comercial (rango `n4_manager`, con `users:manage`), **quiero** crear, editar y desactivar usuarios y asignarles un rango desde el menú de la barra superior, **para** que cada cambio de persona o cargo se refleje en los permisos del CRM sin tocar el código.
+
+**Criterios de aceptación**:
+
+1. **Dado** el menú del usuario, **cuando** lo abre `gerente`, **entonces** ve «Gestionar usuarios»; con `atencion`, `ventas` o `marketing`, la opción no aparece (FR-098).
+2. **Dado** el formulario de usuarios, **cuando** se crea un usuario con nombre único, rango y estado activo, **entonces** se guarda en `erp_users` y queda disponible para asignaciones N2/N4 cuando corresponda (FR-098, FR-099).
+3. **Dado** el usuario `ventas`, **cuando** `gerente` intenta crear `VENTAS`, **entonces** el guardado se rechaza por duplicado y el original conserva su identidad, rango y clientes (FR-098).
+4. **Dado** un usuario desactivado, **cuando** intenta iniciar sesión o realiza una acción con sesión previa, **entonces** se le redirige a login en la siguiente acción o recarga (FR-098, FR-102).
+5. **Dado** un cambio de rango de `ventas` a Nivel 3, **cuando** el usuario actúa, **entonces** ve el nuevo rango en la barra superior y se aplican los permisos Nivel 3; ninguna pantalla permite editar la matriz de permisos (FR-094, FR-098, FR-102).
+6. **Dado** `gerente`, **cuando** abre «Gestionar usuarios», **entonces** no encuentra controles para modificar `PERMISSION_MATRIX` ni una acción `permissions:edit` permitida (FR-094).
+
+#### US23c - Aplicar la matriz en rutas y en la capa de datos
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** que la matriz se aplique también en enlaces profundos y llamadas directas a `storage.js`, **para** que ocultar un botón nunca sea el único mecanismo de protección de los datos del equipo.
+
+**Criterios de aceptación**:
+
+1. **Dado** `ventas`, **cuando** intenta eliminar «Transportes del Norte Ltda.» desde la consola con `storage.js`, **entonces** la capa de datos rechaza la operación con `No tienes permiso para realizar esta acción` y el cliente sigue almacenado (FR-095, FR-096).
+2. **Dado** `atencion`, **cuando** abre directamente `?view=summary`, **entonces** ve «Acceso denegado», vuelve al Panel y no ve los 47 pendientes (FR-097).
+3. **Dado** un visitante sin sesión, **cuando** abre la URL raíz sin `?view=`, **entonces** no accede al espacio de trabajo y solo conserva formulario público y «Dudas y consultas» (FR-097).
+4. **Dado** un usuario autenticado sin permiso para la vista solicitada, **cuando** recarga o usa Back/Forward, **entonces** cada resolución de `location.search` vuelve a aplicar la matriz y muestra «Acceso denegado» sin ejecutar la acción (FR-094, FR-097).
+5. **Dado** un rango nuevo añadido a la matriz, **cuando** arranca la aplicación, **entonces** navegación, acciones rápidas y `storage.js` lo respetan sin cambios en componentes ni reglas de negocio (FR-094).
+6. **Dada** una manipulación deliberada de `erp_session` o `localStorage` para falsificar identidad, **cuando** se intenta, **entonces** queda fuera del alcance demostrativo sin backend (FR-095).
+
+---
+
+### Funcionalidades pendientes detectadas
+
+- **FR-058 / acceso a fichas bloqueadas**: `detailPolicy.entity.offerEditAction` muestra «Editar» sin consultar la matriz de permisos; en los rangos N1 y N3 esa acción puede aparecer y luego rechazarse con `No tienes permiso para realizar esta acción`. Falta decidir si la completación guiada la hace un usuario con `entity:edit_own`/`entity:edit_any` o si la ficha bloqueada debe ofrecer solo lectura y una solicitud de corrección.
+- **FR-098 / usuarios de ejemplo**: el inicio de sesión demostrativo reconoce solo `gerente`, `marketing`, `ventas` y `atencion`, pero las historias y pruebas usan `ana.munoz` como Ejecutivo de Ventas para asignaciones y ventas históricas. Falta declararla explícitamente como usuario creado por Gerencia —no semilla de login— o sustituirla en los ejemplos.
+- **FR-094 / edición de interacciones por Marketing**: la matriz narrativa resume el acceso de Nivel 3 a «consulta conversaciones del chat», pero el catálogo y `PERMISSION_MATRIX` conceden `document:edit_any` a Nivel 3. Falta decidir si Marketing puede editar también interacciones de redes de cualquier entidad o solo responder «Dudas y consultas».
+- **FR-087 / número de indicadores de rendimiento**: el texto dice «cinco indicadores» pero enumera prospectos, conversiones por etapa, tasa de conversión, interacciones, consultas respondidas y ventas «Cerrado ganado». Falta unificar el conteo y decidir si «conversiones por etapa» y «tasa de conversión» son dos tarjetas o una sola.
+- **FR-094 / catálogo de permisos**: `permissions:view` y `permissions:edit` existen en el catálogo canónico, pero ninguna pantalla ofrece actualmente una vista de solo lectura de la matriz. Falta decidir si «Gestionar usuarios» debe mostrar esa vista o si ambos identificadores permanecen solo como contrato interno con `permissions:edit` denegado para todos.
+- **FR-069 / formulario embebible**: una inserción en otro dominio no es verificable con este proyecto sin backend ni `postMessage`; la limitación documentada es que `?view=capture` solo se sirve desde el mismo origen.
+- **Trazabilidad de tareas**: `tasks.md` en la raíz del repositorio conserva la versión ERP anterior con US1–US14 y no debe usarse como fuente; la fuente vigente es `specs/001-erp-base-module/spec.md` y su `tasks.md` asociado.
 
 ---
 

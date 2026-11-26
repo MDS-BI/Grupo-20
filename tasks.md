@@ -1,3 +1,5 @@
+> **Obsoleto**: esta lista corresponde a una versión anterior del módulo base ERP (US1–US14) y ya no es fuente de las historias de usuario. Use `specs/001-erp-base-module/spec.md` y `specs/001-erp-base-module/tasks.md` como documentación vigente.
+
 - [ ] T001 Create Vite project structure per implementation plan
 - [ ] T002 Initialize npm project with dependencies (vitest, jsdom)
 - [ ] T003 Configure eslint and prettier for vanilla JS
