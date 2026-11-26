@@ -3,6 +3,55 @@ import { resolveEntityDateRule } from '../utils/entity-date.js';
 import { isFieldVisible, resolveFieldRules } from '../utils/field-rules.js';
 import { MESSAGES } from '../utils/messages.js';
 
+export function renderClientManagementTableHtml(
+  entities,
+  config,
+  { archived = false, entityLabel = 'Cliente' } = {}
+) {
+  const dateLabel = resolveEntityDateRule(config)?.label || 'Fecha objetivo';
+  const rows = entities
+    .map(
+      (entity) => `
+        <tr class="client-management-row" data-entity-id="${escapeHtml(entity.entity_id)}">
+          <td>
+            <strong>${escapeHtml(entity.name)}</strong>
+            ${archived ? '<span class="status-badge archived">Archivado</span>' : ''}
+          </td>
+          <td>${escapeHtml(entity.code || '—')}</td>
+          <td>${escapeHtml(entity.targetDate || '—')}</td>
+          <td class="client-actions-cell">
+            <button type="button" class="action-button" data-action="edit-entity" data-id="${escapeHtml(entity.id)}" aria-label="Editar ${escapeHtml(entity.name)}">✎ Editar</button>
+            ${
+              archived
+                ? `<button type="button" class="action-button" data-action="restore-entity" data-id="${escapeHtml(entity.id)}" aria-label="Restaurar ${escapeHtml(entity.name)}">↩️ Restaurar</button>`
+                : `<button type="button" class="action-button" data-action="archive-entity" data-id="${escapeHtml(entity.id)}" aria-label="Archivar ${escapeHtml(entity.name)}">🗄️ Archivar</button>`
+            }
+            <button type="button" class="action-button danger" data-action="delete-entity" data-id="${escapeHtml(entity.id)}" aria-label="Eliminar ${escapeHtml(entity.name)}">🗑️ Eliminar</button>
+          </td>
+        </tr>`
+    )
+    .join('');
+  const emptyState = entities.length
+    ? ''
+    : `<p class="empty-state">No hay ${escapeHtml(entityLabel.toLowerCase())}s ${archived ? 'archivados' : 'activos'}.</p>`;
+  return `
+    <div class="client-table-wrapper">
+      <table class="client-management-table">
+        <thead>
+          <tr>
+            <th scope="col">${escapeHtml(entityLabel)}</th>
+            <th scope="col">Código</th>
+            <th scope="col">${escapeHtml(dateLabel)}</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${emptyState}
+    </div>
+  `;
+}
+
 export function renderEntityListHtml(entities, config, { archived = false } = {}) {
   if (!entities.length) {
     return `<p class="empty-state">${MESSAGES.noResults}</p>`;

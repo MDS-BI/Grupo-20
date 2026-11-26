@@ -155,4 +155,65 @@ describe('Ciclo de vida de clientes: archivar, restaurar y eliminar', () => {
     expect(() => archiveEntity(entity.id)).toThrow(MESSAGES.permissionDenied);
     expect(loadEntities().find((item) => item.id === entity.id).archivedAt).toBeUndefined();
   });
+
+  it('gestiona archivar y restaurar desde la tabla Acciones del panel de gestión', async () => {
+    await signIn('gerente');
+    const entity = createEntity('Cliente Desde Gestion');
+    mount();
+
+    app.navigate('manage-entity');
+    const table = document.querySelector('.client-management-table');
+    expect([...table.querySelectorAll('th')].map((th) => th.textContent)).toContain('Acciones');
+    const row = [...table.querySelectorAll('.client-management-row')].find((item) =>
+      item.textContent.includes('Cliente Desde Gestion')
+    );
+    expect(row?.querySelector('[data-action="edit-entity"]')).toBeTruthy();
+    expect(row?.querySelector('[data-action="archive-entity"]')).toBeTruthy();
+    expect(row?.querySelector('[data-action="delete-entity"]')).toBeTruthy();
+
+    click(`.client-management-table [data-action="archive-entity"][data-id="${entity.id}"]`);
+    expect(loadEntities().find((item) => item.id === entity.id).archivedAt).toBeTruthy();
+    expect(document.querySelector('.client-management-table').textContent).not.toContain(
+      'Cliente Desde Gestion'
+    );
+
+    click('.client-management [data-action="client-status-filter"][data-status="archived"]');
+    expect(document.querySelector('.client-management-table').textContent).toContain(
+      'Cliente Desde Gestion'
+    );
+    click(`.client-management-table [data-action="restore-entity"][data-id="${entity.id}"]`);
+    expect(loadEntities().find((item) => item.id === entity.id).archivedAt).toBeUndefined();
+  });
+
+  it('oculta archivar, restaurar y eliminar en la tabla de gestión de ventas', async () => {
+    await signIn('gerente');
+    createEntity('Cliente Sin Permisos Gestion');
+    await logout();
+    await signIn('ventas');
+    mount();
+
+    app.navigate('manage-entity');
+    const table = document.querySelector('.client-management-table');
+    expect(table).toBeTruthy();
+    expect([...table.querySelectorAll('th')].map((th) => th.textContent)).toContain('Acciones');
+    expect(table.querySelector('[data-action="archive-entity"]')).toBeNull();
+    expect(table.querySelector('[data-action="restore-entity"]')).toBeNull();
+    expect(table.querySelector('[data-action="delete-entity"]')).toBeNull();
+  });
+
+  it('confirma antes de eliminar definitivamente desde la tabla de gestión', async () => {
+    await signIn('gerente');
+    const entity = createEntity('Cliente Eliminable Gestion');
+    mount();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    app.navigate('manage-entity');
+    click(`.client-management-table [data-action="delete-entity"][data-id="${entity.id}"]`);
+    expect(confirmSpy).toHaveBeenCalledWith('¿Eliminar este cliente?');
+    expect(loadEntities().some((item) => item.id === entity.id)).toBe(true);
+
+    confirmSpy.mockReturnValue(true);
+    click(`.client-management-table [data-action="delete-entity"][data-id="${entity.id}"]`);
+    expect(loadEntities().some((item) => item.id === entity.id)).toBe(false);
+  });
 });

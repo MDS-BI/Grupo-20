@@ -37,7 +37,10 @@ import {
   buildDocumentFormBaseline,
   isDocumentFormDirty,
 } from './components/document-form.js';
-import { renderEntityListHtml } from './components/entity-list.js';
+import {
+  renderEntityListHtml,
+  renderClientManagementTableHtml,
+} from './components/entity-list.js';
 import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
@@ -562,6 +565,7 @@ export function initApp(rootEl = null, options = {}) {
 
   function renderManageView() {
     const entityLabel = getLabel(state.config, 'entity');
+    const entityPlural = getLabel(state.config, 'entityPlural');
     const documentLabel = getLabel(state.config, 'document');
     const tabsHtml = `
       <div class="tabs" role="tablist">
@@ -579,17 +583,37 @@ export function initApp(rootEl = null, options = {}) {
         ? state.entities.find((e) => e.id === state.editingEntityId)
         : null;
       const values = state.entityFormDraft || editing || {};
+      const archived = state.clientStatusFilter === 'archived';
+      const clients = archived ? archivedEntities() : activeEntities();
+      const statusFilterHtml = `
+        <div class="tabs client-status-filter" role="tablist" aria-label="Estado del ${escapeHtml(entityLabel.toLowerCase())}">
+          <button type="button" role="tab" data-action="client-status-filter" data-status="active"
+            class="tab-button${archived ? '' : ' active'}" aria-selected="${!archived}">
+            Activos (${activeEntities().length})
+          </button>
+          <button type="button" role="tab" data-action="client-status-filter" data-status="archived"
+            class="tab-button${archived ? ' active' : ''}" aria-selected="${archived}">
+            Archivados (${archivedEntities().length})
+          </button>
+        </div>`;
       content = `
-        <h2>${editing ? 'Editar' : 'Nuevo'} ${escapeHtml(editing ? entityLabel.toLowerCase() : entityLabel)}</h2>
-        ${renderEntityFormHtml(state.config, values, state.entityFormErrors)}
-        ${
-          editing
-            ? `<div class="record-actions">
-                <button type="button" data-action="${isArchivedEntity(editing) ? 'restore-entity' : 'archive-entity'}" data-id="${escapeHtml(editing.id)}">${isArchivedEntity(editing) ? '↩️ Restaurar' : '🗄️ Archivar'} ${escapeHtml(entityLabel.toLowerCase())}</button>
-                <button type="button" data-action="delete-entity" data-id="${escapeHtml(editing.id)}">🗑️ Eliminar ${escapeHtml(entityLabel.toLowerCase())}</button>
-              </div>`
-            : ''
-        }
+        <section class="client-management" aria-labelledby="client-management-heading">
+          <h2 id="client-management-heading">Gestión de ${escapeHtml(entityPlural.toLowerCase())}</h2>
+          ${statusFilterHtml}
+          ${renderClientManagementTableHtml(clients, state.config, { archived, entityLabel })}
+        </section>
+        <section class="client-form-section">
+          <h2>${editing ? 'Editar' : 'Nuevo'} ${escapeHtml(editing ? entityLabel.toLowerCase() : entityLabel)}</h2>
+          ${renderEntityFormHtml(state.config, values, state.entityFormErrors)}
+          ${
+            editing
+              ? `<div class="record-actions">
+                  <button type="button" data-action="${isArchivedEntity(editing) ? 'restore-entity' : 'archive-entity'}" data-id="${escapeHtml(editing.id)}">${isArchivedEntity(editing) ? '↩️ Restaurar' : '🗄️ Archivar'} ${escapeHtml(entityLabel.toLowerCase())}</button>
+                  <button type="button" data-action="delete-entity" data-id="${escapeHtml(editing.id)}">🗑️ Eliminar ${escapeHtml(entityLabel.toLowerCase())}</button>
+                </div>`
+              : ''
+          }
+        </section>
       `;
     } else {
       const availableEntities = activeEntities();

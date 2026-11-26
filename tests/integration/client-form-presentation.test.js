@@ -51,8 +51,12 @@ describe('Presentación del formulario de clientes (T064)', () => {
       'Nuevo Cliente'
     );
     openForm();
-    expect(document.querySelector('h2').textContent).toContain('Nuevo Cliente');
-    expect(document.querySelector('h2').textContent).not.toContain('Nueva cliente');
+    expect(document.querySelector('.client-form-section h2').textContent).toContain(
+      'Nuevo Cliente'
+    );
+    expect(document.querySelector('.client-form-section h2').textContent).not.toContain(
+      'Nueva cliente'
+    );
   });
 
   it('ordena las casillas con la adicional del canal junto a «Canal de Contacto»', () => {

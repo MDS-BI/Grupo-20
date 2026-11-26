@@ -34,7 +34,7 @@ export function renderDashboardHtml(
       <div class="quick-actions">
         <button type="button" data-action="quick-new-entity">Nuevo ${escapeHtml(entityLabel)}</button>
         <button type="button" data-action="quick-new-document">Nueva ${escapeHtml(documentLabel.toLowerCase())}</button>
-        <button type="button" data-action="quick-manage">Abrir gestión de ${escapeHtml(entityPlural.toLowerCase())}</button>
+        <button type="button" data-action="quick-manage">Gestionar ${escapeHtml(entityPlural.toLowerCase())} (editar, archivar, eliminar)</button>
         <button type="button" data-action="quick-search">Buscar registros</button>
         <button type="button" data-action="navigate" data-view="manage-document">Gestionar ${escapeHtml(documentPlural.toLowerCase())}</button>
       </div>`

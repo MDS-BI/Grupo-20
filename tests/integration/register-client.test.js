@@ -115,7 +115,7 @@ describe('Alta de clientes con perfil CRM (T040)', () => {
     const entity = loadEntities()[0];
     expect(entity).toBeDefined();
     expect(entity.code).toMatch(/^CLI-\d{3}$/);
-    expect(document.body.textContent).not.toContain(entity.code);
+    expect(qs('entity-form').textContent).not.toContain(entity.code);
   });
 
   it('rechaza un RUT duplicado aunque cambie de formato', () => {

@@ -14,7 +14,7 @@ describe('Pantalla de gestión dedicada (H4)', () => {
     mount();
   });
 
-  it('no muestra la lista de entidades en la pantalla de gestión', () => {
+  it('muestra la tabla de gestión con la columna Acciones sin usar la lista de búsqueda', () => {
     document.getElementById('field-name'); // no-op to ensure dom ready
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
@@ -24,6 +24,11 @@ describe('Pantalla de gestión dedicada (H4)', () => {
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
     expect(document.querySelector('.manage-view .entity-list')).toBeNull();
+    expect(document.querySelector('.client-management-table')).toBeTruthy();
+    expect(
+      [...document.querySelectorAll('.client-management-table th')].map((th) => th.textContent)
+    ).toContain('Acciones');
+    expect(document.querySelector('.client-management-table').textContent).toContain('Acme');
   });
 
   it('alterna entre la pestaña de entidades y la de documentos', () => {
