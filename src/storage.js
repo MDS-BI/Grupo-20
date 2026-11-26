@@ -14,8 +14,13 @@ import { getConfig } from './module-config.js';
 import { transitionStage } from './utils/marketing-stage.js';
 import { runAutomationRules } from './utils/marketing-automation.js';
 import { normalizeMarketingConfig } from './utils/marketing-config.js';
+import {
+  DEFAULT_POSTVENTA_CONFIG,
+  isTicket,
+  validateTicketValues,
+} from './utils/postventa.js';
 import { getCurrentUser, listUsers, resolveExecutive } from './auth.js';
-import { assertPermission } from './auth/permissions.js';
+import { assertPermission, can } from './auth/permissions.js';
 
 const ENTITIES_KEY = 'erp_entities';
 const DOCUMENTS_KEY = 'erp_documents';
@@ -781,6 +786,101 @@ export function clearAll() {
 export function deleteDocumentsForEntity(entityId) {
   authorize('document:delete');
   return removeDocumentsForEntity(entityId);
+}
+
+function postventaConfig() {
+  return getConfig()?.postventa || DEFAULT_POSTVENTA_CONFIG;
+}
+
+export function createTicketDocument(values = {}) {
+  authorize('postventa:create');
+  const config = postventaConfig();
+  const entities = loadEntities();
+  const errors = validateTicketValues(values, { entities, config });
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const now = new Date().toISOString();
+  const status = values.status || config.states[0];
+  const ticket = {
+    id: generateRecordId(),
+    entity_id: documentEntityId(values),
+    ticket: true,
+    startDate: '',
+    endDate: '',
+    notes: '',
+    status,
+    asunto: sanitizeText(values.asunto || ''),
+    categoria: values.categoria,
+    prioridad: values.prioridad,
+    nota_resolucion: config.resolutionNoteStates.includes(status)
+      ? sanitizeText(values.nota_resolucion || '')
+      : '',
+    createdAt: now,
+    updatedAt: now,
+    ownerId: values.ownerId || currentUser()?.id || null,
+  };
+  const documents = loadDocuments();
+  documents.push(ticket);
+  writeDocuments(documents);
+  return ticket;
+}
+
+export function changeTicketStatus(documentId, nextStatus, resolutionNote = '') {
+  authorize('postventa:transition');
+  const config = postventaConfig();
+  const documents = loadDocuments();
+  const existing = documents.find((document) => document.id === documentId);
+  if (!existing || !isTicket(existing)) {
+    throw new ValidationError({ _document: 'El ticket ya no existe.' });
+  }
+  const errors = validateTicketValues(
+    { ...existing, status: nextStatus, nota_resolucion: resolutionNote },
+    { entities: loadEntities(), config }
+  );
+  if (Object.keys(errors).length) throw new ValidationError(errors);
+  const updated = {
+    ...existing,
+    status: nextStatus,
+    nota_resolucion: config.resolutionNoteStates.includes(nextStatus)
+      ? sanitizeText(resolutionNote)
+      : existing.nota_resolucion || '',
+    updatedAt: new Date().toISOString(),
+  };
+  documents[documents.findIndex((document) => document.id === documentId)] = updated;
+  writeDocuments(documents);
+  return updated;
+}
+
+function ticketBelongsToUser(ticket, entities, user) {
+  const entity = entities.find((item) => item.entity_id === ticket.entity_id);
+  if (!entity) return false;
+  const assigned = entity.ejecutivo_asignado;
+  const hasAssignment = Boolean(assigned) && assigned !== 'Sin asignar';
+  const ownerId = hasAssignment ? assigned : entity.ownerId || ticket.ownerId || null;
+  return Boolean(ownerId) && ownerId === user?.id;
+}
+
+export function listTicketDocuments(options = {}) {
+  const user = options.user !== undefined ? options.user : currentUser();
+  const role = user?.rank || 'visitor';
+  const context = user ? { userId: user.id } : {};
+  let viewAll = true;
+  let viewOwn = true;
+  if (!user && !storageAuthEnforced) {
+    viewAll = true;
+    viewOwn = true;
+  } else {
+    viewAll = can(role, 'postventa:view', context);
+    viewOwn = can(role, 'postventa:view_own', { ...context, ownerId: user?.id });
+    if (!viewAll && !viewOwn) assertPermission(role, 'postventa:view', context);
+  }
+  const documents = options.documents || loadDocuments();
+  const entities = options.entities || loadEntities();
+  return documents.filter((document) => {
+    if (!isTicket(document)) return false;
+    const entity = entities.find((item) => item.entity_id === document.entity_id);
+    if (!entity || isArchivedEntity(entity)) return false;
+    return viewAll || (viewOwn && ticketBelongsToUser(document, entities, user));
+  });
 }
 
 export function documentsForEntity(entityId) {

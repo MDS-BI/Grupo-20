@@ -7,6 +7,11 @@
 import { LOCAL_TODAY, isValidISODate } from './utils/entity-date.js';
 import { hasFormat } from './utils/field-formats.js';
 import { normalizeMarketingConfig, validateMarketingConfig } from './utils/marketing-config.js';
+import {
+  DEFAULT_POSTVENTA_CONFIG,
+  normalizePostventaConfig,
+  validatePostventaConfig,
+} from './utils/postventa.js';
 
 //
 // PERFIL ACTIVO: CRM Comercial (sesión 2026-11-16)
@@ -287,6 +292,7 @@ export const DEFAULT_CONFIG = {
   customFields: { entity: [], document: [] },
   statusLifecycle: null,
   marketing: null,
+  postventa: DEFAULT_POSTVENTA_CONFIG,
   theme: { accentColor: null },
   entityDate: null,
   fieldRules: { entity: {}, document: {} },
@@ -517,6 +523,7 @@ export function validateConfig(raw) {
   if (raw.fieldRules !== undefined) validateFieldRules(raw.fieldRules, errors);
   if (raw.detailPolicy !== undefined) validateDetailPolicy(raw.detailPolicy, errors);
   if (raw.marketing !== undefined) validateMarketingConfig(raw.marketing, errors);
+  if (raw.postventa !== undefined) validatePostventaConfig(raw.postventa, errors);
 
   if (raw.statusLifecycle !== undefined && raw.statusLifecycle !== null) {
     const lifecycle = raw.statusLifecycle;
@@ -588,6 +595,9 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
     },
     statusLifecycle: rawConfig.statusLifecycle || null,
     marketing: rawConfig.marketing ? normalizeMarketingConfig(rawConfig.marketing).config : null,
+    postventa: rawConfig.postventa
+      ? normalizePostventaConfig(rawConfig.postventa)
+      : DEFAULT_CONFIG.postventa,
     theme: {
       ...DEFAULT_CONFIG.theme,
       ...(rawConfig.theme || {}),
@@ -646,6 +656,7 @@ export function normalizeConfig(rawConfig) {
     customFields: normalizeCustomFields(rawConfig.customFields),
     statusLifecycle: rawConfig.statusLifecycle ?? null,
     marketing: rawConfig.marketing ?? null,
+    postventa: rawConfig.postventa ?? DEFAULT_CONFIG.postventa,
     theme: isPlainObject(rawConfig.theme)
       ? rawConfig.theme
       : rawConfig.theme === undefined
@@ -667,6 +678,9 @@ export function normalizeConfig(rawConfig) {
       customFields: candidate.customFields,
       statusLifecycle: candidate.statusLifecycle,
       marketing: candidate.marketing ? normalizeMarketingConfig(candidate.marketing).config : null,
+      postventa: candidate.postventa
+        ? normalizePostventaConfig(candidate.postventa)
+        : DEFAULT_CONFIG.postventa,
       theme: {
         ...DEFAULT_CONFIG.theme,
         ...candidate.theme,

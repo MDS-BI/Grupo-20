@@ -33,8 +33,9 @@ describe('Navegación a Marketing desde la barra lateral (T044/T131)', () => {
 
   it('abre Marketing como cuarta opción y resalta la vista activa', () => {
     const buttons = [...document.querySelectorAll('.sidebar-button')];
-    expect(buttons).toHaveLength(4);
+    expect(buttons).toHaveLength(5);
     expect(buttons[3].dataset.view).toBe('marketing');
+    expect(buttons[4].dataset.view).toBe('postventa');
     buttons[3].click();
     expect(document.querySelector('.marketing-view')).toBeTruthy();
     expect(document.querySelector('.sidebar-button.active').dataset.view).toBe('marketing');

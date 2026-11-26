@@ -53,11 +53,12 @@ describe('Navegación filtrada por rango', () => {
       'search',
       'summary',
       'marketing',
+      'postventa',
     ]);
 
     await mountAs('gerente');
 
-    expect(navViews()).toEqual(['dashboard', 'search', 'summary', 'marketing']);
+    expect(navViews()).toEqual(['dashboard', 'search', 'summary', 'marketing', 'postventa']);
     const actions = actionKeys();
     expect(actions).toContain('quick-new-entity');
     expect(actions).toContain('quick-new-document');
@@ -73,6 +74,7 @@ describe('Navegación filtrada por rango', () => {
 
     expect(navViews()).not.toContain('summary');
     expect(navViews()).toContain('marketing');
+    expect(navViews()).not.toContain('postventa');
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
     const actions = actionKeys();
     expect(actions).not.toContain('quick-new-entity');
@@ -87,13 +89,14 @@ describe('Navegación filtrada por rango', () => {
     expect(navViews()).toContain('search');
     expect(navViews()).not.toContain('summary');
     expect(navViews()).not.toContain('marketing');
+    expect(navViews()).toContain('postventa');
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
   });
 
-  it('N1 solo ve Panel y Buscar, sin acciones rápidas de edición', async () => {
+  it('N1 solo ve Panel, Buscar y Postventa, sin acciones rápidas de edición', async () => {
     await mountAs('atencion');
 
-    expect(navViews()).toEqual(['dashboard', 'search']);
+    expect(navViews()).toEqual(['dashboard', 'search', 'postventa']);
     expect(navViews()).not.toContain('summary');
     expect(navViews()).not.toContain('marketing');
     const actions = actionKeys();

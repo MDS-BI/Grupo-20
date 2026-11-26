@@ -3,6 +3,7 @@ import { getLabel } from '../module-config.js';
 import { resolveEntityDateRule } from '../utils/entity-date.js';
 import { getReadinessErrors, isFieldVisible, resolveFieldRules } from '../utils/field-rules.js';
 import { renderDocumentListHtml } from './document-list.js';
+import { DEFAULT_POSTVENTA_CONFIG, isTicket } from '../utils/postventa.js';
 
 export function renderEntityDetailHtml(config, entity, documents) {
   if (!entity) {
@@ -49,6 +50,24 @@ export function renderEntityDetailHtml(config, entity, documents) {
         `<p class="entity-detail-custom" data-field="${escapeHtml(def.key)}">${escapeHtml(def.label || def.key)}: ${escapeHtml(entity[def.key])}</p>`
     )
     .join('');
+  const postventa = config?.postventa || DEFAULT_POSTVENTA_CONFIG;
+  const tickets = (documents || []).filter(isTicket);
+  const postventaHtml = tickets.length
+    ? `<section class="entity-detail-postventa">
+        <h3>Postventa</h3>
+        ${tickets
+          .map(
+            (ticket) => `<article class="entity-detail-ticket">
+              <p>Asunto: ${escapeHtml(ticket.asunto || '')}</p>
+              <p>Categoría: ${escapeHtml(postventa.categoryOptions.find((option) => option.value === ticket.categoria)?.label || ticket.categoria || '')}</p>
+              <p>Prioridad: ${escapeHtml(postventa.priorityOptions.find((option) => option.value === ticket.prioridad)?.label || ticket.prioridad || '')}</p>
+              <p>Estado: ${escapeHtml(ticket.status || '')}</p>
+              <p>Nota de resolución: ${escapeHtml(ticket.nota_resolucion || '')}</p>
+            </article>`
+          )
+          .join('')}
+      </section>`
+    : '';
   return `
     <article id="entity-detail" class="entity-detail" data-entity-id="${escapeHtml(entity.entity_id)}">
       <header class="entity-detail-header">
@@ -61,6 +80,7 @@ export function renderEntityDetailHtml(config, entity, documents) {
           ${customFieldsHtml}
         </div>
       </header>
+      ${postventaHtml}
       <section class="entity-detail-history">
         <h3>Historial de ${getLabel(config, 'documentPlural').toLowerCase()}</h3>
         <div id="entity-history" class="history-list">

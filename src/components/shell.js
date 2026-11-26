@@ -16,6 +16,7 @@ export const NAV_ITEMS = [
   { key: 'search', labelKey: 'search', icon: '🔍', id: 'nav-search' },
   { key: 'summary', labelKey: 'summary', icon: '📊', id: 'nav-summary' },
   { key: 'marketing', label: 'Marketing', icon: '📣', id: 'nav-marketing' },
+  { key: 'postventa', label: 'Postventa', icon: '🎫', id: 'nav-postventa' },
 ];
 
 export function renderShellHtml(config, activeNavKey) {

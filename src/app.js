@@ -21,6 +21,9 @@ import {
   saveEntities,
   loadMarketingConfig,
   saveMarketingConfig,
+  listTicketDocuments,
+  createTicketDocument,
+  changeTicketStatus,
   ValidationError,
 } from './storage.js';
 import { renderShellHtml } from './components/shell.js';
@@ -48,6 +51,7 @@ import { renderCommercialSummaryHtml } from './components/commercial-summary.js'
 import { renderCaptureFormHtml, collectCaptureFormData } from './components/capture-form.js';
 import { createProspectFromCapture, CaptureError } from './utils/capture-prospect.js';
 import { renderMarketingHtml } from './components/marketing.js';
+import { renderPostventaHtml } from './components/postventa.js';
 import { renderMarketingChatHtml } from './components/marketing-chat.js';
 import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
 import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
@@ -80,11 +84,19 @@ import { actionForView, can } from './auth/permissions.js';
 import { renderLoginHtml } from './components/login.js';
 import { collectUserData, RANK_OPTIONS, renderUsersAdminHtml } from './components/users-admin.js';
 
-const ROUTE_VIEWS = new Set(['capture', 'marketing', 'summary', 'search', 'users-admin']);
+const ROUTE_VIEWS = new Set([
+  'capture',
+  'marketing',
+  'postventa',
+  'summary',
+  'search',
+  'users-admin',
+]);
 const VIEW_ROUTES = {
   dashboard: '',
   capture: 'capture',
   marketing: 'marketing',
+  postventa: 'postventa',
   summary: 'summary',
   search: 'search',
   'users-admin': 'users-admin',
@@ -287,6 +299,10 @@ export function initApp(rootEl = null, options = {}) {
     documentFormDraft: null,
     entityFormBaseline: null,
     documentFormBaseline: null,
+    ticketFormOpen: false,
+    ticketClientSearch: '',
+    ticketValues: {},
+    ticketErrors: {},
     focusSearchOnRender: false,
   };
 
@@ -794,6 +810,25 @@ export function initApp(rootEl = null, options = {}) {
     });
   }
 
+  function visibleTicketDocuments() {
+    const context = { documents: state.documents, entities: state.entities };
+    if (!state.authEnabled || !state.currentUser) return listTicketDocuments(context);
+    return listTicketDocuments({ ...context, user: state.currentUser });
+  }
+
+  function renderPostventaView() {
+    return renderPostventaHtml(state.config, {
+      tickets: visibleTicketDocuments(),
+      clients: activeEntities(),
+      formOpen: state.ticketFormOpen,
+      formValues: state.ticketValues,
+      formErrors: state.ticketErrors,
+      ticketClientSearch: state.ticketClientSearch,
+      canCreate: uiCan('postventa:create'),
+      canTransition: uiCan('postventa:transition'),
+    });
+  }
+
   function renderUsersAdminView() {
     const users = listUsers();
     const editing = state.editingUserId
@@ -810,6 +845,8 @@ export function initApp(rootEl = null, options = {}) {
         return renderUsersAdminView();
       case 'marketing':
         return renderMarketingView();
+      case 'postventa':
+        return renderPostventaView();
       case 'capture':
         return `${renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted)}${
           state.config.marketing
@@ -1058,6 +1095,45 @@ export function initApp(rootEl = null, options = {}) {
     render();
   }
 
+  function onTicketFormSubmit(formEl) {
+    const values = formValues(formEl);
+    state.ticketValues = values;
+    try {
+      createTicketDocument(values);
+      state.ticketErrors = {};
+      state.ticketValues = {};
+      state.ticketFormOpen = false;
+      refreshData();
+      render();
+    } catch (err) {
+      if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
+      state.ticketErrors = err?.errors || { _form: MESSAGES.required };
+      render();
+    }
+  }
+
+  function onTicketStatusChange(selectEl) {
+    const ticketId = selectEl.dataset.ticketId;
+    const noteEl = rootEl.querySelector(`[data-ticket-note="${ticketId}"]`);
+    try {
+      changeTicketStatus(ticketId, selectEl.value, noteEl?.value || '');
+      state.ticketErrors = {};
+      refreshData();
+      render();
+    } catch (err) {
+      if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
+      state.ticketErrors = err?.errors || { _form: MESSAGES.required };
+      render();
+    }
+  }
+
+  function onTicketClientSearch(inputEl) {
+    const formEl = inputEl.closest('#ticket-form');
+    if (formEl) state.ticketValues = { ...state.ticketValues, ...formValues(formEl) };
+    state.ticketClientSearch = inputEl.value;
+    render();
+  }
+
   function onArchiveEntity(id) {
     const entity = state.entities.find((e) => e.id === id);
     if (!entity || isArchivedEntity(entity)) return;
@@ -1277,6 +1353,20 @@ export function initApp(rootEl = null, options = {}) {
     switch (action) {
       case 'navigate':
         navigate(target.dataset.view);
+        break;
+      case 'ticket-form':
+        if (!uiCan('postventa:create')) {
+          showPermissionDenied();
+          break;
+        }
+        state.ticketFormOpen = !state.ticketFormOpen;
+        state.ticketErrors = {};
+        render();
+        break;
+      case 'cancel-ticket-form':
+        state.ticketFormOpen = false;
+        state.ticketErrors = {};
+        render();
         break;
       case 'quick-new-entity':
         if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
@@ -1507,6 +1597,9 @@ export function initApp(rootEl = null, options = {}) {
     } else if (event.target.id === 'document-form') {
       event.preventDefault();
       onDocumentFormSubmit(event.target);
+    } else if (event.target.id === 'ticket-form') {
+      event.preventDefault();
+      onTicketFormSubmit(event.target);
     } else if (event.target.id === 'capture-form') {
       event.preventDefault();
       const values = collectCaptureFormData(event.target, state.config, state.captureValues);
@@ -1581,9 +1674,14 @@ export function initApp(rootEl = null, options = {}) {
       state.searchQuery = event.target.value;
       updateSearchResults();
     }
+    if (event.target.id === 'ticket-client-search') onTicketClientSearch(event.target);
   }
 
   function handleChange(event) {
+    if (event.target.dataset?.action === 'ticket-status-change') {
+      onTicketStatusChange(event.target);
+      return;
+    }
     if (event.target.id === 'performance-campaign') {
       state.selectedCampaignId = event.target.value || 'all';
       render();

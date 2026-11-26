@@ -27,6 +27,10 @@ const ALL_ACTIONS = Object.freeze([
   'summary:view_own',
   'marketing:view',
   'marketing:manage',
+  'postventa:view',
+  'postventa:view_own',
+  'postventa:create',
+  'postventa:transition',
   'team:view_all',
   'team:view_own',
   'team:manage',
@@ -74,6 +78,7 @@ export const PERMISSION_MATRIX = Object.freeze({
     'document:edit_own',
     'document:transition_own',
     'summary:view_own',
+    'postventa:view_own',
     'team:view_own',
     'chat:create_query',
   ]),
@@ -83,6 +88,9 @@ export const PERMISSION_MATRIX = Object.freeze({
     'entity:view_any',
     'document:read',
     'document:create',
+    'postventa:view',
+    'postventa:create',
+    'postventa:transition',
     'chat:view',
     'chat:answer',
     'chat:create_query',
@@ -95,6 +103,7 @@ const VIEW_ACTIONS = Object.freeze({
   search: 'search:view',
   summary: 'summary:view_all',
   marketing: 'marketing:view',
+  postventa: 'postventa:view',
   'users-admin': 'users:manage',
 });
 
@@ -120,6 +129,7 @@ export function assertPermission(role, action, context = {}) {
 export function actionForView(view, context = {}) {
   if (view === 'summary' && context.role === 'n2_sales') return 'summary:view_own';
   if (view === 'summary' && context.role === 'n4_manager') return 'summary:view_all';
+  if (view === 'postventa' && context.role === 'n2_sales') return 'postventa:view_own';
   if (view === 'manage')
     return context.manageTab === 'document' ? 'document:create' : 'entity:create';
   if (view === 'capture') return null;

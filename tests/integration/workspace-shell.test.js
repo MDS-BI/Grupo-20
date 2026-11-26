@@ -24,14 +24,15 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
     }
   });
 
-  it('ofrece cuatro botones laterales en el orden acordado sin Clientes ni Interacciones', () => {
+  it('ofrece cinco botones laterales en el orden acordado sin Clientes ni Interacciones', () => {
     const views = Array.from(document.querySelectorAll('.sidebar-button')).map(
       (button) => button.dataset.view
     );
-    expect(views).toEqual(['dashboard', 'search', 'summary', 'marketing']);
+    expect(views).toEqual(['dashboard', 'search', 'summary', 'marketing', 'postventa']);
     expect(document.querySelector('#nav-entities')).toBeNull();
     expect(document.querySelector('#nav-documents')).toBeNull();
     expect(document.querySelector('#nav-marketing')).toBeTruthy();
+    expect(document.querySelector('#nav-postventa')).toBeTruthy();
     expect(document.querySelector('.sidebar').textContent).not.toContain('Clientes');
     expect(document.querySelector('.sidebar').textContent).not.toContain('Interacciones');
   });
@@ -64,11 +65,11 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
       .getElementById('entity-form')
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    for (const view of ['dashboard', 'search', 'summary', 'marketing']) {
+    for (const view of ['dashboard', 'search', 'summary', 'marketing', 'postventa']) {
       document.querySelector(`[data-action="navigate"][data-view="${view}"]`).click();
     }
     expect(localStorage.getItem('erp_entities')).toContain('Acme');
-    expect(document.querySelectorAll('.sidebar-button')).toHaveLength(4);
+    expect(document.querySelectorAll('.sidebar-button')).toHaveLength(5);
   });
 
   it('conserva los enlaces profundos a las vistas de gestión retiradas del menú', () => {
