@@ -170,7 +170,7 @@ detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
 - `placeholder` es texto de ejemplo opcional; se renderiza en color gris y desaparece al escribir. No altera la validación ni el registro (FR-062, FR-067).
 - Los desplegables admiten `options` como cadenas o como `{ value, label }`. La interfaz muestra `label` pero persiste `value`; por eso «Llamada» se guarda como `llamada` y sigue satisfaciendo `when.equals` (FR-063).
 - `rubro` conserva su clave, cambia su etiqueta a «Tipo de actividad» y usa `select` con exactamente: «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante» (FR-066).
-- El encabezado de creación del cliente y su acción rápida muestran «Nuevo Cliente»; el término se deriva de `labels.entity` sin forzar género (FR-064).
+- El encabezado de creación del cliente dentro de «Gestionar clientes» muestra «Nuevo Cliente»; el término se deriva de `labels.entity` sin forzar género (FR-064). El panel principal ya no ofrece esa acción rápida: la creación se hace desde la pantalla de gestión (FR-033, FR-034).
 - Las pistas de la casilla adicional de contacto son: `Ej: +56 9 1234 5678` para «Llamada» y «WhatsApp», `Ej: nombre@ejemplo.cl` para «Correo» y `Ej: Sala 2 o enlace» para «Reunión» (FR-067).
 
 ## Expectativas de Extensibilidad

@@ -12,9 +12,9 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15, US22, US23) y P2 (US2, US6, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21, US25). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable. US24 permanece documentada en `spec.md` pero sin fase en este incremento por no contar con artefactos de diseño propios.
 
-**Incremento anterior**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; T195-T210 (Postventa) cubren `FR-104`–`FR-109` y `SC-039`–`SC-040`.
+**Incremento anterior**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; T195-T210 (Postventa) cubren `FR-104`–`FR-109` y `SC-039`–`SC-040`; T211-T222 (ajustes de Postventa) cubren la pestaña nueva, la sincronización entre pestañas y el tamaño de las tarjetas, y quedan superados por el incremento actual sin renumerar ni cambiar marcadores.
 
-**Incremento actual**: T211-T222 (ajustes de Postventa) cubren la pestaña nueva del formulario, la actualización automática de la vista original y el tamaño de las tarjetas conforme a `FR-104`, `FR-105`, `FR-106`, `FR-109`, `SC-039` y `SC-040`; conservan T001-T210 como historial completado sin renumerar ni cambiar marcadores.
+**Incremento actual**: T223-T250 (panel de Postventa en línea y panel simplificado) cubren `FR-022`, `FR-033`, `FR-034`, `FR-064`, `FR-091`, `FR-094`, `FR-104`–`FR-109`, `SC-015`, `SC-027`, `SC-039` y `SC-040`; «Nuevo Ticket» abre un panel en línea dentro de `?view=postventa`, sin pestaña nueva ni sincronización, y el panel principal queda con tres acciones rápidas; conservan T001-T222 como historial completado sin renumerar ni cambiar marcadores.
 
 **Convención de historias desglosadas**: `spec.md` conserva `US1`–`US23` como epígrafes de trazabilidad y detalla las responsabilidades en subhistorias `US2a`–`US2d`, `US3a`–`US3b`, `US4a`–`US4c`, `US6a`–`US6b`, `US8a`–`US8b`, `US10a`–`US10c`, `US11a`–`US11b`, `US13a`–`US13b`, `US14a`–`US14b`, `US15a`–`US15b`, `US16a`–`US16d`, `US17a`–`US17b`, `US18a`–`US18b`, `US19a`–`US19b`, `US20a`–`US20c`, `US21a`–`US21b`, `US22a`–`US22c` y `US23a`–`US23c`. Las etiquetas de tarea siguen siendo `[USn]`; cuando una tarea cubre una responsabilidad concreta, la descripción indica la subhistoria sin renumerar IDs.
 
@@ -212,9 +212,9 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 ## Phase 10: US15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
 
-**Objetivo**: Panel de entrada con cinco acciones rápidas exclusivamente en el panel y tarjetas de estadísticas en vivo.
+**Objetivo**: Panel de entrada con acciones rápidas exclusivamente en el panel y tarjetas de estadísticas en vivo; las cinco acciones originales quedan reducidas a tres por T223-T250.
 
-**Prueba independiente**: Abrir la aplicación, contar exactamente cinco acciones rápidas en `.dashboard`, navegar a Marketing y verificar que no existe `.quick-actions`, abrir cada destino del panel con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
+**Prueba independiente**: Abrir la aplicación, contar exactamente cinco acciones rápidas en `.dashboard` en el incremento original —tres en el incremento actual—, navegar a Marketing y verificar que no existe `.quick-actions`, abrir cada destino del panel con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
 
 ### Pruebas de US15
 
@@ -676,7 +676,130 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - [x] T221 [P] [US25] Añadir en `src/styles.css` la regla `.postventa-cards` equivalente a `.summary-cards` para igualar tamaño y proporción de las tres tarjetas, sin modificar `.stat-card` global ni el orden de etiqueta y valor.
 - [x] T222 [US25] Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T211-T221, corregir fallos en `src/` y `tests/` y verificar que T001-T210 siguen en verde sin cambiar sus marcadores `[x]`.
 
-**Punto de control**: «Nuevo Ticket» abre una pestaña independiente, la vista Postventa original se actualiza sola tras guardar y las tarjetas igualan a los indicadores de «Resumen»; T222 cierra el gate funcional y de calidad de este incremento.
+**Punto de control**: «Nuevo Ticket» abre una pestaña independiente, la vista Postventa original se actualiza sola tras guardar y las tarjetas igualan a los indicadores de «Resumen»; T222 cierra el gate funcional y de calidad de este incremento, pero sus decisiones de pestaña y sincronización quedan superadas por T223-T249.
+
+---
+
+## Phase 29: US4a - Creación dentro de las gestiones (P1)
+
+**Objetivo**: Conseguir que «Gestionar clientes» y «Gestionar interacciones» abran las pantallas de gestión con el formulario de alta vacío, sin entradas de creación en el panel ni apartados de gestión en la barra lateral.
+
+**Prueba independiente**: Con `gerente` (N4) y `ventas` (N2), abrir `?view=manage-entity` y `?view=manage-document`, comprobar el formulario vacío con «Nuevo Cliente» o «Nueva interacción» y volver al panel con «Panel» sin mutar `erp_entities` ni `erp_documents`; con `atencion` (N1) verificar que las gestiones siguen denegadas por enlace profundo.
+
+### Pruebas de US4a
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [ ] T223 [P] [US4a] Adaptar `tests/integration/manage-screen.test.js` para verificar que `?view=manage-entity` muestra `.client-management-table`, `.client-form-section` con el encabezado «Nuevo Cliente» y `#entity-form` vacío, sin `.entity-list`, sin entradas de gestión en `.sidebar` y sin cambios en `erp_entities` al volver al panel.
+- [ ] T224 [P] [US4a] Adaptar `tests/integration/manage-document.test.js` para verificar que `?view=manage-document` muestra `#document-form`, el encabezado «Nueva interacción» y `#field-notes` vacío, sin entradas de gestión en `.sidebar` y sin cambios en `erp_documents` al volver al panel.
+
+### Implementación de US4a
+
+- [ ] T225 [US4a] Ajustar `renderManageView()` en `src/app.js` para que las acciones de gestión abren `manage-entity` o `manage-document` con el formulario vacío, sin reutilizar borradores ni identificadores de edición, y conservan los enlaces profundos `?view=manage-entity` y `?view=manage-document`.
+- [ ] T226 [US4a] Eliminar de `handleClick()` en `src/app.js` los casos `quick-new-entity` y `quick-new-document`, conservando únicamente `quick-manage`, `navigate` a `manage-document` y `quick-search` como entradas del panel hacia gestión/búsqueda.
+
+**Punto de control**: Las gestiones son el único lugar de alta de clientes e interacciones y los formularios aparecen vacíos T223-T226.
+
+---
+
+## Phase 30: US7 - Etiquetas de creación coherentes (P1)
+
+**Objetivo**: Derivar de `labels` los encabezados de creación y quitar del panel cualquier botón de alta, sin fijar género gramatical en los componentes.
+
+**Prueba independiente**: Con el perfil CRM activo, «Nuevo Cliente» aparece solo dentro de «Gestionar clientes», «Nueva interacción» aparece dentro de «Gestionar interacciones», y Panel, Buscar, Resumen, Marketing y gestión muestran «Cliente» e «Interacción» sin «Entidad», «Documento» ni «Nueva cliente».
+
+### Pruebas de US7
+
+> **Nota**: Esta suite se escribe primero y debe fallar antes de la implementación.
+
+- [ ] T227 [P] [US7] Adaptar `tests/integration/relabeling.test.js` para exigir que Panel, Buscar, Resumen, Marketing y gestión usen «Cliente» e «Interacción» —y «Fecha de nacimiento»—, que «Nuevo Cliente» aparezca solo en la gestión y que no aparezcan «Nueva cliente», «Nuevo Cliente» en `.quick-actions`, «Entidad» ni «Documento» en texto visible.
+
+### Implementación de US7
+
+- [ ] T228 [US7] Ajustar los encabezados de creación en `renderManageView()` de `src/app.js` para derivarlos de `getLabel()`: `Nuevo ${entityLabel}` para clientes, `Nueva interacción` con el perfil CRM y `Nuevo documento` con la configuración base, sin texto «Nueva cliente» ni género codificado en `src/components/`.
+
+**Punto de control**: La terminología de alta es consistente en todas las vistas y no depende de constantes de género T227-T228.
+
+---
+
+## Phase 31: US15a - Panel con tres acciones rápidas (P1)
+
+**Objetivo**: Reducir el panel a «Gestionar clientes», «Gestionar interacciones» y «Buscar registros», filtradas por rango, sin «Nuevo Cliente», «Nueva interacción» ni «Abrir Marketing».
+
+**Prueba independiente**: Con permisos completos, la URL raíz muestra exactamente esas tres acciones en ese orden; `ventas` ve las tres, `atencion` solo «Buscar registros» y `marketing` ninguna de gestión; activar cada acción abre su gestión o enfoca `#search-input`.
+
+### Pruebas de US15a
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [ ] T229 [P] [US15a] Adaptar `tests/integration/dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— en ese orden, sin `quick-new-*`, sin «Nuevo Cliente», sin «Nueva interacción» ni «Abrir Marketing», y verificando que cada botón abre su gestión o enfoca `#search-input`.
+- [ ] T230 [P] [US15a] Adaptar `tests/integration/client-form-presentation.test.js` para exigir «Nuevo Cliente» solo en `.client-form-section h2` tras abrir la gestión y para eliminar la aserción sobre la acción rápida retirada del panel.
+- [ ] T231 [P] [US15a] Adaptar `tests/integration/navigation-by-rank.test.js` para exigir que N4/N2 ven las tres acciones, N1 solo `quick-search`, N3 no ve acciones de gestión y los enlaces profundos de gestión siguen denegados conforme a la matriz.
+
+### Implementación de US15a
+
+- [ ] T232 [US15a] Modificar `renderDashboardHtml()` en `src/components/dashboard.js` para renderizar solo `Gestionar ${entityPlural}`, `Gestionar ${documentPlural}` y `Buscar registros`, con `data-action="quick-manage"`, `data-action="navigate" data-view="manage-document"` y `data-action="quick-search"`, sin botones `quick-new-entity` ni `quick-new-document`.
+- [ ] T233 [US15a] Simplificar `applyPermissionFilters()` en `src/app.js` para filtrar únicamente esas tres acciones con `entity:create`/`entity:edit_*`, `document:create` y `search:view`, retirando las ramas de `quick-new-entity` y `quick-new-document`.
+
+**Punto de control**: El panel ofrece solo tres entradas permitidas y la búsqueda y las gestiones siguen alcanzables T229-T233.
+
+---
+
+## Phase 32: US16d - Marketing sin acciones del panel (P2)
+
+**Objetivo**: Mantener las cinco tarjetas, el embudo y los cinco atajos de Marketing, sin heredar las tres acciones rápidas del panel.
+
+**Prueba independiente**: Tras registrar 47 clientes y 120 interacciones, panel y Marketing muestran las mismas cifras; Marketing no contiene `.quick-actions` ni las etiquetas «Gestionar clientes», «Gestionar interacciones» o «Buscar registros», y conserva sus cinco atajos en orden.
+
+### Pruebas de US16d
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [ ] T234 [P] [US16d] Adaptar `tests/integration/marketing-dashboard.test.js` para exigir tres acciones en el panel, ninguna `.quick-actions` en `.marketing-view` y las mismas cinco tarjetas, embudo y últimas interacciones en ambas vistas.
+- [ ] T235 [P] [US16d] Adaptar `tests/integration/marketing-navigation.test.js` para exigir que Marketing conserve los cinco atajos en el orden acordado y que no aparezcan en Marketing las tres etiquetas de acciones rápidas del panel ni los botones de creación retirados.
+
+### Implementación de US16d
+
+- [ ] T236 [US16d] Verificar y ajustar `renderMarketingView()` en `src/app.js` para invocar `renderDashboardHtml()` con `showQuickActions: false`, sin reintroducir acciones del panel y conservando `team`, `campaigns`, `performance`, `chat` y `social` como claves internas de los cinco atajos.
+
+**Punto de control**: Marketing comparte cifras pero no controles de gestión T234-T236.
+
+---
+
+## Phase 33: US25 - Panel en línea de «Nuevo Ticket» (P2)
+
+**Objetivo**: Abrir el formulario de ticket dentro de `?view=postventa`, sustituyendo temporalmente la tabla con las tres tarjetas visibles, la misma presentación que «Nuevo Cliente» y sin pestaña nueva, ruta independiente ni sincronización entre pestañas.
+
+**Prueba independiente**: Con `atencion` o `gerente`, pulsar «Nuevo Ticket» deja la vista en `?view=postventa`, no llama a `window.open`, muestra el formulario en línea con el orden y las opciones exactas y mantiene las tarjetas; guardar cierra el panel y actualiza tabla y tarjetas; cancelar con cambios pide confirmación antes de descartar; `ventas` no puede crear ni cambiar estados y `marketing`/visitante reciben denegación.
+
+### Pruebas de US25
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [ ] T237 [P] [US25] Crear `tests/integration/postventa-inline-panel.test.js` para exigir que `[data-action="ticket-form"]` active `state.ticketFormOpen`, no llame a `window.open`, no cambie `?view=postventa`, sustituya `.client-management-table` por `#ticket-form` con `.postventa-cards` visible, conserve «Nuevo Ticket» al cerrar y muestre los campos `entity_id`, `asunto`, `categoria`, `prioridad`, `status`, `nota_resolucion` en ese orden con categorías «Soporte técnico», «Facturación», «Garantía» y «Consulta», prioridades sin preselección «Baja», «Media» y «Alta» y pistas grises.
+- [ ] T238 [P] [US25] Adaptar `tests/integration/postventa-permissions.test.js` para verificar que N1/N4 abren y guardan el panel en línea, que N2 no ve «Nuevo Ticket» y recibe `No tienes permiso para realizar esta acción` si se fuerza el estado sin mutar `erp_documents`, que N3/visitante reciben «Acceso denegado» o login y que `?view=ticket-form` ya no resuelve como vista.
+- [ ] T239 [P] [US25] Adaptar `tests/integration/postventa-customer-detail.test.js` para crear el ticket desde el panel en línea de Postventa y confirmar que la ficha del cliente muestra «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con texto sanitizado y vínculo `entity_id`.
+- [ ] T240 [P] [US25] Crear `tests/integration/postventa-inline-cancel.test.js` para exigir que `[data-action="cancel-ticket-form"]` cierra sin confirmar cuando no hay cambios, confirma cuando los hay, conserva el formulario al rechazar el descarte, cierra sin crear ticket al aceptarlo y no persiste borradores en `localStorage`.
+- [ ] T241 [P] [US25] Eliminar `tests/integration/postventa-ticket-tab.test.js` y `tests/integration/postventa-cross-tab.test.js` porque sus expectativas de `window.open`, `?view=ticket-form` y eventos `storage` quedan reemplazadas por T237-T240.
+- [ ] T242 [P] [US25] Ampliar `tests/integration/postventa-view.test.js` para exigir que las tres tarjetas conserven etiquetas, valores y orden antes, durante y después del panel, y que la tabla vuelva con la fila nueva tras guardar sin recarga ni eventos `storage`.
+
+### Implementación de US25
+
+- [ ] T243 [US25] Modificar `renderPostventaHtml()` en `src/components/postventa.js` para renderizar el markup de `renderTicketFormHtml()` dentro de `.postventa-view` cuando esté abierto el panel, manteniendo visibles las tres tarjetas, reemplazando solo la tabla y mostrando de nuevo «Nuevo Ticket» al cerrar.
+- [ ] T244 [US25] Modificar `renderTicketFormHtml()` en `src/components/ticket-form.js` para usar `.form-field`, `.client-form-section` y `.form-actions` como «Nuevo Cliente», conservar el orden y las opciones declaradas, los mensajes exactos y añadir un botón `[data-action="cancel-ticket-form"]` sin incorporar campos ni reglas de entidades.
+- [ ] T245 [US25] Eliminar de `src/app.js` el registro de `ticket-form` en `ROUTE_VIEWS`, `VIEW_ROUTES`, `routeFromKey()` y `routeForState()`, la vista `renderTicketFormView()`, el `window.open(routeUrl('ticket-form'), '_blank', 'noopener')`, el listener `storage` y su retirada en `destroy()`, conservando `postventa:create` en `createTicketDocument()`.
+- [ ] T246 [US25] Cablear en `src/app.js` las acciones `ticket-form` y `cancel-ticket-form` con `state.ticketFormOpen`, preservando `state.ticketValues`, `state.ticketClientSearch` y `state.ticketErrors` durante los `render()` necesarios para actualizar el buscador y los errores en la misma pestaña.
+- [ ] T247 [US25] Implementar en `src/app.js` la comprobación de cambios sin guardar del panel de ticket y la confirmación de descarte reutilizando la semántica de `confirmDiscardChanges()`, sin nueva clave de `localStorage`, sin navegación y sin cerrar el panel si el usuario decide quedarse.
+- [ ] T248 [US25] Ajustar `onTicketFormSubmit()` en `src/app.js` para guardar con `createTicketDocument()`, limpiar errores y borradores, cerrar el panel, permanecer en `?view=postventa` y recalcular tabla y tarjetas con un solo `render()` y sin `StorageEvent`, `postMessage`, sondeo ni `visibilitychange`.
+- [ ] T249 [US25] Retirar `ticket-form` de `VIEW_ACTIONS` en `src/auth/permissions.js` para que el catálogo de vistas ya no exponga una ruta eliminada, conservando `postventa:view`, `postventa:create` y `postventa:transition` y el mensaje exacto `No tienes permiso para realizar esta acción`.
+
+---
+
+## Polish final del incremento
+
+**Objetivo**: Cerrar la remediación sin renumerar T001-T222 ni alterar sus marcadores completados.
+
+- [ ] T250 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T223-T249, corregir fallos en `src/` y `tests/`, verificar que T001-T222 siguen marcados `[x]` y confirmar que no quedan referencias a `quick-new-entity`, `quick-new-document`, `?view=ticket-form`, `window.open` ni listener `storage` en el flujo de Postventa.
 
 ---
 
@@ -691,7 +814,13 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **Phase 25 (Inicio de sesión y rangos)**: se añade tras Polish sin renombrar fases existentes; depende de Setup, Foundational y de los contratos de `src/components/shell.js`, `src/components/dashboard.js`, `src/storage.js` y Marketing definidos en Phase 14-23.
 - **Phase 26 (Remediación de consistencia)**: se ejecuta tras Phase 25 sin renombrar T001-T186; depende de los contratos de rutas relativas, mensajes exactos, terminología, casos límite, rendimiento y búsqueda canónica ya declarados en `spec.md`, `plan.md` y los contratos.
 - **Phase 27 (US25 Postventa)**: se ejecuta tras Phase 26 sin renombrar T001-T194; depende de Setup, Foundational, de la matriz de US23, de la relación entidad-documento de US1/US11 y de los contratos `contracts/postventa.md`, `contracts/auth.md` y `contracts/entity-storage.md`.
-- **Phase 28 (ajustes de Postventa)**: se ejecuta tras Phase 27 sin renombrar T001-T210; depende del formulario, las tarjetas y la matriz de permisos de Phase 27, y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre pestaña nueva, sincronización por `storage` y tamaño de tarjetas.
+- **Phase 28 (ajustes de Postventa)**: se ejecuta tras Phase 27 sin renombrar T001-T210; depende del formulario, las tarjetas y la matriz de permisos de Phase 27, y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre pestaña nueva, sincronización por `storage` y tamaño de tarjetas; sus decisiones de pestaña y sincronización son superadas por Phase 33.
+- **Phase 29 (US4a)**: se ejecuta tras Phase 28 sin renombrar T001-T222; depende de las gestiones de US4, del panel de US15 y de la decisión de `research.md`/`contracts/marketing.md` de mover la creación a «Gestionar clientes» e «Gestionar interacciones».
+- **Phase 30 (US7)**: depende de Phase 29 y de `labels` de US5 para derivar los encabezados de creación sin género codificado.
+- **Phase 31 (US15a)**: depende de Phase 30, de la matriz de US23 y de la decisión de reducir el panel a tres acciones en `spec.md`, `plan.md` y `contracts/marketing.md`.
+- **Phase 32 (US16d)**: depende de Phase 31 y de los contratos compartidos de tarjetas, embudo y cinco atajos de Marketing.
+- **Phase 33 (US25)**: depende de Phase 27/28, de los permisos `postventa:*`, de las clases de formulario compartidas y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre panel en línea, cancelación con cambios y retiro de pestaña/sincronización.
+- **Polish final**: depende de Phase 29-33 y se ejecuta al final sin renumerar ni desmarcar T001-T222.
 
 ### Dependencias entre historias
 
@@ -733,7 +862,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - En Phase 26: T187/T188 resuelven rutas antes de T189-T193, y T194 se ejecuta al final con `npm test`, `npm run lint` y `npm run format:check`.
 - Clarificaciones Marketing: T134/T135 preceden a T136-T137; T138 precede a T139; T140 depende de T139; T141 precede a T142-T143; T144 y T145 cierran la regresión.
 - En US25: T195-T200 se escriben primero y fallan; T201/T202 definen la configuración y las utilidades puras antes de T203-T209; la matriz T203 precede al filtro de navegación T205 y a la capa de datos T204; el componente T207 y el cableado T208 se integran después de T204/T206; T210 ejecuta el gate final.
-- En Phase 28: T211-T215 se escriben primero y fallan; T216 crea el formulario antes de T217 lo saque de Postventa; T218 registra la ruta antes de T219 abrirla y guardar; T220 añade la sincronización y T221 el estilo; T222 ejecuta el gate final.
+- En Phase 28: T211-T215 se escriben primero y fallan; T216 crea el formulario antes de T217 lo saque de Postventa; T218 registra la ruta antes de T219 abrirla y guardar; T220 añade la sincronización y T221 el estilo; T222 ejecuta el gate final, superado por el incremento actual.
+- En el incremento actual: T223-T224 y T227 y T229-T231 y T234-T235 y T237-T242 se escriben primero y fallan; T225/T226 y T228 y T232/T233 y T236 y T243-T249 se implementan después; T250 ejecuta el gate final sin cambiar marcadores de T001-T222.
 
 ## Oportunidades de paralelismo
 
@@ -750,6 +880,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - Clarificaciones Marketing: T134, T135, T138, T140, T141 y T144 son suites independientes; T136-T137, T139 y T142-T143 se implementan después de sus pruebas; T145 se ejecuta al final.
 - US25: T195-T200 son seis suites independientes en `tests/unit/` y `tests/integration/`; T201 también puede avanzar en paralelo porque crea `src/utils/postventa.js`; T202-T210 se encadenan según las dependencias de configuración, permisos, almacenamiento, ruta, componente y cableado, y T210 se ejecuta al final.
 - Ajustes de Postventa: T211-T215 son cinco suites independientes en `tests/integration/`; T216 y T221 pueden avanzar en paralelo porque crean `src/components/ticket-form.js` y editan `src/styles.css`; T217-T220 se encadenan en `src/components/postventa.js` y `src/app.js`, y T222 se ejecuta al final.
+- Incremento actual: T223/T224, T227, T229-T231, T234/T235 y T237-T242 tocan suites distintas y pueden repartirse; T225/T226, T228, T232/T233, T236 y T243-T249 se encadenan dentro de `src/app.js`, `src/components/dashboard.js`, `src/components/postventa.js`, `src/components/ticket-form.js` y `src/auth/permissions.js`; T250 se ejecuta al final.
 
 ### Ejemplo de paralelismo: US16
 
@@ -808,6 +939,18 @@ T214 "Ampliar tests/integration/postventa-view.test.js ..."
 T215 "Adaptar tests/integration/postventa-customer-detail.test.js ..."
 ```
 
+### Ejemplo de paralelismo: panel en línea y panel simplificado
+
+```bash
+T223 "Adaptar tests/integration/manage-screen.test.js ..."
+T224 "Adaptar tests/integration/manage-document.test.js ..."
+T227 "Adaptar tests/integration/relabeling.test.js ..."
+T229 "Adaptar tests/integration/dashboard.test.js ..."
+T234 "Adaptar tests/integration/marketing-dashboard.test.js ..."
+T237 "Crear tests/integration/postventa-inline-panel.test.js ..."
+T240 "Crear tests/integration/postventa-inline-cancel.test.js ..."
+```
+
 ## Estrategia de implementación
 
 ### MVP primero
@@ -828,7 +971,8 @@ T215 "Adaptar tests/integration/postventa-customer-detail.test.js ..."
 7. Cerrar con Phase 26 (T187-T194) sin renumerar T001-T186: rutas relativas, terminología, casos límite, presupuesto de rendimiento, mensajes exactos, redacción verificable y búsqueda canónica.
 8. Aplicar el incremento T134-T145 sobre las fases US15, US16, US17, US19 y Polish para quitar acciones rápidas de Marketing, fijar los cinco atajos y usar «Dudas y consultas» sin cambiar contratos internos.
 9. Añadir Phase 27 (US25) sin renumerar T001-T194: primero las seis suites que fallan, luego configuración/utilidades, matriz, capa de datos, navegación, ruta, componente, cableado y ficha del cliente; T210 cierra el gate funcional y de calidad.
-10. Añadir Phase 28 sin renumerar T001-T210: primero las cinco suites que fallan, luego `ticket-form.js`, la ruta `ticket-form`, `window.open`, el listener `storage` y `.postventa-cards`; T222 cierra el gate funcional y de calidad de los ajustes.
+10. Añadir Phase 28 sin renumerar T001-T210: primero las cinco suites que fallan, luego `ticket-form.js`, la ruta `ticket-form`, `window.open`, el listener `storage` y `.postventa-cards`; T222 cierra el gate funcional y de calidad de los ajustes, superados por el siguiente incremento.
+11. Aplicar T223-T250 sin renumerar ni desmarcar T001-T222: primero gestiones y etiquetas de creación, luego el panel de tres acciones y Marketing sin atajos de gestión, y finalmente el panel en línea de «Nuevo Ticket» con cancelación segura; T250 cierra el gate funcional y de calidad.
 
 ### Estrategia con equipo paralelo
 
@@ -839,157 +983,157 @@ T215 "Adaptar tests/integration/postventa-customer-detail.test.js ..."
 
 ## Trazabilidad de requisitos a tareas
 
-La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, `T210` el gate de US25 y `T222` el gate de los ajustes de pestaña, sincronización y tarjetas.
+La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, `T210` el gate de US25, `T222` el gate de los ajustes de pestaña/sincronización superados y `T250` el gate final del panel en línea y el panel simplificado.
 
-| Requirement Key | Task IDs                                                                                       | Notes                                                                            |
-| --------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| FR-001          | `T015`, `T017`                                                                                 | Identidad y código único.                                                        |
-| FR-002          | `T005`, `T006`, `T020`, `T026`                                                                 | Edición base y desde gestión.                                                    |
-| FR-003          | `T026`, `T029`                                                                                 | Eliminación con recuento y cascada.                                              |
-| FR-004          | `T063`, `T065`, `T076`, `T193`                                                                 | Lista canónica de campos buscables y anulaciones de perfil.                      |
-| FR-005          | `T019`, `T063`, `T066`, `T192`                                                                 | Lista, estado vacío y mensaje exacto en búsqueda/ficha.                          |
-| FR-006          | `T059`, `T075`, `T089`, `T192`                                                                 | Mensajes exactos de validación.                                                  |
-| FR-007          | `T005`, `T006`, `T016`                                                                         | Consistencia CRUD.                                                               |
-| FR-008          | `T025`, `T073`, `T074`                                                                         | Altas, ediciones y bajas de documentos.                                          |
-| FR-009          | `T016`, `T018`, `T029`, `T074`                                                                 | Vínculo exacto y cascada.                                                        |
-| FR-010          | `T048`, `T050`, `T051`                                                                         | Panel y acciones rápidas.                                                        |
-| FR-011          | `T043`, `T045`                                                                                 | Marco persistente.                                                               |
-| FR-012          | `T043`, `T045`, `T159`, `T170`                                                                 | Barra lateral filtrada por rango.                                                |
-| FR-013          | `T024`, `T027`, `T051`                                                                         | Acceso a entidades desde el panel.                                               |
-| FR-014          | `T024`, `T027`, `T051`                                                                         | Acceso a documentos desde el panel.                                              |
-| FR-015          | `T047`, `T077`                                                                                 | Botón Panel y retorno al inicio.                                                 |
-| FR-016          | `T024`, `T027`                                                                                 | Gestión sin lista de entidades.                                                  |
-| FR-017          | `T024`, `T026`, `T027`                                                                         | CRUD de entidades en gestión.                                                    |
-| FR-018          | `T025`, `T027`, `T028`                                                                         | CRUD de documentos en gestión.                                                   |
-| FR-019          | `T076`, `T077`                                                                                 | Pantalla de búsqueda dedicada.                                                   |
-| FR-020          | `T063`, `T065`, `T076`, `T193`                                                                 | Aplicación del perfil sin lista independiente.                                   |
-| FR-021          | `T051`, `T076`, `T077`                                                                         | Accesos a búsqueda.                                                              |
-| FR-022          | `T047`, `T128`                                                                                 | Confirmación al salir con cambios.                                               |
-| FR-023          | `T007`, `T008`, `T033`                                                                         | Carga de configuración.                                                          |
-| FR-024          | `T007`, `T008`, `T031`                                                                         | Valores predeterminados.                                                         |
-| FR-025          | `T031`, `T033`                                                                                 | Configuración inválida con advertencia.                                          |
-| FR-026          | `T011`, `T012`, `T041`                                                                         | Campos personalizados en formularios.                                            |
-| FR-027          | `T037`, `T040`, `T042`                                                                         | Validación de campos personalizados.                                             |
-| FR-028          | `T038`, `T042`                                                                                 | Campos personalizados en listas/ficha.                                           |
-| FR-029          | `T034`, `T035`                                                                                 | Etiquetas derivadas de configuración.                                            |
-| FR-030          | `T079`, `T081`                                                                                 | Transiciones configuradas por cualquier vía.                                     |
-| FR-031          | `T079`, `T081`                                                                                 | Estado como texto libre.                                                         |
-| FR-032          | `T064`, `T126`, `T191`                                                                         | 500 entidades y 500 documentos con umbrales p95.                                 |
-| FR-033          | `T048`, `T051`, `T171`                                                                         | Cinco acciones rápidas filtradas por rango.                                      |
-| FR-034          | `T028`, `T051`                                                                                 | Formulario vacío desde acción rápida.                                            |
-| FR-035          | `T049`, `T050`, `T052`, `T084`, `T133`                                                         | Tarjetas y embudo canónicos.                                                     |
-| FR-036          | `T043`, `T045`                                                                                 | Marca en barra superior.                                                         |
-| FR-037          | `T045`, `T047`                                                                                 | Módulo activo resaltado.                                                         |
-| FR-038          | `T008`, `T046`                                                                                 | Color de acento con fallback.                                                    |
-| FR-039          | `T043`, `T045`                                                                                 | Barra estrecha operable.                                                         |
-| FR-040          | `T039`, `T129`                                                                                 | Valores huérfanos conservados.                                                   |
-| FR-041          | `T019`, `T022`, `T023`                                                                         | Ficha de entidad.                                                                |
-| FR-042          | `T021`, `T022`                                                                                 | Historial ordenado por fecha.                                                    |
-| FR-043          | `T020`, `T022`                                                                                 | Ficha refleja ediciones.                                                         |
-| FR-044          | `T081`, `T123`, `T124`                                                                         | Indicadores y precedencia de pendientes.                                         |
-| FR-045          | `T122`, `T124`, `T125`                                                                         | Actualización y selección desde resumen.                                         |
-| FR-046          | `T122`, `T125`                                                                                 | Estado vacío del resumen.                                                        |
-| FR-047          | `T036`, `T068`, `T069`                                                                         | Rango de fecha de nacimiento.                                                    |
-| FR-048          | `T067`, `T068`, `T069`                                                                         | Actualización al cambiar de día.                                                 |
-| FR-049          | `T067`, `T069`                                                                                 | Fecha local del dispositivo.                                                     |
-| FR-050          | `T057`, `T071`                                                                                 | Valores históricos conservados y corregidos.                                     |
-| FR-051          | `T053`, `T058`, `T129`                                                                         | Campos ocultos del cliente.                                                      |
-| FR-052          | `T015`, `T017`, `T053`, `T058`                                                                 | Código interno único no visible.                                                 |
-| FR-053          | `T058`, `T129`                                                                                 | Campo `pedidos` eliminado.                                                       |
-| FR-054          | `T039`, `T053`, `T129`                                                                         | Valores ocultos conservados.                                                     |
-| FR-055          | `T053`, `T065`, `T076`, `T193`                                                                 | Perfil de clientes sin contradecir FR-004.                                       |
-| FR-056          | `T054`, `T058`, `T059`                                                                         | Campos obligatorios del cliente.                                                 |
-| FR-057          | `T009`, `T010`, `T054`, `T059`                                                                 | RUT válido y único.                                                              |
-| FR-058          | `T057`, `T061`                                                                                 | Ficha bloqueada de cliente incompleto.                                           |
-| FR-059          | `T055`, `T058`                                                                                 | Canal sin preselección.                                                          |
-| FR-060          | `T055`, `T058`, `T060`                                                                         | Casilla adicional por canal.                                                     |
-| FR-061          | `T009`, `T010`, `T055`, `T059`                                                                 | Validación por canal.                                                            |
-| FR-062          | `T056`, `T058`, `T060`                                                                         | Pista gris del RUT.                                                              |
-| FR-063          | `T056`, `T058`                                                                                 | Opciones de canal.                                                               |
-| FR-064          | `T056`, `T062`                                                                                 | Texto «Nuevo Cliente».                                                           |
-| FR-065          | `T056`, `T058`, `T174`                                                                         | Orden de casillas y `select` de ejecutivo.                                       |
-| FR-066          | `T056`, `T058`                                                                                 | Diez opciones de tipo de actividad.                                              |
-| FR-067          | `T056`, `T058`, `T060`                                                                         | Pistas de casilla adicional.                                                     |
-| FR-068          | `T083`, `T088`, `T092`, `T093`, `T179`                                                         | Conversión interna y auditoría.                                                  |
-| FR-069          | `T085`, `T088`, `T089`, `T090`, `T151`                                                         | Captura pública.                                                                 |
-| FR-070          | `T092`, `T114`, `T169`                                                                         | Reglas por evento y ejecución como `Sistema`.                                    |
-| FR-071          | `T083`, `T085`, `T088`, `T089`                                                                 | Consentimiento de captura.                                                       |
-| FR-072          | `T084`, `T086`, `T087`, `T091`, `T133`                                                         | Embudo compartido.                                                               |
-| FR-073          | `T084`, `T086`, `T087`, `T091`, `T133`                                                         | Tarjetas compartidas.                                                            |
-| FR-074          | `T084`, `T087`, `T118`, `T133`                                                                 | Coincidencia panel/Marketing.                                                    |
-| FR-075          | `T086`, `T091`, `T131`                                                                         | Sin torta ni selector de etapas.                                                 |
-| FR-076          | `T095`, `T097`, `T098`                                                                         | Equipos e integrantes.                                                           |
-| FR-077          | `T095`, `T175`, `T183`                                                                         | Integrantes y atribución histórica.                                              |
-| FR-078          | `T094`, `T096`, `T175`, `T183`                                                                 | Real mensual.                                                                    |
-| FR-079          | `T094`, `T096`, `T175`, `T183`                                                                 | Objetivo mensual.                                                                |
-| FR-080          | `T099`, `T100`, `T102`                                                                         | Apartado de redes sociales.                                                      |
-| FR-081          | `T099`, `T101`, `T103`                                                                         | Interacciones como documentos.                                                   |
-| FR-082          | `T104`, `T106`, `T107`, `T109`                                                                 | Respuestas rápidas por FAQ.                                                      |
-| FR-083          | `T104`, `T105`, `T106`, `T180`                                                                 | Consultas sin coincidencia.                                                      |
-| FR-084          | `T105`, `T108`, `T151`                                                                         | Chat en captura y Marketing.                                                     |
-| FR-085          | `T104`, `T105`, `T107`, `T180`                                                                 | Consentimiento y prospecto previo.                                               |
-| FR-086          | `T110`, `T112`, `T113`, `T184`                                                                 | Campañas e historial con creador.                                                |
-| FR-087          | `T116`, `T119`, `T120`                                                                         | Indicadores de rendimiento.                                                      |
-| FR-088          | `T117`, `T121`                                                                                 | Campaña opcional y «Sin campaña».                                                |
-| FR-089          | `T110`, `T113`, `T114`                                                                         | Acciones internas de campaña.                                                    |
-| FR-090          | `T111`, `T114`                                                                                 | Solapamiento y omitidas.                                                         |
-| FR-091          | `T134`, `T135`, `T136`, `T137`                                                                 | Acciones rápidas solo en el panel; Marketing no las hereda.                      |
-| FR-092          | `T141`, `T142`, `T143`                                                                         | «Dudas y consultas» como terminología visible.                                   |
-| FR-093          | `T138`, `T139`, `T140`, `T144`                                                                 | Cinco atajos de Marketing en orden y terminología aprobada.                      |
-| FR-094          | `T153`, `T159`, `T168`                                                                         | Matriz como fuente única.                                                        |
-| FR-095          | `T153`, `T163`, `T169`, `T182`                                                                 | Validación en capa de datos.                                                     |
-| FR-096          | `T153`, `T156`, `T157`, `T163`, `T169`                                                         | Mensaje exacto de denegación.                                                    |
-| FR-097          | `T150`, `T160`                                                                                 | Acceso denegado y redirección.                                                   |
-| FR-098          | `T146`, `T161`, `T172`, `T173`                                                                 | Administración de usuarios.                                                      |
-| FR-099          | `T056`, `T161`, `T174`                                                                         | Select de ejecutivos activos.                                                    |
-| FR-100          | `T094`, `T175`, `T183`                                                                         | Vinculación del integrante y métricas.                                           |
-| FR-101          | `T092`, `T114`, `T184`                                                                         | Identidad `Sistema` y creador persistido.                                        |
-| FR-102          | `T148`, `T152`, `T167`                                                                         | Persistencia y revocación de sesión.                                             |
-| SC-001          | `T015`, `T178`                                                                                 | Crear entidad en menos de 2 minutos.                                             |
-| SC-002          | `T063`, `T064`                                                                                 | Búsqueda en menos de 10 segundos.                                                |
-| SC-003          | `T178`, `T185`                                                                                 | Prueba cronometrada con cinco participantes.                                     |
-| SC-004          | `T064`, `T126`                                                                                 | 500 registros sin pérdida funcional.                                             |
-| SC-005          | `T048`, `T077`                                                                                 | Accesos iniciales en menos de 10 segundos.                                       |
-| SC-006          | `T132`, `T177`, `T185`                                                                         | Sin regresiones.                                                                 |
-| SC-007          | `T016`, `T128`                                                                                 | Navegación sin pérdida de datos.                                                 |
-| SC-008          | `T030`, `T032`, `T058`                                                                         | Adaptación solo por configuración.                                               |
-| SC-009          | `T043`, `T045`                                                                                 | Marco con marca consistente.                                                     |
-| SC-010          | `T049`, `T052`, `T133`                                                                         | Estadísticas del panel coincidentes.                                             |
-| SC-011          | `T122`, `T124`                                                                                 | Indicadores del resumen coincidentes.                                            |
-| SC-012          | `T068`, `T069`                                                                                 | Fechas inválidas y límite diario.                                                |
-| SC-013          | `T053`, `T129`                                                                                 | Campos ocultos del cliente.                                                      |
-| SC-014          | `T054`, `T055`, `T059`                                                                         | Rechazo de guardados inválidos.                                                  |
-| SC-015          | `T056`                                                                                         | Pista, opciones y texto «Nuevo Cliente».                                         |
-| SC-016          | `T056`, `T058`                                                                                 | Orden y opciones de tipo de actividad.                                           |
-| SC-017          | `T056`, `T060`                                                                                 | Pistas de canales.                                                               |
-| SC-018          | `T084`, `T086`, `T133`                                                                         | Embudo de Marketing.                                                             |
-| SC-019          | `T084`, `T086`, `T133`                                                                         | Tarjetas de Marketing.                                                           |
-| SC-020          | `T043`, `T044`, `T131`                                                                         | Navegación y etiquetas.                                                          |
-| SC-021          | `T086`, `T091`, `T131`                                                                         | Sin torta ni selector.                                                           |
-| SC-022          | `T094`, `T095`, `T183`                                                                         | Equipo y métricas.                                                               |
-| SC-023          | `T099`, `T100`, `T102`                                                                         | Redes sociales.                                                                  |
-| SC-024          | `T116`, `T117`, `T118`, `T119`, `T141`, `T142`, `T143`, `T180`, `T192`                         | «Dudas y consultas» con respuesta, acuse y consentimiento.                       |
-| SC-025          | `T122`, `T123`, `T124`, `T125`, `T126`, `T184`, `T192`                                         | Campañas internas con historial y solapamiento.                                  |
-| SC-026          | `T128`, `T129`, `T130`, `T192`                                                                 | Rendimiento por campaña coherente con los registros.                             |
-| SC-027          | `T134`, `T135`, `T136`, `T137`                                                                 | Cinco acciones rápidas solo en el panel.                                         |
-| SC-028          | `T141`, `T142`, `T143`                                                                         | Etiquetas «Dudas y consultas» sin cambiar contratos.                             |
-| SC-029          | `T138`, `T139`, `T140`, `T144`                                                                 | Cinco atajos de Marketing en orden exacto.                                       |
-| SC-030          | `T104`, `T105`, `T180`                                                                         | Chat con consentimiento.                                                         |
-| SC-031          | `T110`, `T111`, `T112`, `T184`                                                                 | Campañas y solapamientos.                                                        |
-| SC-032          | `T116`, `T117`, `T118`                                                                         | Rendimiento por campaña.                                                         |
-| SC-033          | `T154`                                                                                         | Verificaciones de Nivel 4.                                                       |
-| SC-034          | `T155`                                                                                         | Verificaciones de Nivel 3.                                                       |
-| SC-035          | `T156`                                                                                         | Verificaciones de Nivel 2.                                                       |
-| SC-036          | `T157`                                                                                         | Verificaciones de Nivel 1.                                                       |
-| SC-037          | `T158`                                                                                         | Verificaciones de visitante.                                                     |
-| FR-104          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T211`, `T212`, `T215`, `T216`, `T218`, `T219` | Ticket como `Documento`, formulario en pestaña nueva y desplegable buscable.     |
-| FR-105          | `T195`, `T198`, `T201`, `T207`, `T208`, `T213`, `T214`, `T220`, `T221`                         | Tres tarjetas derivadas, sincronizadas entre pestañas y con tamaño de «Resumen». |
-| FR-106          | `T196`, `T199`, `T203`, `T204`, `T205`, `T212`, `T218`, `T219`                                 | Permisos en UI, rutas, pestaña nueva y capa de datos.                            |
-| FR-107          | `T195`, `T198`, `T204`, `T207`, `T208`                                                         | Categorías y cambios entre cualquier par de estados.                             |
-| FR-108          | `T195`, `T200`, `T201`, `T204`, `T207`                                                         | Prioridad sin preselección y nota condicional.                                   |
-| FR-109          | `T195`, `T198`, `T205`, `T206`, `T207`, `T214`, `T217`, `T221`                                 | Quinta opción, layout sin formulario en línea, tarjetas y estado vacío.          |
-| SC-039          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T210`, `T211`, `T213`, `T215`, `T222`         | Verificaciones funcionales de Postventa y sus ajustes.                           |
-| SC-040          | `T196`, `T199`, `T203`, `T204`, `T205`, `T206`, `T210`, `T212`, `T218`, `T219`, `T222`         | Verificaciones de permisos de Postventa y pestaña nueva.                         |
+| Requirement Key | Task IDs                                                                                                                                                               | Notes                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| FR-001          | `T015`, `T017`                                                                                                                                                         | Identidad y código único.                                                            |
+| FR-002          | `T005`, `T006`, `T020`, `T026`                                                                                                                                         | Edición base y desde gestión.                                                        |
+| FR-003          | `T026`, `T029`                                                                                                                                                         | Eliminación con recuento y cascada.                                                  |
+| FR-004          | `T063`, `T065`, `T076`, `T193`                                                                                                                                         | Lista canónica de campos buscables y anulaciones de perfil.                          |
+| FR-005          | `T019`, `T063`, `T066`, `T192`                                                                                                                                         | Lista, estado vacío y mensaje exacto en búsqueda/ficha.                              |
+| FR-006          | `T059`, `T075`, `T089`, `T192`                                                                                                                                         | Mensajes exactos de validación.                                                      |
+| FR-007          | `T005`, `T006`, `T016`                                                                                                                                                 | Consistencia CRUD.                                                                   |
+| FR-008          | `T025`, `T073`, `T074`                                                                                                                                                 | Altas, ediciones y bajas de documentos.                                              |
+| FR-009          | `T016`, `T018`, `T029`, `T074`                                                                                                                                         | Vínculo exacto y cascada.                                                            |
+| FR-010          | `T048`, `T050`, `T051`                                                                                                                                                 | Panel y acciones rápidas.                                                            |
+| FR-011          | `T043`, `T045`                                                                                                                                                         | Marco persistente.                                                                   |
+| FR-012          | `T043`, `T045`, `T159`, `T170`                                                                                                                                         | Barra lateral filtrada por rango.                                                    |
+| FR-013          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a entidades desde el panel.                                                   |
+| FR-014          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a documentos desde el panel.                                                  |
+| FR-015          | `T047`, `T077`                                                                                                                                                         | Botón Panel y retorno al inicio.                                                     |
+| FR-016          | `T024`, `T027`                                                                                                                                                         | Gestión sin lista de entidades.                                                      |
+| FR-017          | `T024`, `T026`, `T027`                                                                                                                                                 | CRUD de entidades en gestión.                                                        |
+| FR-018          | `T025`, `T027`, `T028`                                                                                                                                                 | CRUD de documentos en gestión.                                                       |
+| FR-019          | `T076`, `T077`                                                                                                                                                         | Pantalla de búsqueda dedicada.                                                       |
+| FR-020          | `T063`, `T065`, `T076`, `T193`                                                                                                                                         | Aplicación del perfil sin lista independiente.                                       |
+| FR-021          | `T051`, `T076`, `T077`, `T229`, `T250`                                                                                                                                 | Accesos a búsqueda y foco en `#search-input`.                                        |
+| FR-022          | `T047`, `T128`, `T240`, `T247`, `T250`                                                                                                                                 | Confirmación al salir con cambios y al cancelar el panel de ticket.                  |
+| FR-023          | `T007`, `T008`, `T033`                                                                                                                                                 | Carga de configuración.                                                              |
+| FR-024          | `T007`, `T008`, `T031`                                                                                                                                                 | Valores predeterminados.                                                             |
+| FR-025          | `T031`, `T033`                                                                                                                                                         | Configuración inválida con advertencia.                                              |
+| FR-026          | `T011`, `T012`, `T041`                                                                                                                                                 | Campos personalizados en formularios.                                                |
+| FR-027          | `T037`, `T040`, `T042`                                                                                                                                                 | Validación de campos personalizados.                                                 |
+| FR-028          | `T038`, `T042`                                                                                                                                                         | Campos personalizados en listas/ficha.                                               |
+| FR-029          | `T034`, `T035`                                                                                                                                                         | Etiquetas derivadas de configuración.                                                |
+| FR-030          | `T079`, `T081`                                                                                                                                                         | Transiciones configuradas por cualquier vía.                                         |
+| FR-031          | `T079`, `T081`                                                                                                                                                         | Estado como texto libre.                                                             |
+| FR-032          | `T064`, `T126`, `T191`                                                                                                                                                 | 500 entidades y 500 documentos con umbrales p95.                                     |
+| FR-033          | `T048`, `T051`, `T171`, `T223`, `T225`, `T226`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                 | Tres acciones rápidas filtradas por rango, solo en el panel.                         |
+| FR-034          | `T028`, `T051`, `T223`, `T224`, `T225`, `T226`, `T228`, `T229`, `T232`, `T250`                                                                                         | Formulario vacío dentro de las gestiones.                                            |
+| FR-035          | `T049`, `T050`, `T052`, `T084`, `T133`                                                                                                                                 | Tarjetas y embudo canónicos.                                                         |
+| FR-036          | `T043`, `T045`                                                                                                                                                         | Marca en barra superior.                                                             |
+| FR-037          | `T045`, `T047`                                                                                                                                                         | Módulo activo resaltado.                                                             |
+| FR-038          | `T008`, `T046`                                                                                                                                                         | Color de acento con fallback.                                                        |
+| FR-039          | `T043`, `T045`                                                                                                                                                         | Barra estrecha operable.                                                             |
+| FR-040          | `T039`, `T129`                                                                                                                                                         | Valores huérfanos conservados.                                                       |
+| FR-041          | `T019`, `T022`, `T023`                                                                                                                                                 | Ficha de entidad.                                                                    |
+| FR-042          | `T021`, `T022`                                                                                                                                                         | Historial ordenado por fecha.                                                        |
+| FR-043          | `T020`, `T022`                                                                                                                                                         | Ficha refleja ediciones.                                                             |
+| FR-044          | `T081`, `T123`, `T124`                                                                                                                                                 | Indicadores y precedencia de pendientes.                                             |
+| FR-045          | `T122`, `T124`, `T125`                                                                                                                                                 | Actualización y selección desde resumen.                                             |
+| FR-046          | `T122`, `T125`                                                                                                                                                         | Estado vacío del resumen.                                                            |
+| FR-047          | `T036`, `T068`, `T069`                                                                                                                                                 | Rango de fecha de nacimiento.                                                        |
+| FR-048          | `T067`, `T068`, `T069`                                                                                                                                                 | Actualización al cambiar de día.                                                     |
+| FR-049          | `T067`, `T069`                                                                                                                                                         | Fecha local del dispositivo.                                                         |
+| FR-050          | `T057`, `T071`                                                                                                                                                         | Valores históricos conservados y corregidos.                                         |
+| FR-051          | `T053`, `T058`, `T129`                                                                                                                                                 | Campos ocultos del cliente.                                                          |
+| FR-052          | `T015`, `T017`, `T053`, `T058`                                                                                                                                         | Código interno único no visible.                                                     |
+| FR-053          | `T058`, `T129`                                                                                                                                                         | Campo `pedidos` eliminado.                                                           |
+| FR-054          | `T039`, `T053`, `T129`                                                                                                                                                 | Valores ocultos conservados.                                                         |
+| FR-055          | `T053`, `T065`, `T076`, `T193`                                                                                                                                         | Perfil de clientes sin contradecir FR-004.                                           |
+| FR-056          | `T054`, `T058`, `T059`                                                                                                                                                 | Campos obligatorios del cliente.                                                     |
+| FR-057          | `T009`, `T010`, `T054`, `T059`                                                                                                                                         | RUT válido y único.                                                                  |
+| FR-058          | `T057`, `T061`                                                                                                                                                         | Ficha bloqueada de cliente incompleto.                                               |
+| FR-059          | `T055`, `T058`                                                                                                                                                         | Canal sin preselección.                                                              |
+| FR-060          | `T055`, `T058`, `T060`                                                                                                                                                 | Casilla adicional por canal.                                                         |
+| FR-061          | `T009`, `T010`, `T055`, `T059`                                                                                                                                         | Validación por canal.                                                                |
+| FR-062          | `T056`, `T058`, `T060`                                                                                                                                                 | Pista gris del RUT.                                                                  |
+| FR-063          | `T056`, `T058`                                                                                                                                                         | Opciones de canal.                                                                   |
+| FR-064          | `T056`, `T062`, `T227`, `T228`, `T230`, `T250`                                                                                                                         | Texto «Nuevo Cliente» solo dentro de «Gestionar clientes».                           |
+| FR-065          | `T056`, `T058`, `T174`                                                                                                                                                 | Orden de casillas y `select` de ejecutivo.                                           |
+| FR-066          | `T056`, `T058`                                                                                                                                                         | Diez opciones de tipo de actividad.                                                  |
+| FR-067          | `T056`, `T058`, `T060`                                                                                                                                                 | Pistas de casilla adicional.                                                         |
+| FR-068          | `T083`, `T088`, `T092`, `T093`, `T179`                                                                                                                                 | Conversión interna y auditoría.                                                      |
+| FR-069          | `T085`, `T088`, `T089`, `T090`, `T151`                                                                                                                                 | Captura pública.                                                                     |
+| FR-070          | `T092`, `T114`, `T169`                                                                                                                                                 | Reglas por evento y ejecución como `Sistema`.                                        |
+| FR-071          | `T083`, `T085`, `T088`, `T089`                                                                                                                                         | Consentimiento de captura.                                                           |
+| FR-072          | `T084`, `T086`, `T087`, `T091`, `T133`                                                                                                                                 | Embudo compartido.                                                                   |
+| FR-073          | `T084`, `T086`, `T087`, `T091`, `T133`                                                                                                                                 | Tarjetas compartidas.                                                                |
+| FR-074          | `T084`, `T087`, `T118`, `T133`                                                                                                                                         | Coincidencia panel/Marketing.                                                        |
+| FR-075          | `T086`, `T091`, `T131`                                                                                                                                                 | Sin torta ni selector de etapas.                                                     |
+| FR-076          | `T095`, `T097`, `T098`                                                                                                                                                 | Equipos e integrantes.                                                               |
+| FR-077          | `T095`, `T175`, `T183`                                                                                                                                                 | Integrantes y atribución histórica.                                                  |
+| FR-078          | `T094`, `T096`, `T175`, `T183`                                                                                                                                         | Real mensual.                                                                        |
+| FR-079          | `T094`, `T096`, `T175`, `T183`                                                                                                                                         | Objetivo mensual.                                                                    |
+| FR-080          | `T099`, `T100`, `T102`                                                                                                                                                 | Apartado de redes sociales.                                                          |
+| FR-081          | `T099`, `T101`, `T103`                                                                                                                                                 | Interacciones como documentos.                                                       |
+| FR-082          | `T104`, `T106`, `T107`, `T109`                                                                                                                                         | Respuestas rápidas por FAQ.                                                          |
+| FR-083          | `T104`, `T105`, `T106`, `T180`                                                                                                                                         | Consultas sin coincidencia.                                                          |
+| FR-084          | `T105`, `T108`, `T151`                                                                                                                                                 | Chat en captura y Marketing.                                                         |
+| FR-085          | `T104`, `T105`, `T107`, `T180`                                                                                                                                         | Consentimiento y prospecto previo.                                                   |
+| FR-086          | `T110`, `T112`, `T113`, `T184`                                                                                                                                         | Campañas e historial con creador.                                                    |
+| FR-087          | `T116`, `T119`, `T120`                                                                                                                                                 | Indicadores de rendimiento.                                                          |
+| FR-088          | `T117`, `T121`                                                                                                                                                         | Campaña opcional y «Sin campaña».                                                    |
+| FR-089          | `T110`, `T113`, `T114`                                                                                                                                                 | Acciones internas de campaña.                                                        |
+| FR-090          | `T111`, `T114`                                                                                                                                                         | Solapamiento y omitidas.                                                             |
+| FR-091          | `T134`, `T135`, `T136`, `T137`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                                 | Tres acciones rápidas solo en el panel; Marketing no las hereda.                     |
+| FR-092          | `T141`, `T142`, `T143`                                                                                                                                                 | «Dudas y consultas» como terminología visible.                                       |
+| FR-093          | `T138`, `T139`, `T140`, `T144`                                                                                                                                         | Cinco atajos de Marketing en orden y terminología aprobada.                          |
+| FR-094          | `T153`, `T159`, `T168`, `T223`, `T224`, `T229`, `T231`, `T233`, `T238`, `T250`                                                                                         | Matriz como fuente única para panel, gestiones y Postventa.                          |
+| FR-095          | `T153`, `T163`, `T169`, `T182`                                                                                                                                         | Validación en capa de datos.                                                         |
+| FR-096          | `T153`, `T156`, `T157`, `T163`, `T169`                                                                                                                                 | Mensaje exacto de denegación.                                                        |
+| FR-097          | `T150`, `T160`                                                                                                                                                         | Acceso denegado y redirección.                                                       |
+| FR-098          | `T146`, `T161`, `T172`, `T173`                                                                                                                                         | Administración de usuarios.                                                          |
+| FR-099          | `T056`, `T161`, `T174`                                                                                                                                                 | Select de ejecutivos activos.                                                        |
+| FR-100          | `T094`, `T175`, `T183`                                                                                                                                                 | Vinculación del integrante y métricas.                                               |
+| FR-101          | `T092`, `T114`, `T184`                                                                                                                                                 | Identidad `Sistema` y creador persistido.                                            |
+| FR-102          | `T148`, `T152`, `T167`                                                                                                                                                 | Persistencia y revocación de sesión.                                                 |
+| SC-001          | `T015`, `T178`                                                                                                                                                         | Crear entidad en menos de 2 minutos.                                                 |
+| SC-002          | `T063`, `T064`                                                                                                                                                         | Búsqueda en menos de 10 segundos.                                                    |
+| SC-003          | `T178`, `T185`                                                                                                                                                         | Prueba cronometrada con cinco participantes.                                         |
+| SC-004          | `T064`, `T126`                                                                                                                                                         | 500 registros sin pérdida funcional.                                                 |
+| SC-005          | `T048`, `T077`                                                                                                                                                         | Accesos iniciales en menos de 10 segundos.                                           |
+| SC-006          | `T132`, `T177`, `T185`                                                                                                                                                 | Sin regresiones.                                                                     |
+| SC-007          | `T016`, `T128`                                                                                                                                                         | Navegación sin pérdida de datos.                                                     |
+| SC-008          | `T030`, `T032`, `T058`                                                                                                                                                 | Adaptación solo por configuración.                                                   |
+| SC-009          | `T043`, `T045`                                                                                                                                                         | Marco con marca consistente.                                                         |
+| SC-010          | `T049`, `T052`, `T133`                                                                                                                                                 | Estadísticas del panel coincidentes.                                                 |
+| SC-011          | `T122`, `T124`                                                                                                                                                         | Indicadores del resumen coincidentes.                                                |
+| SC-012          | `T068`, `T069`                                                                                                                                                         | Fechas inválidas y límite diario.                                                    |
+| SC-013          | `T053`, `T129`                                                                                                                                                         | Campos ocultos del cliente.                                                          |
+| SC-014          | `T054`, `T055`, `T059`                                                                                                                                                 | Rechazo de guardados inválidos.                                                      |
+| SC-015          | `T056`, `T227`, `T228`, `T230`, `T250`                                                                                                                                 | Pista, opciones y texto «Nuevo Cliente» solo en la gestión.                          |
+| SC-016          | `T056`, `T058`                                                                                                                                                         | Orden y opciones de tipo de actividad.                                               |
+| SC-017          | `T056`, `T060`                                                                                                                                                         | Pistas de canales.                                                                   |
+| SC-018          | `T084`, `T086`, `T133`                                                                                                                                                 | Embudo de Marketing.                                                                 |
+| SC-019          | `T084`, `T086`, `T133`                                                                                                                                                 | Tarjetas de Marketing.                                                               |
+| SC-020          | `T043`, `T044`, `T131`                                                                                                                                                 | Navegación y etiquetas.                                                              |
+| SC-021          | `T086`, `T091`, `T131`                                                                                                                                                 | Sin torta ni selector.                                                               |
+| SC-022          | `T094`, `T095`, `T183`                                                                                                                                                 | Equipo y métricas.                                                                   |
+| SC-023          | `T099`, `T100`, `T102`                                                                                                                                                 | Redes sociales.                                                                      |
+| SC-024          | `T116`, `T117`, `T118`, `T119`, `T141`, `T142`, `T143`, `T180`, `T192`                                                                                                 | «Dudas y consultas» con respuesta, acuse y consentimiento.                           |
+| SC-025          | `T122`, `T123`, `T124`, `T125`, `T126`, `T184`, `T192`                                                                                                                 | Campañas internas con historial y solapamiento.                                      |
+| SC-026          | `T128`, `T129`, `T130`, `T192`                                                                                                                                         | Rendimiento por campaña coherente con los registros.                                 |
+| SC-027          | `T134`, `T135`, `T136`, `T137`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                                 | Tres acciones rápidas solo en el panel.                                              |
+| SC-028          | `T141`, `T142`, `T143`                                                                                                                                                 | Etiquetas «Dudas y consultas» sin cambiar contratos.                                 |
+| SC-029          | `T138`, `T139`, `T140`, `T144`                                                                                                                                         | Cinco atajos de Marketing en orden exacto.                                           |
+| SC-030          | `T104`, `T105`, `T180`                                                                                                                                                 | Chat con consentimiento.                                                             |
+| SC-031          | `T110`, `T111`, `T112`, `T184`                                                                                                                                         | Campañas y solapamientos.                                                            |
+| SC-032          | `T116`, `T117`, `T118`                                                                                                                                                 | Rendimiento por campaña.                                                             |
+| SC-033          | `T154`                                                                                                                                                                 | Verificaciones de Nivel 4.                                                           |
+| SC-034          | `T155`                                                                                                                                                                 | Verificaciones de Nivel 3.                                                           |
+| SC-035          | `T156`                                                                                                                                                                 | Verificaciones de Nivel 2.                                                           |
+| SC-036          | `T157`                                                                                                                                                                 | Verificaciones de Nivel 1.                                                           |
+| SC-037          | `T158`                                                                                                                                                                 | Verificaciones de visitante.                                                         |
+| FR-104          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T211`, `T212`, `T215`, `T216`, `T218`, `T219`, `T237`, `T239`, `T242`, `T243`, `T244`, `T245`, `T246`, `T248`, `T250` | Ticket como `Documento` y panel en línea con desplegable buscable.                   |
+| FR-105          | `T195`, `T198`, `T201`, `T207`, `T208`, `T213`, `T214`, `T220`, `T221`, `T237`, `T242`, `T243`, `T245`, `T248`, `T250`                                                 | Tres tarjetas derivadas, actualizadas en la misma pestaña y con tamaño de «Resumen». |
+| FR-106          | `T196`, `T199`, `T203`, `T204`, `T205`, `T212`, `T218`, `T219`, `T238`, `T245`, `T247`, `T249`, `T250`                                                                 | Permisos en UI, panel en línea y capa de datos, sin ruta de ticket.                  |
+| FR-107          | `T195`, `T198`, `T204`, `T207`, `T208`, `T237`, `T242`, `T243`, `T244`, `T248`, `T250`                                                                                 | Categorías y cambios entre cualquier par de estados.                                 |
+| FR-108          | `T195`, `T200`, `T201`, `T204`, `T207`, `T237`, `T242`, `T243`, `T244`, `T248`, `T250`                                                                                 | Prioridad sin preselección y nota condicional.                                       |
+| FR-109          | `T195`, `T198`, `T205`, `T206`, `T207`, `T214`, `T217`, `T221`, `T237`, `T242`, `T243`, `T245`, `T250`                                                                 | Quinta opción, panel en línea, tarjetas y estado vacío.                              |
+| SC-039          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T210`, `T211`, `T213`, `T215`, `T222`, `T237`, `T238`, `T239`, `T242`, `T248`, `T250`                                 | Verificaciones funcionales de Postventa y del panel en línea.                        |
+| SC-040          | `T196`, `T199`, `T203`, `T204`, `T205`, `T206`, `T210`, `T212`, `T218`, `T219`, `T222`, `T238`, `T245`, `T247`, `T249`, `T250`                                         | Verificaciones de permisos de Postventa sin pestaña nueva.                           |
 
 ## Notas
 
@@ -1008,9 +1152,13 @@ La tabla declara explícitamente la cobertura de los 149 requisitos buildables p
 - Phase 26 añade T187-T194 sin renumerar ni cambiar marcadores de T001-T186; T194 verifica que no queden URL absolutas, adjetivos subjetivos sin respaldo medible, variantes de mensajes exactos ni contradicciones entre FR-004, FR-020 y FR-055.
 - En el incremento de clarificaciones, los cambios de terminología son solo visuales: `chat` sigue siendo la clave, el canal y el nombre interno de `ChatConsentError`.
 - Phase 27 añade T195-T210 sin renumerar ni cambiar marcadores de T001-T194; T210 verifica `npm test`, `npm run lint` y `npm run format:check` al cierre de Postventa.
-- Phase 28 añade T211-T222 sin renumerar ni cambiar marcadores de T001-T210; T222 verifica `npm test`, `npm run lint` y `npm run format:check` al cierre de los ajustes de Postventa.
-- La pestaña nueva usa `?view=ticket-form`, hereda la sesión del mismo origen y exige `postventa:create`; la vista original permanece en `?view=postventa` y solo se sincroniza por eventos `storage` de `erp_documents`/`erp_entities` o clave `null`, sin sondeo, `postMessage` ni `visibilitychange`.
+- Phase 28 añade T211-T222 sin renumerar ni cambiar marcadores de T001-T210; T222 verificó `npm test`, `npm run lint` y `npm run format:check`, pero las decisiones de pestaña nueva y sincronización quedan superadas por T223-T250.
+- El panel en línea usa `state.ticketFormOpen` dentro de `?view=postventa`, exige `postventa:create` en la capa de datos y no introduce `?view=ticket-form`, `window.open`, eventos `storage`, `postMessage`, sondeo ni `visibilitychange`.
+- Guardar cierra el panel y vuelve a la tabla con un solo `render()`; cancelar sin cambios cierra directamente y cancelar con cambios pide confirmación sin persistir borradores.
+- El formulario de ticket reutiliza `.form-field`, `.client-form-section` y `.form-actions` del formulario de clientes sin adoptar sus campos ni reglas; las etiquetas y pistas grises conservan los valores de tickets.
+- El panel principal ofrece solo «Gestionar clientes», «Gestionar interacciones» y «Buscar registros»; «Nuevo Cliente» y «Nueva interacción» viven dentro de las gestiones y Marketing no hereda esas tres acciones.
 - `.postventa-cards` iguala el dimensionamiento de `.summary-cards`; no se modifica `.stat-card` global ni el orden de etiqueta y valor de los indicadores.
+- T250 añade el gate final sin renumerar ni desmarcar T001-T222 y comprueba que no queden referencias vivas a `quick-new-*`, `?view=ticket-form`, `window.open` ni listener `storage`.
 - Los tickets son `Documento` con `ticket: true` y `entity_id` de un cliente existente: no hay clave `support_tickets`, resultados derivados persistidos ni cambio del `statusLifecycle` global.
 - Las acciones `postventa:*` son aditivas al catálogo canónico; N1 no recibe `document:edit_any` y N3 no recibe `postventa:view` aunque pueda leer documentos genéricos.
 - US24 (FR-103, SC-038) queda fuera de este incremento: sus tareas requieren primero artefactos de diseño propios y no deben inferirse de la implementación de Postventa.

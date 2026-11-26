@@ -9,7 +9,7 @@
 
 ## Flujo de Usuario Principal
 
-1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos o buscar registros), o abra Marketing o Postventa desde la barra lateral.
+1. Aterrice en el panel ERP y use una de sus tres acciones rápidas («Gestionar clientes», «Gestionar interacciones» o «Buscar registros»), o abra Marketing o Postventa desde la barra lateral; la creación de clientes e interacciones se hace dentro de las gestiones correspondientes.
 2. Cree una entidad usando el formulario y añádale un documento asociado.
 3. Busque una entidad usando la pantalla de búsqueda y abra su ficha para ver el historial de documentos ordenado por fecha.
 4. Edite o elimine una entidad desde el área de gestión; confirme que la ficha de esa entidad refleja el cambio.
@@ -61,7 +61,7 @@ La forma de las reglas está en [`contracts/entity-storage.md`](contracts/entity
 
 ## Validación del Perfil de Clientes (tercera tanda)
 
-1. Abra el formulario de registro: el título debe decir «Nuevo Cliente» y la acción rápida de creación del panel también debe mostrar «Nuevo Cliente».
+1. Abra «Gestionar clientes» y su formulario de registro: el título debe decir «Nuevo Cliente»; el panel principal ya no muestra esa acción rápida.
 2. Compruebe que las casillas aparecen en este orden: «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado».
 3. En «RUT», confirme que la pista gris es `Ej: 11.111.111-1` y que no se guarda como valor; guarde un RUT con puntos (`12.345.678-9`) y luego el mismo RUT sin puntos (`12345678-9`) en otro cliente: el segundo debe rechazarse por repetido.
 4. Despliegue «Canal de Contacto» y verifique que las opciones son «Llamada», «Correo», «Reunión» y «WhatsApp», y que al guardar se conservan los valores internos `llamada`, `correo`, `reunion` y `whatsapp`.
@@ -73,7 +73,7 @@ La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/enti
 ## Validación del Apartado de Marketing
 
 1. Abra el panel principal y confirme que la barra lateral muestra Panel, Buscar, Resumen y Marketing; «Clientes» e «Interacciones» no aparecen y el panel ya no ofrece «Abrir Marketing».
-2. Compruebe que el panel ofrece las acciones rápidas de nueva entidad, nuevo documento, abrir gestión de entidades, abrir gestión de documentos y buscar registros; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí.
+2. Compruebe que el panel ofrece exactamente tres acciones rápidas —«Gestionar clientes», «Gestionar interacciones» y «Buscar registros»—; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí y que la creación ocurre dentro de ellas.
 3. Abra Marketing y confirme las cinco tarjetas del panel —entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— y el mismo embudo por estados de documento, con idénticos valores que en el panel.
 4. Confirme que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas, y que la lista «Últimas Interacciones / Próximos Seguimientos» coincide con la del panel.
 5. Con cero registros, verifique que las tarjetas y el embudo muestran cero con un estado vacío claro.
@@ -86,10 +86,10 @@ La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/m
 
 ## Validación de Atajos y Terminología de Marketing
 
-1. Abra el panel principal y confirme que sigue ofreciendo cinco acciones rápidas: nueva entidad, nuevo documento, gestionar entidades, gestionar documentos y buscar registros.
-2. Abra Marketing y confirme que no aparece ninguna de esas cinco acciones rápidas ni el marcado `.quick-actions`, pero que las cinco tarjetas y el embudo siguen mostrando los mismos valores que en el panel.
+1. Abra el panel principal y confirme que ofrece exactamente tres acciones rápidas: «Gestionar clientes», «Gestionar interacciones» y «Buscar registros», sin «Nuevo Cliente» ni «Nueva interacción».
+2. Abra Marketing y confirme que no aparece ninguna de esas tres acciones rápidas ni el marcado `.quick-actions`, pero que las cinco tarjetas y el embudo siguen mostrando los mismos valores que en el panel.
 3. Compruebe que Marketing ofrece exactamente cinco atajos en este orden: «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales».
-4. Active cada atajo y verifique que abre su sección de Marketing sin llevar a las vistas de gestión del panel; vuelva al panel para confirmar que sus cinco acciones rápidas siguen disponibles.
+4. Active cada atajo y verifique que abre su sección de Marketing sin llevar a las vistas de gestión del panel; vuelva al panel para confirmar que sus tres acciones rápidas siguen disponibles.
 5. Confirme que «Dudas y consultas» sustituye a «Chat» en el encabezado de Marketing, en `?view=capture` y en el texto de consentimiento y de error; envíe una consulta con consentimiento y compruebe que el documento sigue visible en la ficha de la entidad tras recargar.
 
 ## Validación de Equipos de ventas y logros, Redes y Dudas y consultas
@@ -115,7 +115,7 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 ## Validación de Postventa
 
 1. Confirme que la barra lateral muestra «Postventa» como quinta opción, inmediatamente debajo de Marketing, y que abre `?view=postventa` con el marco ERP y «Nuevo Ticket» arriba.
-2. Pulse «Nuevo Ticket»: debe abrirse `?view=ticket-form` en una pestaña nueva del navegador, sin barra superior ni lateral, mientras la vista de Postventa permanece intacta en la pestaña original. En la pestaña nueva compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
+2. Pulse «Nuevo Ticket»: debe abrirse un panel dentro de la misma página de Postventa, sin pestaña nueva, sustituyendo temporalmente la tabla mientras las tres tarjetas permanecen visibles. Compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», con la misma presentación visual que el formulario «Nuevo Cliente».
 3. En «Cliente», compruebe que el desplegable ofrece solo clientes existentes y que escribir en el buscador filtra por nombre sin crear un cliente nuevo.
 4. Despliegue «Categoría» y confirme exactamente «Soporte técnico», «Facturación», «Garantía» y «Consulta»; despliegue «Prioridad» y confirme «Baja», «Media» y «Alta» sin selección previa.
 5. Guarde sin elegir prioridad y luego con estado «Resuelto» sin nota: ambos intentos deben mostrar `Completa los campos obligatorios.` y no crear el ticket.
@@ -126,8 +126,8 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 10. Inicie sesión como `atencion` (N1) y como `gerente` (N4): ambos deben crear tickets y cambiar cualquier estado. Inicie como `ventas` (N2): debe ver solo los tickets de sus clientes, sin botón «Nuevo Ticket» ni control de estado. Inicie como `marketing` (N3) o sin sesión: no debe acceder ni por enlace profundo, consola o llamada directa a `storage.js`.
 11. Abra directamente `?view=postventa`, use Back/Forward y recargue: la vista debe resolverse con la matriz en cada caso y la denegación debe mostrar `No tienes permiso para realizar esta acción`.
 
-12. Con Postventa abierta en una pestaña y el formulario en otra, guarde un ticket en la pestaña nueva y confirme que la pestaña original muestra la nueva fila y recalcula las tres tarjetas sin pulsar recargar.
-13. Abra `?view=ticket-form` como enlace profundo con `ventas` (N2), `marketing` (N3) o sin sesión: debe mostrar «Acceso denegado» o el inicio de sesión, sin formulario utilizable.
+12. Guarde un ticket desde el panel y confirme que el panel se cierra, vuelve la tabla con la nueva fila y las tres tarjetas se recalculan sin pulsar recargar; no debe existir `?view=ticket-form` ni evento de sincronización entre pestañas.
+13. Modifique una casilla y pulse cancelar: debe aparecer la confirmación de cambios sin guardar; al confirmar el descarte el panel se cierra y la tabla vuelve sin crear el ticket. Repita sin cambios y confirme que el panel se cierra directamente.
 14. Compare visualmente las tres tarjetas de Postventa con los indicadores del apartado «Resumen»: deben tener el mismo tamaño y proporción, conservando sus etiquetas «Tickets abiertos», «En proceso» y «Resueltos» y sus valores.
 
 La forma de los tickets y las reglas está en [`contracts/postventa.md`](contracts/postventa.md) y su efecto en el modelo en [`data-model.md`](data-model.md#9-postventa-historia-de-usuario-25).

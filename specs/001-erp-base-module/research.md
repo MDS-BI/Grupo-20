@@ -172,9 +172,9 @@
 
 ### Decisión: Título «Nuevo Cliente» sin género codificado
 
-- **Decisión**: Derivar el encabezado y la acción rápida de creación como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente».
-- **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario y la acción de creación sin afectar otros perfiles (FR-064).
-- **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario).
+- **Decisión**: Derivar el encabezado del formulario dentro de «Gestionar clientes» como `Nuevo ${entityLabel}` usando el término configurado con su inicial, en lugar de `Nueva ${label.toLowerCase()}`; el término «Cliente» produce «Nuevo Cliente». El panel principal ya no muestra esa acción rápida (FR-033, FR-034, FR-064).
+- **Rationale**: Evita concordar género en el código central y satisface el cambio pedido en el formulario de gestión sin afectar otros perfiles ni reintroducir botones eliminados del panel.
+- **Alternativas consideradas**: Texto fijo «Nuevo Cliente» en los componentes (rompe la reetiquetación de FR-029); mantener «Nueva» (contradice la decisión del usuario); conservar la acción rápida en el panel (contradice FR-033).
 
 ## Decisiones de diseño (apartado de Marketing)
 
@@ -228,9 +228,9 @@
 
 ### Decisión: Retirar solo «Clientes» e «Interacciones» de la barra lateral
 
-- **Decisión**: Eliminar `manage-entity` y `manage-document` de `NAV_ITEMS` en `src/components/shell.js`; conservar `dashboard`, `search` y `summary`. Añadir una quinta acción rápida «abrir gestión de documentos» en `src/components/dashboard.js` para que ambos apartados sigan siendo accesibles solo desde el panel (FR-012, FR-013, FR-014, FR-033).
-- **Justificación**: El usuario nombró únicamente esos dos apartados; retirar también «Resumen» sería un cambio no solicitado. Las pruebas de integración que navegaban por `#nav-entities`/`#nav-documents` deben usar las acciones rápidas o `app.navigate(...)`.
-- **Alternativas consideradas**: Retirar también «Resumen» (excede la petición); ocultar los botones con CSS (deja el marcado y los selectores accesibles, contradictorio con «eliminar»).
+- **Decisión**: Eliminar `manage-entity` y `manage-document` de `NAV_ITEMS` en `src/components/shell.js`; conservar `dashboard`, `search` y `summary`. El panel ofrece «Gestionar clientes» y «Gestionar interacciones» como acciones rápidas de apertura, además de «Buscar registros»; la creación de clientes e interacciones se realiza dentro de esas gestiones, no desde el panel (FR-012, FR-013, FR-014, FR-033, FR-034).
+- **Justificación**: El usuario nombró únicamente esos dos apartados para retirar de la barra lateral; retirar también «Resumen» sería un cambio no solicitado. La decisión actual reduce el panel a tres acciones y mueve la creación a las pantallas de gestión, por lo que las pruebas que navegaban por `#nav-entities`/`#nav-documents` deben usar las acciones rápidas o `app.navigate(...)`.
+- **Alternativas consideradas**: Retirar también «Resumen» (excede la petición); mantener «Nuevo Cliente» y «Nueva interacción» en el panel (contradice FR-033); ocultar los botones con CSS (deja el marcado y los selectores accesibles, contradictorio con «eliminar»).
 
 ## Decisiones de diseño (equipo, canales, campañas y rendimiento)
 
@@ -342,7 +342,7 @@
 
 ### Decisión: Cobertura de integración para la nueva presentación
 
-- **Decisión**: Las pruebas de integración comprueban que el panel conserva cinco `.quick-actions button`, que Marketing no contiene `.quick-actions`, que `.marketing-sections [data-action="marketing-section"]` devuelve cinco elementos con el texto y orden exactos, y que «Dudas y consultas» aparece como encabezado y en el texto de consentimiento de la captura pública y de Marketing.
+- **Decisión**: Las pruebas de integración comprueban que el panel ofrece exactamente tres `.quick-actions button`, que Marketing no contiene `.quick-actions`, que `.marketing-sections [data-action="marketing-section"]` devuelve cinco elementos con el texto y orden exactos, y que «Dudas y consultas» aparece como encabezado y en el texto de consentimiento de la captura pública y de Marketing.
 - **Justificación**: Los cambios son visibles y susceptibles de regresión por compartir componentes entre panel, Marketing y captura; la verificación debe hacerse sobre marcado real, no solo sobre cadenas de código.
 - **Alternativas consideradas**: Solo pruebas unitarias de las listas de etiquetas (no detectan que el panel sigue renderizando los botones en Marketing); snapshots completos de HTML (frágiles ante cambios de estilo no relacionados).
 
@@ -378,22 +378,40 @@
 - **Justificación**: `addDocument()` permite `document:create` a N3 y `saveDocuments()` exige `document:edit_any`, permiso que N1 no tiene; por tanto las operaciones genéricas no bastan para FR-106/FR-095. Funciones dedicadas mantienen una sola validación de permisos y permiten probar llamadas directas desde consola.
 - **Alternativas consideradas**: Dar `document:edit_any` a Atención al Cliente (amplía permisos sobre todas las interacciones); confiar solo en el ocultamiento de botones (falla FR-095); duplicar la lógica de validación en el componente (dos fuentes de verdad).
 
-## Decisiones de diseño (ajustes de Postventa, sesión 2026-11-26)
+## Decisiones de diseño (Postventa en línea y panel simplificado, sesión 2026-11-26)
 
-### Decisión: «Nuevo Ticket» abre una pestaña nueva del navegador
+### Decisión: «Nuevo Ticket» abre un panel en línea dentro de Postventa
 
-- **Decisión**: El botón «Nuevo Ticket» ya no alterna un formulario en línea: ejecuta `window.open(routeUrl('ticket-form'), '_blank', 'noopener')` y deja la vista `?view=postventa` intacta en la pestaña original. La ruta `?view=ticket-form` se añade a `ROUTE_VIEWS`/`VIEW_ROUTES`, se despacha como vista autónoma sin `renderShellHtml()` — patrón ya usado por `login` y `capture` — y se protege con `postventa:create` antes de renderizar y de nuevo en `createTicketDocument()`. El markup del formulario se extrae a `src/components/ticket-form.js`, conservando el orden «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», el buscador `#ticket-client-search` y los mensajes exactos.
-- **Justificación**: El usuario pidió expresamente una pestaña nueva del navegador; la interpretación alternativa de una pestaña dentro del marco ERP fue descartada en la clarificación. Reutilizar el patrón autónomo evita cargar navegación innecesaria en el formulario, y extraer el componente evita duplicar campos u opciones entre la vista original y la nueva (FR-104, FR-106).
-- **Alternativas consideradas**: Mantener el formulario en línea y abrir solo una ventana de confirmación (contradice la clarificación); clonar el markup en un componente nuevo (duplica reglas y mensajes); mostrar la pestaña nueva con barra lateral completa (estorbos para una única tarea y dependencia de `activeNavKey`).
+- **Decisión**: El botón «Nuevo Ticket» usa `state.ticketFormOpen` en `app.js` y hace que `renderPostventaHtml()` sustituya temporalmente la tabla de tickets por `renderTicketFormHtml()`; las tres tarjetas siguen arriba y el botón vuelve a mostrarse al cerrar el panel. Se retiran la ruta `?view=ticket-form`, su registro en `ROUTE_VIEWS`/`VIEW_ROUTES`, la vista autónoma y el `window.open(..., '_blank', 'noopener')`. `src/components/ticket-form.js` conserva el único markup del formulario con el orden «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», el buscador `#ticket-client-search` y los mensajes exactos.
+- **Justificación**: La clarificación sustituye la decisión anterior de pestaña nueva por un panel en la misma página (FR-104, SC-039). El estado local ya existe en `app.js`, por lo que no se añade ruta, sesión paralela ni clave de almacenamiento; reutilizar un único componente evita duplicar campos, opciones y validaciones.
+- **Alternativas consideradas**: Mantener `?view=ticket-form` como vista autónoma (contradice la clarificación); duplicar el formulario dentro de `postventa.js` (dos fuentes de verdad); abrir un modal fuera del marco ERP (rompe la continuidad visual y la posición de las tarjetas).
 
-### Decisión: Sincronización de la pestaña original mediante evento `storage`
+### Decisión: Presentación del ticket alineada con «Nuevo Cliente»
 
-- **Decisión**: `app.js` registra un listener `window` para `storage` junto al `popstate` existente. Si `event.key` es nulo o es `erp_documents`/`erp_entities`, llama a `render()`, que ya ejecuta `refreshData()` y reconstruye `#view-root`; `destroy()` retira el listener. No se añaden claves, sondeos ni contadores.
-- **Justificación**: Es el mecanismo nativo del navegador para avisar a otras pestañas del mismo origen cuando `localStorage` cambia; `createTicketDocument()` ya escribe `erp_documents`, por lo que la tabla y las tres tarjetas se recalculan sin que el usuario pulse recargar (FR-105). Un solo listener con el `render()` existente aprovecha la ruta de mutación ya probada y evita lógica de sincronización duplicada.
-- **Alternativas consideradas**: Escuchar `focus`/`visibilitychange` (solo actualiza al volver, retrasa la respuesta y fue rechazado en la clarificación); sondeo periódico de `localStorage` (consume recursos y contradice FR-032); pasar datos por `postMessage` entre `window.opener` (frágil con `noopener` y requiere acoplar las dos pestañas).
+- **Decisión**: Cada casilla del formulario de ticket usa las clases compartidas `.form-field`, `.client-form-section` y `.form-actions` de `entity-form.js`/`form-fields.js`, con etiquetas, espaciado, colores y pistas grises iguales a los del formulario de clientes. Se conservan los nombres de campo `#ticket-form`, `#ticket-client-search` y los mensajes exactos; no se adoptan los campos `rut`, `canal_contacto` ni las reglas `fieldRules` de entidades.
+- **Justificación**: El usuario pidió la misma presentación visual, no el mismo modelo de datos (FR-104). Reutilizar clases y tokens CSS ya existentes evita duplicar estilos y mantiene consistente el marco ERP (Principio III).
+- **Alternativas consideradas**: Copiar reglas CSS específicas para tickets (se desincronizan de los tokens); reutilizar `renderEntityFormHtml()` (añadiría campos y validaciones de clientes); dejar el marcado actual sin `.form-field` (no iguala etiquetas, espaciado ni pistas grises).
+
+### Decisión: Guardado, cancelación y detección de cambios sin guardar en el mismo panel
+
+- **Decisión**: `ticket-save` mantiene validación, permisos y mensajes exactos, y al guardar cierra el panel y vuelve a renderizar tabla y tarjetas con los datos ya en memoria. El botón de cancelación usa la acción `cancel-ticket-form` ya declarada y reutiliza la comprobación de borradores de `app.js`: si hay cambios sin guardar, pide confirmación antes de descartarlos y solo cierra el panel si el usuario confirma (FR-022, FR-104).
+- **Justificación**: El panel comparte el ciclo de renderizado de Postventa, por lo que hace falta el mismo criterio de descarto usado en otros formularios; no se introduce un segundo mecanismo de confirmación ni estado persistido adicional (FR-022, SC-039).
+- **Alternativas consideradas**: Cerrar sin confirmación (contradice FR-104); guardar borradores en `localStorage` (nueva clave y riesgo de fugas entre sesiones); crear un componente de confirmación propio (duplica la lógica existente).
+
+### Decisión: Retirar la sincronización entre pestañas
+
+- **Decisión**: Se elimina el listener `storage` de `app.js` —incluidos su registro y su retirada en `destroy()`— junto con la captura de valores de `#ticket-form` que hacía posible la pestaña nueva. La tabla y las tres tarjetas se actualizan con el `render()` normal tras cada mutación en la misma pestaña; no hay `postMessage`, sondeo ni `visibilitychange`.
+- **Justificación**: Sin segunda pestaña, el evento `storage` ya no tiene consumidor funcional y obligaría a simularlo en jsdom; retirarlo reduce superficie de pruebas y evita renders innecesarios (FR-105, FR-032).
+- **Alternativas consideradas**: Conservar el listener por si otra pestaña muta datos (comportamiento no solicitado y render extra); escuchar `focus`/`visibilitychange` (no aporta al flujo en una sola pestaña); sincronizar con `postMessage` (requiere acoplar ventanas que ya no existen).
+
+### Decisión: Panel principal con tres acciones rápidas
+
+- **Decisión**: `src/components/dashboard.js` deja de renderizar `quick-new-entity` y `quick-new-document`. Quedan «Gestionar clientes», «Gestionar interacciones» y «Buscar registros», filtrados por permisos como antes. La creación sigue disponible en los formularios ya renderizados por `renderManageView()`.
+- **Justificación**: La clarificación elimina esos dos botones del panel y traslada su creación a las gestiones correspondientes (FR-033, FR-034, SC-027). No hace falta nueva pantalla ni acción canónica: el formulario de entidades ya está siempre presente en la pestaña de clientes y el de documentos aparece al seleccionar cliente.
+- **Alternativas consideradas**: Ocultar los botones con CSS (deja marcado y selectores accesibles); moverlos a la barra lateral (contradice FR-012 y FR-033); crear un asistente nuevo (duplica la creación existente).
 
 ### Decisión: Tamaño de tarjetas por CSS con ámbito propio
 
-- **Decisión**: `.postventa-cards` recibe la misma regla de contenedor que `.summary-cards` (`display: flex`, `flex-wrap: wrap`, `gap: var(--space-3)`, `margin: var(--space-3) 0`). El tamaño de cada tarjeta proviene de la regla global existente `.stat-card` (`padding: var(--space-3)`, `min-width: 120px`, tipografía de `.stat-value`/`.stat-label`). No se modifica `.stat-card`, no se reordena el par etiqueta/valor y no se toca `computeTicketStats()`, `renderPostventaHtml()` ni los textos.
-- **Justificación**: El usuario pidió que las tarjetas de Postventa tomen como ejemplo el tamaño de los indicadores de «Resumen» y que solo cambie la proporción; hoy las tarjetas de Postventa son hijos de un `<div>` sin estilo y se apilan a ancho completo, mientras que las de Resumen son ítems flex de 120 px mínimo. Aplicar la misma regla al contenedor logra la proporción pedida sin afectar a panel, Marketing ni al cálculo (FR-109, Principio III).
-- **Alternativas consideradas**: Cambiar `.stat-card` global (altera todas las vistas); duplicar CSS con valores literales (se desincroniza de los tokens); modificar el orden DOM para parecerse más a Resumen (excede «solo modifica la proporción» y cambiaría pruebas existentes).
+- **Decisión**: `.postventa-cards` recibe la misma regla de contenedor que `.summary-cards` (`display: flex`, `flex-wrap: wrap`, `gap: var(--space-3)`, `margin: var(--space-3) 0`). El tamaño de cada tarjeta proviene de la regla global existente `.stat-card` (`padding: var(--space-3)`, `min-width: 120px`, tipografía de `.stat-value`/`.stat-label`). No se modifica `.stat-card`, no se reordena el par etiqueta/valor y no se toca `computeTicketStats()` ni los textos.
+- **Justificación**: El ajuste de tamaño solicitado se mantiene aunque el formulario vuelva a estar en línea; aplicar la misma regla al contenedor conserva la proporción de «Resumen» sin afectar a panel, Marketing ni al cálculo (FR-109, Principio III).
+- **Alternativas consideradas**: Cambiar `.stat-card` global (altera todas las vistas); duplicar CSS con valores literales (se desincroniza de los tokens); modificar el orden DOM (excede «solo modifica la proporción» y cambiaría pruebas existentes).

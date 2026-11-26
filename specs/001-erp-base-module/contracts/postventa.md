@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a FR-109): quinta opción de la barra lateral, botón «Nuevo Ticket», tres tarjetas derivadas de los tickets y una tabla cuyo estado puede cambiarse libremente. El formulario se abre en una pestaña nueva del navegador y su guardado actualiza la pestaña original sin recarga; las tres tarjetas tienen el tamaño de los indicadores de «Resumen». La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#9-postventa-historia-de-usuario-25). No se introduce backend, dependencia nueva ni clave adicional de `localStorage`.
+Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a FR-109): quinta opción de la barra lateral, botón «Nuevo Ticket», tres tarjetas derivadas de los tickets y una tabla cuyo estado puede cambiarse libremente. El formulario se abre en un panel dentro de la misma página, sustituyendo temporalmente la tabla sin abrir pestaña nueva; guardar cierra el panel y vuelve a la tabla actualizada, y cancelar con cambios sin guardar pide confirmación. Su presentación visual es la misma que la del formulario «Nuevo Cliente», y las tres tarjetas tienen el tamaño de los indicadores de «Resumen». La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#9-postventa-historia-de-usuario-25). No se introduce backend, dependencia nueva ni clave adicional de `localStorage`.
 
 ## Datos y configuración
 
@@ -29,6 +29,8 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - Cualquier campo obligatorio ausente, incluida la nota en estado «Resuelto» y la prioridad sin elegir, se rechaza con el mensaje exacto `Completa los campos obligatorios.`
 - Al guardar en un estado distinto de «Resuelto», `nota_resolucion` se descarta aunque se haya escrito.
 - Un `entity_id` inexistente o un cliente eliminado se rechaza antes de persistir.
+- El formulario del panel usa la misma presentación visual que «Nuevo Cliente» —tarjetas, etiquetas, espaciado, colores, pistas en gris y botones— sin incorporar campos ni reglas de validación de entidades.
+- Guardar cierra el panel y vuelve a la tabla con la fila nueva y las tarjetas recalculadas; cancelar sin cambios cierra el panel de inmediato, y cancelar con cambios sin guardar pide confirmación antes de descartarlos.
 
 ## Permisos
 
@@ -48,9 +50,9 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 
 - `src/components/shell.js`: `NAV_ITEMS` incluye `postventa` inmediatamente después de `marketing`, con etiqueta «Postventa» y resaltado derivado de `state.view`.
 - `src/app.js`: `ROUTE_VIEWS`/`VIEW_ROUTES` incluyen `postventa`; la resolución aplica la matriz antes de renderizar, incluso en enlaces profundos y Back/Forward.
-- `src/components/postventa.js`: renderiza «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y la tabla de gestión después; reutiliza `.stat-card`, `.client-management-table` y `.empty-state`. Ya no renderiza el formulario en línea: «Nuevo Ticket» abre `?view=ticket-form` en una pestaña nueva del navegador (`_blank`, `noopener`) y deja esta vista intacta.
-- `src/components/ticket-form.js`: contiene el único formulario de «Nuevo Ticket», con el mismo orden de campos, buscador `#ticket-client-search`, opciones declaradas y mensajes exactos; la ruta `?view=ticket-form` lo muestra como vista autónoma sin barra superior ni lateral y exige `postventa:create` antes de dibujarlo.
-- `src/app.js`: registra un listener `storage` en `window` que, al cambiar `erp_documents` o `erp_entities` (o con `key` nulo en pruebas), llama a `render()`; `destroy()` lo retira. La pestaña original actualiza tabla y tarjetas sin que el usuario pulse recargar; la pestaña que escribe ya renderiza tras su propia mutación.
+- `src/components/postventa.js`: renderiza «Nuevo Ticket» arriba y las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo; el cuerpo inferior alterna entre la tabla de gestión y el panel del formulario según `state.ticketFormOpen`, reutilizando `.stat-card`, `.client-management-table` y `.empty-state`. Al cerrar el panel vuelven a mostrarse el botón «Nuevo Ticket» y la tabla.
+- `src/components/ticket-form.js`: contiene el único formulario de «Nuevo Ticket», con el mismo orden de campos, buscador `#ticket-client-search`, opciones declaradas y mensajes exactos; sus casillas usan `.form-field`, `.client-form-section` y `.form-actions` para igualar la presentación de «Nuevo Cliente», sin adoptar sus campos ni reglas.
+- `src/app.js`: `state.ticketFormOpen` controla el panel en la misma vista `?view=postventa`; no hay ruta `ticket-form`, `window.open` ni listener `storage`. `ticket-save` conserva validación, permisos y mensajes, cierra el panel y vuelve a renderizar; `cancel-ticket-form` reutiliza la detección de cambios sin guardar antes de descartar.
 - `src/styles.css`: `.postventa-cards` usa la misma regla de contenedor que `.summary-cards` para que las tres tarjetas tengan su tamaño y proporción; no se modifica `.stat-card` global ni el orden de etiqueta y valor.
 - Las tarjetas leen `computeTicketStats()` de `src/utils/postventa.js`: «Tickets abiertos» = `Abierto`, «En proceso» = `En revisión`, «Resueltos» = `Resuelto`, con una sola pasada y sin contadores persistidos.
 - La tabla muestra cliente, asunto, categoría, prioridad y estado, con un control para cambiar el estado permitido según el rango; cada mutación vuelve a renderizar tarjetas y tabla.
@@ -59,8 +61,8 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 
 ## Rutas y mensajes
 
-- Rutas relativas: `?view=postventa` y `?view=ticket-form` para el formulario en la pestaña nueva. No existe `?view=panel`; el Panel se abre quitando el parámetro.
-- `?view=ticket-form` hereda la sesión del mismo origen y responde con «Acceso denegado» o inicio de sesión igual que `?view=postventa` cuando el rango no tiene `postventa:create`.
+- Rutas relativas: solo `?view=postventa`; el panel del formulario es estado local de esa vista y no añade parámetro `view`. No existe `?view=panel`; el Panel se abre quitando el parámetro.
+- La apertura del panel exige `postventa:create` en la interfaz y `createTicketDocument()` vuelve a comprobarlo en la capa de datos; N3 y visitante reciben «Acceso denegado» o inicio de sesión al entrar en `?view=postventa`, igual que antes.
 - Mensajes exactos: `Completa los campos obligatorios.` y `No tienes permiso para realizar esta acción`.
 - Etiquetas exactas: «Postventa», «Nuevo Ticket», «Tickets abiertos», «En proceso», «Resueltos», «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
 
@@ -71,7 +73,8 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - Crear un ticket para un cliente existente lo añade a la ficha de ese cliente y aumenta solo la tarjeta correspondiente.
 - Cambiar de `Resuelto` a `Abierto` actualiza tabla y tarjetas sin borrar la nota histórica del documento.
 - N1 y N4 crean y cambian cualquier estado; N2 solo ve sus clientes y no ve el botón ni el control de estado; N3 y visitante no acceden ni por enlace profundo, consola o llamada directa a `src/storage.js`.
-- Al pulsar «Nuevo Ticket» se comprueba que `window.open` recibe `?view=ticket-form`, `_blank` y `noopener`, y que el marcado de Postventa no contiene el formulario en línea.
-- Abrir `?view=ticket-form` directamente con N1/N4 muestra el formulario sin `.sidebar` ni `.topbar`; con N2, N3 o visitante muestra la denegación o el inicio de sesión.
-- Tras crear un ticket en la otra pestaña, despachar `StorageEvent('storage', { key: 'erp_documents' })` actualiza la tabla y las tres tarjetas de la pestaña original sin recargar; el formulario y los mensajes de validación son idénticos a los del flujo anterior.
+- Al pulsar «Nuevo Ticket» se comprueba que aparece el panel dentro de `?view=postventa`, que la tabla queda sustituida temporalmente, que las tres tarjetas siguen visibles y que no se llama a `window.open` ni se registra `?view=ticket-form`.
+- Con N2 no se muestra el botón «Nuevo Ticket»; con N3 o visitante la vista `?view=postventa` muestra la denegación o el inicio de sesión, sin panel utilizable ni escritura directa.
+- Guardar un ticket cierra el panel, vuelve a la tabla y recalcula las tres tarjetas sin recarga; cancelar sin cambios cierra el panel, y cancelar con cambios sin guardar muestra la confirmación antes de descartarlos. No se despacha ni se requiere `StorageEvent`.
+- El marcado del panel usa las mismas clases de presentación que «Nuevo Cliente» y conserva el orden «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con los mensajes exactos.
 - Las tres tarjetas de Postventa comparten el tamaño y la proporción de los indicadores de «Resumen» sin cambiar sus etiquetas, valores ni cálculo.
