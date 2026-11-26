@@ -127,6 +127,13 @@ body {
   margin: var(--space-3) 0;
 }
 
+.postventa-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);

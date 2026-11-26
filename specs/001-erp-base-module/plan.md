@@ -9,7 +9,9 @@
 
 **Incremento actual (2026-11-24, octava tanda, autenticación y permisos)**: añadir autenticación local, sesión persistente con expiración, contraseñas con hash, bloqueo temporal, matriz única de permisos por rango y administración de usuarios restringida al Gerente comercial. La estructura incluye `src/auth.js`, `src/auth/permissions.js`, `src/components/login.js` y `src/components/users-admin.js`.
 
-**Incremento actual (2026-11-26, Postventa)**: añadir «Postventa» como quinta opción de la barra lateral, con botón «Nuevo Ticket», tres tarjetas de resumen y una tabla de gestión de casos. Los tickets son `Documento` vinculados a clientes existentes con campos declarados en la configuración, y su creación y cambio de estado se validan con acciones canónicas nuevas en la matriz de permisos.
+**Incremento anterior (2026-11-26, Postventa)**: añadir «Postventa» como quinta opción de la barra lateral, con botón «Nuevo Ticket», tres tarjetas de resumen y una tabla de gestión de casos. Los tickets son `Documento` vinculados a clientes existentes con campos declarados en la configuración, y su creación y cambio de estado se validan con acciones canónicas nuevas en la matriz de permisos.
+
+**Incremento actual (2026-11-26, ajustes de Postventa)**: al activar «Nuevo Ticket», abrir el formulario en una pestaña nueva del navegador mientras la vista de Postventa permanece intacta; al guardar en esa pestaña, actualizar automáticamente la tabla y las tres tarjetas de la pestaña original sin recarga manual; y dar a las tres tarjetas el mismo tamaño y proporción que los indicadores del apartado «Resumen», con un cambio únicamente visual.
 
 ## Resumen
 
@@ -17,7 +19,7 @@ Construir una aplicación web Vite sin framework de interfaz que sirva como mód
 
 Marketing conserva las tarjetas y el embudo del panel, pero no sus botones de acción rápida: en esa vista solo se muestran cinco atajos de sección («Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales»), y el apartado antes llamado «Chat» pasa a denominarse «Dudas y consultas» en todas las etiquetas visibles, conservando `chat` como clave interna.
 
-Postventa es una vista adicional para atender a clientes que ya compraron. Cada ticket se guarda como un `Documento` vinculado al cliente elegido, con «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», de modo que quede visible en la ficha del cliente. El apartado muestra «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y una tabla en la que Atención al Cliente y Gerencia pueden cambiar el estado entre «Abierto», «En revisión» y «Resuelto», sin perder la posibilidad de reabrir un ticket resuelto.
+Postventa es una vista adicional para atender a clientes que ya compraron. Cada ticket se guarda como un `Documento` vinculado al cliente elegido, con «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», de modo que quede visible en la ficha del cliente. El apartado muestra «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y una tabla en la que Atención al Cliente y Gerencia pueden cambiar el estado entre «Abierto», «En revisión» y «Resuelto», sin perder la posibilidad de reabrir un ticket resuelto. «Nuevo Ticket» abre ahora el formulario en una pestaña nueva del navegador y deja la vista de Postventa intacta; el guardado en esa pestaña actualiza sola la tabla y las tarjetas de la pestaña original, sin recarga manual. Las tres tarjetas tienen el mismo tamaño y proporción que los indicadores del apartado «Resumen», sin cambiar etiquetas, valores ni cálculo.
 
 ## Contexto Técnico
 
@@ -70,6 +72,18 @@ Postventa es una vista adicional para atender a clientes que ya compraron. Cada 
 **Formulario**: `src/components/postventa.js` combina un buscador `#ticket-client-search` con un `select` de clientes activos, y valida prioridad obligatoria y «Nota de resolución» obligatoria solo cuando el estado es «Resuelto».
 **Permisos**: acciones canónicas `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`; N4 las tiene todas, N1 crea y cambia estados, N2 solo consulta los clientes que tiene asignados y N3/visitante no acceden.
 **Capa de datos**: `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` validan con `assertPermission()` antes de escribir o filtrar, sin depender solo de botones ocultos.
+
+### Contexto Técnico del incremento de ajustes de Postventa (2026-11-26)
+
+**Pestaña nueva del formulario**: «Nuevo Ticket» deja de alternar un formulario en línea y abre `?view=ticket-form` con `window.open(..., '_blank', 'noopener')`. La nueva ruta se registra en `ROUTE_VIEWS`/`VIEW_ROUTES` y se renderiza como vista autónoma sin marco ERP, siguiendo el patrón de `login`/`capture`; `src/components/ticket-form.js` extrae el formulario existente para reutilizarlo sin duplicar validación.
+
+**Sesión y permisos compartidos**: la pestaña nueva lee el mismo `erp_session`/`erp_users` de `localStorage` del mismo origen y resuelve identidad y rango con `refreshAuth()`; la ruta exige `postventa:create` y `createTicketDocument()` vuelve a comprobarlo en la capa de datos. No hay clave de almacenamiento ni acción canónica nueva.
+
+**Sincronización entre pestañas**: `app.js` registra un listener `storage` en `window` que filtra `erp_documents`/`erp_entities` (y acepta `key` nulo en las pruebas) y llama a `render()`, que ya ejecuta `refreshData()`; `destroy()` retira el listener. No hay sondeo ni contadores persistidos.
+
+**Tamaño de tarjetas**: regla CSS ámbito `.postventa-cards` equivalente a `.summary-cards` (contenedor flex con `gap`/`margin` y `min-width` heredado de `.stat-card`), sin modificar la regla global `.stat-card` ni el orden, etiquetas, valores o cálculo de las tarjetas.
+
+**Pruebas**: Vitest/jsdom simula `window.open` y comprueba la URL `_blank`; como el mock de `localStorage` no emite eventos, las pruebas de sincronización despachan `StorageEvent('storage', { key: 'erp_documents' })` explícitamente. Las suites existentes que esperaban el formulario en línea se actualizan al nuevo flujo.
 
 ### Aclaraciones integradas (sesión 2026-11-01)
 
@@ -170,6 +184,12 @@ Postventa es una vista adicional para atender a clientes que ya compraron. Cada 
 - La tabla permite cambiar entre cualquier par de estados, incluida la reapertura desde «Resuelto».
 - «Prioridad» ofrece «Baja», «Media» y «Alta» sin preselección; «Nota de resolución» es obligatoria solo al guardar en «Resuelto».
 
+### Aclaraciones integradas (sesión 2026-11-26, ajustes de Postventa)
+
+- «Nuevo Ticket» abre un formulario en una pestaña nueva del navegador; la vista de Postventa permanece intacta en la pestaña original.
+- Al guardarse el ticket en esa pestaña, la vista original actualiza sola la tabla y las tres tarjetas, sin exigir que el usuario pulse recargar.
+- Las tres tarjetas de Postventa tienen el mismo tamaño y proporción que los indicadores del apartado «Resumen»; el cambio es únicamente visual.
+
 ### Ajustes posteriores al análisis (2026-11-24)
 
 - FR-005 se limita a búsqueda/ficha; la pantalla de gestión sigue sin lista de entidades conforme a FR-016.
@@ -209,6 +229,11 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 - Pruebas (Postventa): Se cubrirán con pruebas unitarias las agregaciones, las opciones declaradas y la validación condicional de la nota de resolución, y con pruebas de integración el formulario, el desplegable buscable, la tabla, los cambios de estado, la ficha del cliente y las denegaciones por rango.
 - Seguridad y UX (Postventa): La creación y el cambio de estado se validarán en `src/storage.js` con las acciones canónicas nuevas, incluso en llamadas directas; la vista usará mensajes exactos, estados vacíos, texto sanitizado y el mismo marco ERP, con Postventa como quinta opción de la barra lateral.
 - Rendimiento (Postventa): Las tres tarjetas se calcularán en una sola pasada sobre los documentos ya cargados en memoria y se actualizarán al renderizar tras cada mutación, sin contadores persistidos (FR-032, FR-105).
+- Calidad (ajustes de Postventa): El formulario se extraerá a un componente dedicado reutilizado por la pestaña nueva, sin duplicar campos ni validación; la ruta nueva usará `postventa:create` y no añadirá acciones canónicas ni claves de almacenamiento.
+- Pruebas (ajustes de Postventa): Se cubrirán con pruebas de integración la apertura de `?view=ticket-form` en `_blank`, la vista autónoma con sus permisos, la denegación para N2/N3/visitante y la actualización de la pestaña original al despachar `StorageEvent`, además de ajustar las suites que asumían el formulario en línea.
+- Experiencia de Usuario (ajustes de Postventa): La pestaña nueva usará los mismos campos, orden y mensajes exactos; la vista original se actualizará sin recarga y las tres tarjetas adoptarán el tamaño de «Resumen» sin alterar etiquetas, valores ni cálculo.
+- Seguridad (ajustes de Postventa): La nueva ruta se validará con la matriz antes de renderizar y `createTicketDocument()` volverá a comprobar `postventa:create`, de modo que un enlace profundo o una llamada directa no eludan los permisos.
+- Rendimiento (ajustes de Postventa): Un único evento `storage` provocará un solo `render()`; no se introducirá sondeo ni recálculo adicional, y el cambio de tamaño será solo CSS.
 
 **Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. La tercera tanda añade presentación declarativa (`order`, `placeholder` y opciones con `{ value, label }`) reutilizando el mismo `module-config.js` y el registro de formatos existente: los valores almacenados, las condiciones `when` y la clave `rubro` no cambian, las pistas grises son solo atributos de ejemplo y la unicidad del RUT sigue una sola regla normalizada. No se introducen dependencias ni violaciones de la constitución.
 
@@ -221,6 +246,8 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 **Reverificación post-diseño del incremento de autenticación**: APROBADA. La identidad y la matriz viven en módulos separados por responsabilidad sin dependencias nuevas; `src/auth/permissions.js` es la única fuente de permisos y `src/storage.js` la consume antes de mutar, de modo que ocultar botones no sea la única barrera. La sesión guarda solo `userId` y marcas de tiempo, resolviendo el rango desde `erp_users` para cumplir la revocación y el cambio de rango inmediato. El hash con `PBKDF2-SHA-256` y sal por usuario evita contraseñas en texto plano dentro de la limitación demostrativa sin backend; `Sistema` queda fuera de la matriz interactiva pero conserva la auditación de campañas. Los contratos y el modelo de datos documentan estados, mensajes exactos y escenarios verificables para `/speckit.tasks`.
 
 **Reverificación post-diseño del incremento de Postventa (2026-11-26)**: APROBADA. Los tickets reutilizan `Documento` y su vínculo `entity_id`, por lo que no aparece `support_tickets` ni segunda historial; el bloque `postventa` de configuración mantiene las opciones y transiciones declaradas sin alterar el `statusLifecycle` global ni los atajos de Marketing. Las cuatro acciones canónicas nuevas se añaden a la única matriz de permisos y se validan en funciones dedicadas de `src/storage.js`, de modo que N1 no necesite `document:edit_any` ni N3 pueda crear tickets. Las tarjetas derivan de los documentos en una sola pasada, con estados vacíos y mensajes exactos conforme al marco compartido. Los contratos, el modelo de datos y la guía de validación cubren la ruta, el formulario, los rangos y los casos límite; no se introducen dependencias ni violaciones de la constitución.
+
+**Reverificación post-diseño del incremento de ajustes de Postventa (2026-11-26)**: APROBADA. La pestaña nueva reutiliza la sesión de mismo origen y la ruta autónoma patrón de `login`/`capture`, sin clave de almacenamiento ni acción de permisos adicional: `postventa:create` se comprueba tanto al resolver la ruta como en `createTicketDocument()`. El formulario se extrae a un componente único, de modo que no se dupliquen campos, opciones ni mensajes exactos. La sincronización se apoya en el evento `storage` del navegador y en el `render()` existente, sin sondeo ni contadores derivados; las pruebas lo simulan con `StorageEvent`. El ajuste de tamaño es una regla CSS con ámbito `.postventa-cards` que no toca `.stat-card` global, el orden de los nodos ni `computeTicketStats()`, por lo que etiquetas, valores y recálculo siguen siendo los mismos. No hay dependencias nuevas ni violaciones de la constitución.
 
 ## Estructura del Proyecto
 
@@ -278,11 +305,12 @@ src/
     ├── marketing-chat.js   («Dudas y consultas»: preguntas frecuentes, respuestas rápidas y consultas de seguimiento)
     ├── login.js            (pantalla de inicio de sesión sin marco ERP; rutas públicas de captura y «Dudas y consultas»)
     ├── users-admin.js      (alta, edición, desactivación y asignación de rango solo para Nivel 4)
-    └── postventa.js        (vista de Postventa: «Nuevo Ticket», tarjetas, tabla y cambios de estado)
+    ├── postventa.js        (vista de Postventa: «Nuevo Ticket», tarjetas, tabla y cambios de estado)
+    └── ticket-form.js      (formulario autónomo de «Nuevo Ticket» para la pestaña nueva)
 
 tests/
 ├── unit/          (incluye entity-date, validación de rango, marketing-stats y postventa)
-├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública y postventa)
+├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública, postventa, pestaña del formulario y sincronización entre pestañas)
 └── setup/
 ```
 
@@ -302,6 +330,8 @@ tests/
 
 **Decisión adicional (sesión 2026-11-26, Postventa)**: Postventa se añade como quinta entrada de `NAV_ITEMS` y como ruta `?view=postventa`, sin tocar los cinco atajos internos de Marketing. Los tickets reutilizan `Documento` con `entity_id` de un cliente ya existente y se distinguen por el campo `ticket`; sus opciones y estados se declaran en un bloque opcional `postventa` de `MODULE_CONFIG`, con `transitions` vacío para permitir cualquier cambio entre «Abierto», «En revisión» y «Resuelto». `src/utils/postventa.js` centraliza la validación y las tres agregaciones en una sola pasada, y `src/components/postventa.js` reutiliza el marco de tarjetas y tablas existente. `src/auth/permissions.js` gana `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`; `src/storage.js` los comprueba en `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()`, de modo que N1 pueda crear y reabrir sin heredar `document:edit_any` y N2 quede limitado a sus clientes. No hay nueva clave de `localStorage`, dependencia externa ni esquema relacional.
 
+**Decisión adicional (sesión 2026-11-26, ajustes de Postventa)**: «Nuevo Ticket» cambia el formulario en línea por un enlace a `?view=ticket-form` abierto con `window.open(..., '_blank', 'noopener')`; la ruta se renderiza sin barra superior ni lateral, como `login`/`capture`, y se protege con `postventa:create` antes de dibujar y en `createTicketDocument()`. El markup del formulario se mueve a `src/components/ticket-form.js`, conservando nombres de campos, buscador de cliente, opciones y mensajes exactos, para que Postventa y la pestaña nueva compartan una sola definición. La pestaña original se actualiza mediante un listener `storage` en `app.js` que llama al `render()` existente cuando cambian `erp_documents` o `erp_entities`; se retira en `destroy()` y no añade sondeo ni estado persistido. Las tarjetas logran el tamaño de «Resumen» con una regla `.postventa-cards` equivalente a `.summary-cards`, sin tocar `.stat-card` global ni reordenar etiqueta y valor.
+
 ## Seguimiento de Complejidad
 
 Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente, la lógica de RUT ya presente en la semilla y el mismo patrón de pruebas Vitest/jsdom. Las contrapartidas registradas son un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado, y una capa declarativa adicional (`fieldRules`/`detailPolicy`) que se resuelve en un único punto y no modifica el comportamiento de los módulos que no la declaran. El bloqueo de ficha reutiliza el validador de guardado, por lo que no añade una segunda fuente de verdad. La tercera tanda tampoco añade dependencias: `order`, `placeholder` y `options` con valor y etiqueta se resuelven en el mismo punto de configuración, las pistas son texto de ejemplo sin persistencia, y la aceptación de dos formatos de RUT aprovecha el normalizador ya existente en `field-formats.js`.
@@ -315,6 +345,8 @@ La octava tanda de Marketing tampoco añade dependencias ni violaciones: introdu
 La octava tanda de autenticación tampoco añade dependencias: usa Web Crypto API para el hash y `localStorage` para la identidad simulada. La contrapartida registrada es que un hash local con sal y un bloqueo temporal no sustituyen la autenticación de servidor requerida para producción; por eso la sesión guarda solo `userId`, resuelve el rango en cada verificación y documenta la limitación en `research.md` y `contracts/auth.md`. La expiración por inactividad y el bloqueo se implementan como medidas demostrativas para que el flujo sea verificable sin backend. La denegación de permisos se verifica en UI, enlaces profundos y llamadas a la API de `storage.js` con sesión íntegra, incluidas las realizadas desde consola; no se promete resistencia a edición deliberada de `localStorage`/`erp_session` ni a falsificación de identidad/rango. `createdByUserId` y `assignedUserIdAtSale` conservan atribución histórica aunque el usuario cambie de rango o sea desactivado.
 
 La tanda de Postventa no añade dependencias ni claves de almacenamiento: reutiliza `Documento`, `customFields.document`, el marco de tarjetas y la matriz de permisos existente. La contrapartida es que la nota de resolución y la prioridad viven en la configuración activa, por lo que las pruebas deben verificar tanto la forma declarada como el texto exacto de validación; y que las acciones `postventa:*` son aditivas a las de Marketing, sin ampliar `document:create` ni `document:edit_any`. La agregación en una sola pasada evita contadores derivados persistidos, y la denegación se comprueba en la capa de datos para enlaces profundos y llamadas directas.
+
+Los ajustes de Postventa tampoco añaden dependencias ni claves: la pestaña nueva reutiliza el mismo documento HTML, la sesión de mismo origen y el componente de formulario extraído; la contrapartida es que la sincronización depende del evento `storage`, que no se propaga a la pestaña que escribe y que en jsdom debe despacharse explícitamente en las pruebas. El listener es single y acotado a `render()`, y el cambio de tamaño es solo CSS con ámbito propio, sin afectar a las tarjetas del panel ni de Marketing.
 
 ## Revisión de la Lista de Verificación Pendiente
 

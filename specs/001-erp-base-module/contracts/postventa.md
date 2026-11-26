@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a FR-109): quinta opción de la barra lateral, botón «Nuevo Ticket», tres tarjetas derivadas de los tickets y una tabla cuyo estado puede cambiarse libremente. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#9-postventa-historia-de-usuario-25). No se introduce backend, dependencia nueva ni clave adicional de `localStorage`.
+Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a FR-109): quinta opción de la barra lateral, botón «Nuevo Ticket», tres tarjetas derivadas de los tickets y una tabla cuyo estado puede cambiarse libremente. El formulario se abre en una pestaña nueva del navegador y su guardado actualiza la pestaña original sin recarga; las tres tarjetas tienen el tamaño de los indicadores de «Resumen». La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#9-postventa-historia-de-usuario-25). No se introduce backend, dependencia nueva ni clave adicional de `localStorage`.
 
 ## Datos y configuración
 
@@ -32,13 +32,13 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 
 ## Permisos
 
-| Rango                    | Ver listado       | Crear | Cambiar estado |
-| ------------------------ | ----------------- | ----- | -------------- |
-| N4 Gerente comercial     | Todos los tickets | Sí    | Cualquiera     |
-| N1 Atención al cliente   | Todos los tickets | Sí    | Cualquiera     |
-| N2 Ejecutivo de Ventas   | Solo sus clientes | No    | No             |
-| N3 Ejecutivo de Marketing| No                | No    | No             |
-| Visitante                | No                | No    | No             |
+| Rango                     | Ver listado       | Crear | Cambiar estado |
+| ------------------------- | ----------------- | ----- | -------------- |
+| N4 Gerente comercial      | Todos los tickets | Sí    | Cualquiera     |
+| N1 Atención al cliente    | Todos los tickets | Sí    | Cualquiera     |
+| N2 Ejecutivo de Ventas    | Solo sus clientes | No    | No             |
+| N3 Ejecutivo de Marketing | No                | No    | No             |
+| Visitante                 | No                | No    | No             |
 
 - Las acciones canónicas son `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, definidas en [`auth.md`](auth.md).
 - La pertenencia de N2 se resuelve con `Entidad.ejecutivo_asignado === user.id`; cambiar el asignado cambia la visibilidad sin mutar los tickets.
@@ -48,7 +48,10 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 
 - `src/components/shell.js`: `NAV_ITEMS` incluye `postventa` inmediatamente después de `marketing`, con etiqueta «Postventa» y resaltado derivado de `state.view`.
 - `src/app.js`: `ROUTE_VIEWS`/`VIEW_ROUTES` incluyen `postventa`; la resolución aplica la matriz antes de renderizar, incluso en enlaces profundos y Back/Forward.
-- `src/components/postventa.js`: renderiza «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y la tabla de gestión después; reutiliza `.stat-card`, `.client-management-table` y `.empty-state`.
+- `src/components/postventa.js`: renderiza «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y la tabla de gestión después; reutiliza `.stat-card`, `.client-management-table` y `.empty-state`. Ya no renderiza el formulario en línea: «Nuevo Ticket» abre `?view=ticket-form` en una pestaña nueva del navegador (`_blank`, `noopener`) y deja esta vista intacta.
+- `src/components/ticket-form.js`: contiene el único formulario de «Nuevo Ticket», con el mismo orden de campos, buscador `#ticket-client-search`, opciones declaradas y mensajes exactos; la ruta `?view=ticket-form` lo muestra como vista autónoma sin barra superior ni lateral y exige `postventa:create` antes de dibujarlo.
+- `src/app.js`: registra un listener `storage` en `window` que, al cambiar `erp_documents` o `erp_entities` (o con `key` nulo en pruebas), llama a `render()`; `destroy()` lo retira. La pestaña original actualiza tabla y tarjetas sin que el usuario pulse recargar; la pestaña que escribe ya renderiza tras su propia mutación.
+- `src/styles.css`: `.postventa-cards` usa la misma regla de contenedor que `.summary-cards` para que las tres tarjetas tengan su tamaño y proporción; no se modifica `.stat-card` global ni el orden de etiqueta y valor.
 - Las tarjetas leen `computeTicketStats()` de `src/utils/postventa.js`: «Tickets abiertos» = `Abierto`, «En proceso» = `En revisión`, «Resueltos» = `Resuelto`, con una sola pasada y sin contadores persistidos.
 - La tabla muestra cliente, asunto, categoría, prioridad y estado, con un control para cambiar el estado permitido según el rango; cada mutación vuelve a renderizar tarjetas y tabla.
 - El texto persistido se sanitiza con `escapeHtml()` antes de insertarse en el DOM.
@@ -56,7 +59,8 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 
 ## Rutas y mensajes
 
-- Ruta relativa: `?view=postventa`. No existe `?view=panel`; el Panel se abre quitando el parámetro.
+- Rutas relativas: `?view=postventa` y `?view=ticket-form` para el formulario en la pestaña nueva. No existe `?view=panel`; el Panel se abre quitando el parámetro.
+- `?view=ticket-form` hereda la sesión del mismo origen y responde con «Acceso denegado» o inicio de sesión igual que `?view=postventa` cuando el rango no tiene `postventa:create`.
 - Mensajes exactos: `Completa los campos obligatorios.` y `No tienes permiso para realizar esta acción`.
 - Etiquetas exactas: «Postventa», «Nuevo Ticket», «Tickets abiertos», «En proceso», «Resueltos», «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
 
@@ -67,3 +71,7 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - Crear un ticket para un cliente existente lo añade a la ficha de ese cliente y aumenta solo la tarjeta correspondiente.
 - Cambiar de `Resuelto` a `Abierto` actualiza tabla y tarjetas sin borrar la nota histórica del documento.
 - N1 y N4 crean y cambian cualquier estado; N2 solo ve sus clientes y no ve el botón ni el control de estado; N3 y visitante no acceden ni por enlace profundo, consola o llamada directa a `src/storage.js`.
+- Al pulsar «Nuevo Ticket» se comprueba que `window.open` recibe `?view=ticket-form`, `_blank` y `noopener`, y que el marcado de Postventa no contiene el formulario en línea.
+- Abrir `?view=ticket-form` directamente con N1/N4 muestra el formulario sin `.sidebar` ni `.topbar`; con N2, N3 o visitante muestra la denegación o el inicio de sesión.
+- Tras crear un ticket en la otra pestaña, despachar `StorageEvent('storage', { key: 'erp_documents' })` actualiza la tabla y las tres tarjetas de la pestaña original sin recargar; el formulario y los mensajes de validación son idénticos a los del flujo anterior.
+- Las tres tarjetas de Postventa comparten el tamaño y la proporción de los indicadores de «Resumen» sin cambiar sus etiquetas, valores ni cálculo.

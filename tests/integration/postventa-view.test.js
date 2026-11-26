@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { NAV_ITEMS } from '../../src/components/shell.js';
@@ -13,12 +15,6 @@ function mount() {
   document.body.innerHTML = '<div id="app"></div>';
   app = initApp(document.getElementById('app'), { rawConfig: null });
   return app;
-}
-
-function click(selector) {
-  const element = document.querySelector(selector);
-  expect(element, `No se encontró ${selector}`).toBeTruthy();
-  element.click();
 }
 
 afterEach(() => {
@@ -67,12 +63,16 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
     mount();
     app.navigate('postventa');
 
+    const view = document.querySelector('.postventa-view');
     const button = document.querySelector('[data-action="ticket-form"]');
     const cards = document.querySelector('.postventa-cards');
     const table = document.querySelector('.client-management-table');
+    expect(view).toBeTruthy();
     expect(button).toBeTruthy();
     expect(cards).toBeTruthy();
     expect(table).toBeTruthy();
+    expect(view.contains(cards)).toBe(true);
+    expect(view.querySelectorAll('.postventa-cards .stat-card')).toHaveLength(3);
     expect(button.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cards.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cards.textContent).toContain('Tickets abiertos');
@@ -84,25 +84,6 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
       '0',
     ]);
     expect(table.textContent).toContain('No hay tickets registrados.');
-
-    click('[data-action="ticket-form"]');
-    const names = [...document.querySelectorAll('#ticket-form [name]')].map((field) => field.name);
-    expect(names).toEqual([
-      'entity_id',
-      'asunto',
-      'categoria',
-      'prioridad',
-      'status',
-      'nota_resolucion',
-    ]);
-    const priority = document.querySelector('#ticket-form [name="prioridad"]');
-    expect(priority.value).toBe('');
-    expect([...priority.options].map((option) => option.textContent)).toEqual([
-      '-- Selecciona --',
-      'Baja',
-      'Media',
-      'Alta',
-    ]);
   });
 
   it('filtra el desplegable Cliente por nombre y excluye archivados', () => {
@@ -110,9 +91,8 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
     addEntity({ name: 'Beta S.A.', code: 'PV-B' });
     const archived = addEntity({ name: 'Archivada', code: 'PV-C' });
     archiveEntity(archived.id);
+    setSearch('?view=ticket-form');
     mount();
-    app.navigate('postventa');
-    click('[data-action="ticket-form"]');
 
     const initial = [...document.querySelectorAll('#ticket-client option')].map(
       (option) => option.textContent
@@ -130,5 +110,31 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
     );
     expect(filtered.join(' ')).toContain('Alpha Ltda');
     expect(filtered.join(' ')).not.toContain('Beta S.A.');
+  });
+
+  it('usa el mismo dimensionamiento de tarjetas que Resumen sin reglas específicas', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    const declarations = (selector) => {
+      const escaped = selector.replaceAll('.', '\\.');
+      const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+      expect(match, `No se encontró ${selector}`).toBeTruthy();
+      return match[1]
+        .split(';')
+        .map((declaration) => declaration.trim())
+        .filter(Boolean);
+    };
+
+    expect(declarations('.summary-cards')).toEqual(declarations('.postventa-cards'));
+    expect(css).not.toMatch(/\.postventa-cards\s+\.stat-card/);
+    expect(css).not.toMatch(/\.postventa-cards\s+\.stat-label/);
+    expect(css).not.toMatch(/\.postventa-cards\s+\.stat-value/);
+
+    setSearch('?view=postventa');
+    mount();
+    const card = document.querySelector('.postventa-cards .stat-card');
+    expect([...card.children].map((element) => element.className)).toEqual([
+      'stat-label',
+      'stat-value',
+    ]);
   });
 });

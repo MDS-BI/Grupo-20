@@ -61,7 +61,10 @@ export function authEnabled() {
 
 export function ensureSeedUsers() {
   if (storage()?.getItem(USERS_KEY)) return;
-  writeJson(USERS_KEY, DEMO_USERS.map(([username, rank]) => buildUser(username, rank)));
+  writeJson(
+    USERS_KEY,
+    DEMO_USERS.map(([username, rank]) => buildUser(username, rank))
+  );
 }
 
 export function listUsers() {

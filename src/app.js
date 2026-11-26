@@ -40,10 +40,7 @@ import {
   buildDocumentFormBaseline,
   isDocumentFormDirty,
 } from './components/document-form.js';
-import {
-  renderEntityListHtml,
-  renderClientManagementTableHtml,
-} from './components/entity-list.js';
+import { renderEntityListHtml, renderClientManagementTableHtml } from './components/entity-list.js';
 import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
@@ -52,6 +49,7 @@ import { renderCaptureFormHtml, collectCaptureFormData } from './components/capt
 import { createProspectFromCapture, CaptureError } from './utils/capture-prospect.js';
 import { renderMarketingHtml } from './components/marketing.js';
 import { renderPostventaHtml } from './components/postventa.js';
+import { renderTicketFormHtml } from './components/ticket-form.js';
 import { renderMarketingChatHtml } from './components/marketing-chat.js';
 import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
 import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
@@ -88,6 +86,7 @@ const ROUTE_VIEWS = new Set([
   'capture',
   'marketing',
   'postventa',
+  'ticket-form',
   'summary',
   'search',
   'users-admin',
@@ -97,6 +96,7 @@ const VIEW_ROUTES = {
   capture: 'capture',
   marketing: 'marketing',
   postventa: 'postventa',
+  'ticket-form': 'ticket-form',
   summary: 'summary',
   search: 'search',
   'users-admin': 'users-admin',
@@ -820,13 +820,18 @@ export function initApp(rootEl = null, options = {}) {
     return renderPostventaHtml(state.config, {
       tickets: visibleTicketDocuments(),
       clients: activeEntities(),
-      formOpen: state.ticketFormOpen,
-      formValues: state.ticketValues,
-      formErrors: state.ticketErrors,
-      ticketClientSearch: state.ticketClientSearch,
       canCreate: uiCan('postventa:create'),
       canTransition: uiCan('postventa:transition'),
     });
+  }
+
+  function renderTicketFormView() {
+    return `<h1>Nuevo Ticket</h1>${renderTicketFormHtml(state.config, {
+      clients: activeEntities(),
+      formValues: state.ticketValues,
+      formErrors: state.ticketErrors,
+      ticketClientSearch: state.ticketClientSearch,
+    })}`;
   }
 
   function renderUsersAdminView() {
@@ -847,6 +852,8 @@ export function initApp(rootEl = null, options = {}) {
         return renderMarketingView();
       case 'postventa':
         return renderPostventaView();
+      case 'ticket-form':
+        return renderTicketFormView();
       case 'capture':
         return `${renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted)}${
           state.config.marketing
@@ -904,7 +911,8 @@ export function initApp(rootEl = null, options = {}) {
       state.authEnabled && state.currentUser
         ? `<div class="user-meta"><span id="current-user">${escapeHtml(state.currentUser.username)}</span><span id="current-rank">${escapeHtml(RANK_LABELS[state.currentUser.rank] || state.currentUser.rank || '')}</span>${canViewRoute(state.role, 'users-admin') ? '<button type="button" data-action="navigate" data-view="users-admin">Gestionar usuarios</button>' : ''}<button type="button" data-action="logout">Cerrar sesión</button></div>`
         : '';
-    const bareStandalone = state.view === 'login' || state.view === 'capture';
+    const bareStandalone =
+      state.view === 'login' || state.view === 'capture' || state.view === 'ticket-form';
     const wrappedStandalone = bareStandalone && enableAuth;
     rootEl.innerHTML = bareStandalone
       ? `${warningHtml}${noticeHtml}${wrappedStandalone ? `<main id="view-root">${renderCurrentView()}</main>` : renderCurrentView()}`
@@ -1103,8 +1111,13 @@ export function initApp(rootEl = null, options = {}) {
       state.ticketErrors = {};
       state.ticketValues = {};
       state.ticketFormOpen = false;
+      state.ticketClientSearch = '';
       refreshData();
-      render();
+      if (state.view === 'ticket-form') {
+        applyRoute(routeFromKey('postventa'), { skipDirtyCheck: true, replace: true });
+      } else {
+        render();
+      }
     } catch (err) {
       if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
       state.ticketErrors = err?.errors || { _form: MESSAGES.required };
@@ -1359,9 +1372,7 @@ export function initApp(rootEl = null, options = {}) {
           showPermissionDenied();
           break;
         }
-        state.ticketFormOpen = !state.ticketFormOpen;
-        state.ticketErrors = {};
-        render();
+        window.open(routeUrl('ticket-form'), '_blank', 'noopener');
         break;
       case 'cancel-ticket-form':
         state.ticketFormOpen = false;
@@ -1735,11 +1746,26 @@ export function initApp(rootEl = null, options = {}) {
     applyRoute(routeFromSearch(), { fromPopState: true });
   }
 
+  function handleStorage(event) {
+    if (
+      !event ||
+      (event.key !== 'erp_documents' && event.key !== 'erp_entities' && event.key !== null)
+    ) {
+      return;
+    }
+    const formEl = rootEl.querySelector('#ticket-form');
+    if (formEl) state.ticketValues = { ...state.ticketValues, ...formValues(formEl) };
+    render();
+  }
+
   rootEl.addEventListener('click', handleClick);
   rootEl.addEventListener('submit', handleSubmit);
   rootEl.addEventListener('input', handleInput);
   rootEl.addEventListener('change', handleChange);
-  if (typeof window !== 'undefined') window.addEventListener('popstate', handlePopState);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('storage', handleStorage);
+  }
 
   const stopEntityDateWatcher = config.entityDate
     ? watchLocalDayChange(() => {
@@ -1777,7 +1803,10 @@ export function initApp(rootEl = null, options = {}) {
       rootEl.removeEventListener('submit', handleSubmit);
       rootEl.removeEventListener('input', handleInput);
       rootEl.removeEventListener('change', handleChange);
-      if (typeof window !== 'undefined') window.removeEventListener('popstate', handlePopState);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('storage', handleStorage);
+      }
       if (typeof storageApi.setStorageAuthEnforced === 'function') {
         storageApi.setStorageAuthEnforced(false);
       }

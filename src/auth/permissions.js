@@ -104,6 +104,7 @@ const VIEW_ACTIONS = Object.freeze({
   summary: 'summary:view_all',
   marketing: 'marketing:view',
   postventa: 'postventa:view',
+  'ticket-form': 'postventa:create',
   'users-admin': 'users:manage',
 });
 

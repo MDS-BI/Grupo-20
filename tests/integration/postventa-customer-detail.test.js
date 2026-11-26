@@ -13,6 +13,10 @@ import {
 
 let app = null;
 
+function setSearch(search = '') {
+  window.history.replaceState({}, '', `${window.location.pathname}${search}`);
+}
+
 function mount() {
   document.body.innerHTML = '<div id="app"></div>';
   app = initApp(document.getElementById('app'), { rawConfig: null });
@@ -36,6 +40,7 @@ afterEach(() => {
   logout();
   app?.destroy();
   app = null;
+  setSearch('');
   localStorage.clear();
 });
 
@@ -70,7 +75,7 @@ describe('Tickets en la ficha del cliente (T200)', () => {
     );
   });
 
-  it('rechaza sin prioridad o con Resuelto sin nota usando el mensaje exacto', async () => {
+  it('rechaza sin prioridad o con Resuelto sin nota y crea el ticket desde ?view=ticket-form', async () => {
     setActiveConfig(DEFAULT_CONFIG);
     await signIn('gerente');
     setStorageAuthEnforced(true);
@@ -78,13 +83,13 @@ describe('Tickets en la ficha del cliente (T200)', () => {
     logout();
     await signIn('atencion');
 
+    setSearch('?view=ticket-form');
     document.body.innerHTML = '<div id="app"></div>';
     app = initApp(document.getElementById('app'), { rawConfig: null, enableAuth: true });
-    app.navigate('postventa');
-    document.querySelector('[data-action="ticket-form"]').click();
+    expect(app.getState().view).toBe('ticket-form');
 
     setField('entity_id', entity.entity_id);
-    setField('asunto', 'Sin prioridad');
+    setField('asunto', '<script>alert(1)</script>');
     setField('categoria', 'consulta');
     submitTicket();
     expect(document.querySelector('#ticket-form-error').textContent).toBe(
@@ -105,6 +110,18 @@ describe('Tickets en la ficha del cliente (T200)', () => {
     submitTicket();
     expect(loadDocuments()).toHaveLength(1);
     expect(loadDocuments()[0].status).toBe('Resuelto');
+    expect(app.getState().view).toBe('postventa');
+    expect(window.location.search).toBe('?view=postventa');
+
+    app.navigate('search');
+    document.querySelector('[data-action="view-entity"]').click();
+    const section = document.querySelector('.entity-detail-postventa');
+    expect(section.textContent).toContain('Asunto');
+    expect(section.textContent).toContain('Categoría');
+    expect(section.textContent).toContain('Prioridad');
+    expect(section.textContent).toContain('Estado');
+    expect(section.textContent).toContain('Nota de resolución');
+    expect(section.innerHTML).not.toContain('<script>');
   });
 
   it('elimina los tickets al eliminar los documentos del cliente', () => {

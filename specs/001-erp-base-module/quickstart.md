@@ -115,7 +115,7 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 ## Validación de Postventa
 
 1. Confirme que la barra lateral muestra «Postventa» como quinta opción, inmediatamente debajo de Marketing, y que abre `?view=postventa` con el marco ERP y «Nuevo Ticket» arriba.
-2. Abra «Nuevo Ticket» y compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
+2. Pulse «Nuevo Ticket»: debe abrirse `?view=ticket-form` en una pestaña nueva del navegador, sin barra superior ni lateral, mientras la vista de Postventa permanece intacta en la pestaña original. En la pestaña nueva compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
 3. En «Cliente», compruebe que el desplegable ofrece solo clientes existentes y que escribir en el buscador filtra por nombre sin crear un cliente nuevo.
 4. Despliegue «Categoría» y confirme exactamente «Soporte técnico», «Facturación», «Garantía» y «Consulta»; despliegue «Prioridad» y confirme «Baja», «Media» y «Alta» sin selección previa.
 5. Guarde sin elegir prioridad y luego con estado «Resuelto» sin nota: ambos intentos deben mostrar `Completa los campos obligatorios.` y no crear el ticket.
@@ -125,6 +125,10 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 9. Guarde un ticket en «Abierto» con texto en «Nota de resolución» y confirme que el texto no se conserva; guárdelo en «Resuelto» con nota y compruebe que sí se conserva.
 10. Inicie sesión como `atencion` (N1) y como `gerente` (N4): ambos deben crear tickets y cambiar cualquier estado. Inicie como `ventas` (N2): debe ver solo los tickets de sus clientes, sin botón «Nuevo Ticket» ni control de estado. Inicie como `marketing` (N3) o sin sesión: no debe acceder ni por enlace profundo, consola o llamada directa a `storage.js`.
 11. Abra directamente `?view=postventa`, use Back/Forward y recargue: la vista debe resolverse con la matriz en cada caso y la denegación debe mostrar `No tienes permiso para realizar esta acción`.
+
+12. Con Postventa abierta en una pestaña y el formulario en otra, guarde un ticket en la pestaña nueva y confirme que la pestaña original muestra la nueva fila y recalcula las tres tarjetas sin pulsar recargar.
+13. Abra `?view=ticket-form` como enlace profundo con `ventas` (N2), `marketing` (N3) o sin sesión: debe mostrar «Acceso denegado» o el inicio de sesión, sin formulario utilizable.
+14. Compare visualmente las tres tarjetas de Postventa con los indicadores del apartado «Resumen»: deben tener el mismo tamaño y proporción, conservando sus etiquetas «Tickets abiertos», «En proceso» y «Resueltos» y sus valores.
 
 La forma de los tickets y las reglas está en [`contracts/postventa.md`](contracts/postventa.md) y su efecto en el modelo en [`data-model.md`](data-model.md#9-postventa-historia-de-usuario-25).
 

@@ -62,7 +62,7 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 | `chat:create_query`                                                          | Sí  | Sí  | Sí                 | Sí  | Solo en ruta pública con consentimiento |
 | `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | Sí  | Sí  | No                 | No  | No                                      |
 | `campaign:stop_any`                                                          | Sí  | No  | No                 | No  | No                                      |
-| `postventa:view`, `postventa:create`, `postventa:transition`                  | Sí  | No  | No                 | Sí  | No                                      |
+| `postventa:view`, `postventa:create`, `postventa:transition`                 | Sí  | No  | No                 | Sí  | No                                      |
 | `postventa:view_own`                                                         | Sí  | No  | Solo con `ownerId` | No  | No                                      |
 | `users:manage`, `permissions:view`                                           | Sí  | No  | No                 | No  | No                                      |
 | `permissions:edit`                                                           | No  | No  | No                 | No  | No                                      |
@@ -127,4 +127,4 @@ Los textos de retroalimentación son los de FR-006. En autenticación y permisos
 - Agregar un rango requiere añadir una fila en `PERMISSION_MATRIX`; desde la interfaz no puede modificarse.
 - Un módulo personalizado puede reutilizar `can()` con nuevas acciones sin cambiar el núcleo de autenticación.
 - La autenticación es local y simulada en modo demostración: cualquier contraseña no vacía sirve para los cuatro usuarios, no hay hash ni bloqueo, y la expiración de la sesión sigue siendo demostrativa.
- Una implementación productiva requiere autenticación en servidor, tal como declara la especificación.
+  Una implementación productiva requiere autenticación en servidor, tal como declara la especificación.

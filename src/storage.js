@@ -14,11 +14,7 @@ import { getConfig } from './module-config.js';
 import { transitionStage } from './utils/marketing-stage.js';
 import { runAutomationRules } from './utils/marketing-automation.js';
 import { normalizeMarketingConfig } from './utils/marketing-config.js';
-import {
-  DEFAULT_POSTVENTA_CONFIG,
-  isTicket,
-  validateTicketValues,
-} from './utils/postventa.js';
+import { DEFAULT_POSTVENTA_CONFIG, isTicket, validateTicketValues } from './utils/postventa.js';
 import { getCurrentUser, listUsers, resolveExecutive } from './auth.js';
 import { assertPermission, can } from './auth/permissions.js';
 

@@ -25,12 +25,6 @@ function mount() {
   return app;
 }
 
-function click(selector) {
-  const element = document.querySelector(selector);
-  expect(element, `No se encontró ${selector}`).toBeTruthy();
-  element.click();
-}
-
 function submit(selector) {
   const form = document.querySelector(selector);
   expect(form, `No se encontró ${selector}`).toBeTruthy();
@@ -84,9 +78,9 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
 
   it('N1 crea tickets y cambia cualquier estado con nota', async () => {
     await signIn('atencion');
+    setSearch('?view=ticket-form');
     mount();
-    app.navigate('postventa');
-    click('[data-action="ticket-form"]');
+    expect(app.getState().view).toBe('ticket-form');
     setField('entity_id', ownEntity.entity_id);
     setField('asunto', 'Falla reportada');
     setField('categoria', 'soporte_tecnico');
@@ -96,6 +90,8 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
     let tickets = loadDocuments();
     expect(tickets).toHaveLength(1);
     expect(tickets[0]).toMatchObject({ ticket: true, status: 'Abierto' });
+    expect(app.getState().view).toBe('postventa');
+    expect(window.location.search).toBe('?view=postventa');
 
     const row = document.querySelector(`[data-ticket-id="${tickets[0].id}"]`);
     row.querySelector('[data-ticket-note]').value = 'Resuelto por teléfono';
@@ -121,9 +117,9 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
 
   it('N4 también crea y cambia estados', async () => {
     await signIn('gerente');
+    setSearch('?view=ticket-form');
     mount();
-    app.navigate('postventa');
-    click('[data-action="ticket-form"]');
+    expect(app.getState().view).toBe('ticket-form');
     setField('entity_id', otherEntity.entity_id);
     setField('asunto', 'Solicitud de garantía');
     setField('categoria', 'garantia');
@@ -131,6 +127,8 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
     submit('#ticket-form');
 
     expect(loadDocuments()).toHaveLength(1);
+    expect(app.getState().view).toBe('postventa');
+    expect(window.location.search).toBe('?view=postventa');
     const status = document.querySelector('[data-action="ticket-status-change"]');
     status.value = 'En revisión';
     status.dispatchEvent(new Event('change', { bubbles: true }));
@@ -159,6 +157,27 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
     expect(localStorage.getItem('erp_documents')).toBe(before);
   });
 
+  it('N2 ve Postventa pero recibe acceso denegado en ticket-form por enlace profundo', async () => {
+    logout();
+    await signIn('ventas');
+    setSearch('?view=ticket-form');
+    mount();
+
+    expect(document.querySelector('#route-notice').textContent).toBe(MESSAGES.accessDenied);
+    expect(app.getState().view).toBe('dashboard');
+    expect(document.querySelector('#ticket-form')).toBeNull();
+
+    app.navigate('postventa');
+    expect(app.getState().view).toBe('postventa');
+    expect(document.querySelector('[data-action="ticket-form"]')).toBeNull();
+
+    const before = localStorage.getItem('erp_documents');
+    expect(() => createTicketFor(ownEntity.entity_id, 'Intento N2')).toThrow(
+      MESSAGES.permissionDenied
+    );
+    expect(localStorage.getItem('erp_documents')).toBe(before);
+  });
+
   it('N3 recibe acceso denegado en enlace profundo y la capa de datos rechaza la escritura', async () => {
     await signIn('marketing');
     setSearch('?view=postventa');
@@ -168,6 +187,22 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
     expect(app.getState().view).toBe('dashboard');
     const before = localStorage.getItem('erp_documents');
     expect(() => createTicketFor(ownEntity.entity_id, 'Intento de marketing')).toThrow(
+      MESSAGES.permissionDenied
+    );
+    expect(localStorage.getItem('erp_documents')).toBe(before);
+  });
+
+  it('N3 recibe acceso denegado en ticket-form por enlace profundo', async () => {
+    await signIn('marketing');
+    setSearch('?view=ticket-form');
+    mount();
+
+    expect(document.querySelector('#route-notice').textContent).toBe(MESSAGES.accessDenied);
+    expect(app.getState().view).toBe('dashboard');
+    expect(document.querySelector('#ticket-form')).toBeNull();
+
+    const before = localStorage.getItem('erp_documents');
+    expect(() => createTicketFor(ownEntity.entity_id, 'Intento N3')).toThrow(
       MESSAGES.permissionDenied
     );
     expect(localStorage.getItem('erp_documents')).toBe(before);
@@ -184,5 +219,22 @@ describe('Permisos de Postventa en UI, ruta y datos (T199)', () => {
     expect(() => createTicketFor(ownEntity.entity_id, 'Intento anónimo')).toThrow(
       MESSAGES.permissionDenied
     );
+  });
+
+  it('el visitante conserva ticket-form como ruta pendiente y ve el login', async () => {
+    logout();
+    setSearch('?view=ticket-form');
+    mount();
+
+    expect(app.getState().view).toBe('login');
+    expect(app.getState().pendingRoute).toMatchObject({ view: 'ticket-form' });
+    expect(window.location.search).toBe('?view=ticket-form');
+    expect(document.querySelector('#ticket-form')).toBeNull();
+
+    const before = localStorage.getItem('erp_documents');
+    expect(() => createTicketFor(ownEntity.entity_id, 'Intento visitante')).toThrow(
+      MESSAGES.permissionDenied
+    );
+    expect(localStorage.getItem('erp_documents')).toBe(before);
   });
 });
