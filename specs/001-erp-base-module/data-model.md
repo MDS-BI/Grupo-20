@@ -1,6 +1,6 @@
 # Modelo de Datos: Módulo Base ERP
 
-**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM y Marketing descritos en las Historias de Usuario 2, 3, 5, 6, 7 y 16 a 21 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
+**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM, Marketing y Postventa descritos en las Historias de Usuario 2, 3, 5, 6, 7, 16 a 21 y 25 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
 
 Para la forma exacta de los campos y las operaciones de almacenamiento, ver `contracts/entity-storage.md`, que es la fuente autoritativa; este documento resume las relaciones y la extensión vía configuración.
 
@@ -106,7 +106,7 @@ El perfil CRM ilustrado en la especificación **no introduce entidades nuevas**:
 
 FR-004 es la lista canónica de campos buscables: nombre, código, categoría, descripción, fecha objetivo y campos personalizados visibles declarados en la configuración activa. La búsqueda del perfil de clientes deriva sus campos de estas reglas mediante `fieldRules`/anulación de perfil: solo `name`, `targetDate` y campos personalizados visibles y buscables (FR-020, FR-055); no existe una segunda lista de campos en la vista de búsqueda ni en la persistencia. La utilidad `src/utils/field-formats.js` expone los formatos `cl-rut`, `phone`, `email` y `nonEmpty` sin dependencias externas. La retroalimentación usa los textos exactos de FR-006.
 
-**Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad.
+**Nota de diseño**: una versión anterior de este documento describía un esquema relacional (`customers`, `customer_interactions`, `support_tickets`, `sales_opportunities`, `users`) que asumía una base de datos SQL con backend. Ese diseño era incompatible con la arquitectura elegida en `plan.md` (aplicación Vite sin backend, persistencia en `localStorage`, ver `research.md`) y con `contracts/entity-storage.md`, e introducía entidades (`support_tickets`, `sales_opportunities`, `users`) sin respaldo en ninguna historia de usuario o requisito funcional de `spec.md`. Se reemplazó por el modelo de esta sección para mantener un único modelo de datos consistente en toda la funcionalidad. La Postventa de la Historia de Usuario 25 confirma esa decisión: los tickets son `Documento` vinculados a un cliente (sección 9), no registros de `support_tickets`.
 
 ## 3. Perfil de Marketing (Historias de Usuario 16 a 21)
 
@@ -257,10 +257,10 @@ La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven d
 
 | Rango                            | Acciones canónicas                                                                                                                                                                                                               | Restricciones clave                                                                                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Visitante (sin sesión)           | Ninguna acción interna; solo `chat:create_query` en la ruta pública con consentimiento                                                                                                                                           | Sin `panel:view`, `search:view`, `summary:*`, `marketing:*`, `team:*` ni `users:manage`. La captura pública se rige por FR-069 y no es una acción de la matriz interactiva. |
-| Nivel 1 - Atención al cliente    | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `document:create`, `chat:answer`                                                                                                                                | No crea ni edita entidades; no elimina; no cambia estados de documento; sin `summary:*`, `marketing:*`, `team:*` ni `users:manage`.                                         |
-| Nivel 2 - Ejecutivo de Ventas    | `panel:view`, `search:view`, `entity:view_any`, `entity:create`, `entity:edit_own`, `document:create`, `document:read`, `document:edit_own`, `document:transition_own`, `summary:view_own`, `team:view_own`                      | No elimina entidades ni documentos; edita solo donde `ownerId` coincida con su `id`; sin `marketing:*` ni `users:manage`.                                                   |
-| Nivel 3 - Ejecutivo de Marketing | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `marketing:view`, `marketing:manage`, `team:view_all`, `chat:view`, `chat:answer`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | No elimina entidades; sin `summary:*` ni `users:manage`; no detiene campañas de otro usuario (`campaign:stop_any`).                                                         |
+| Visitante (sin sesión)           | Ninguna acción interna; solo `chat:create_query` en la ruta pública con consentimiento                                                                                                                                           | Sin `panel:view`, `search:view`, `summary:*`, `marketing:*`, `postventa:*`, `team:*` ni `users:manage`. La captura pública se rige por FR-069 y no es una acción de la matriz interactiva. |
+| Nivel 1 - Atención al cliente    | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `document:create`, `chat:answer`, `postventa:view`, `postventa:create`, `postventa:transition`                                                                 | No crea ni edita entidades; no elimina; no cambia estados de documento ajenos a Postventa; sin `summary:*`, `marketing:*`, `team:*` ni `users:manage`.                       |
+| Nivel 2 - Ejecutivo de Ventas    | `panel:view`, `search:view`, `entity:view_any`, `entity:create`, `entity:edit_own`, `document:create`, `document:read`, `document:edit_own`, `document:transition_own`, `summary:view_own`, `team:view_own`, `postventa:view_own` | No elimina entidades ni documentos; edita solo donde `ownerId` coincida con su `id`; ve solo tickets de sus clientes; sin `marketing:*` ni `users:manage`.                   |
+| Nivel 3 - Ejecutivo de Marketing | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `marketing:view`, `marketing:manage`, `team:view_all`, `chat:view`, `chat:answer`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | No elimina entidades; sin `summary:*`, `postventa:*` ni `users:manage`; no detiene campañas de otro usuario (`campaign:stop_any`).                                           |
 | Nivel 4 - Gerente comercial      | Todas las acciones canónicas excepto `permissions:edit`                                                                                                                                                                          | `permissions:view` solo consulta la matriz; `permissions:edit` se deniega a todos y la matriz no se edita desde la interfaz.                                                |
 
 `ownerId` identifica al usuario asignado, al creador de la campaña o al integrante vinculado según la acción; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. `Sistema` es una identidad de auditoría para automatizaciones, no un rango de la matriz ni una opción de inicio de sesión.
@@ -287,3 +287,67 @@ La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven d
 | `Sistema` → `Documento` / campaña           | Las automatizaciones se registran como creadas por «Sistema»; el historial de campaña conserva el `Usuario.id` creador. |
 
 La identidad simulada no sustituye la autenticación de servidor requerida para producción; esta limitación ya está declarada en las suposiciones de la especificación.
+
+## 9. Postventa (Historia de Usuario 25)
+
+### 9.1 Decisión de modelo
+
+Un ticket de Postventa **no es una entidad nueva**: es un `Documento` de la sección 1.2 con `entity_id` apuntando al cliente afectado. El campo personalizado `ticket: true` lo distingue del resto del historial; por tanto aparece en la ficha del cliente y se elimina junto con él mediante `deleteDocumentsForEntity()` (FR-009, FR-104). No se crea la clave `support_tickets` ni una segunda lista persistida.
+
+### 9.2 Forma de un ticket
+
+| Campo               | Tipo                    | Obligatorio                  | Notas                                                                                                                      |
+| ------------------- | ----------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | string                  | Sí                           | `id` base del `Documento`, autogenerado.                                                                                     |
+| `entity_id`         | string                  | Sí                           | `entity_id` de un cliente existente, elegido en el desplegable «Cliente».                                                   |
+| `ticket`            | boolean                 | Sí                           | Discriminador declarado en `customFields.document`; todo documento con `ticket: true` se trata como ticket de Postventa.    |
+| `asunto`            | string                  | Sí                           | Campo personalizado «Asunto».                                                                                               |
+| `categoria`         | string                  | Sí                           | Uno de `soporte_tecnico`, `facturacion`, `garantia`, `consulta`; etiquetas visibles definidas en la sección 9.3.            |
+| `prioridad`         | string                  | Sí                           | Uno de `baja`, `media`, `alta`; sin valor preseleccionado en el formulario.                                                  |
+| `status`            | string                  | Sí                           | Uno de `Abierto`, `En revisión`, `Resuelto`; gobernado por la configuración `postventa`, no por el `statusLifecycle` global. |
+| `nota_resolucion`   | string                  | Solo si `status = Resuelto`  | Campo personalizado «Nota de resolución». Se descarta al guardar en otro estado para no conservar textos obsoletos.        |
+| `createdAt`         | string (ISO timestamp)  | Sí                           | Marca de auditoría del `Documento`.                                                                                         |
+| `updatedAt`         | string (ISO timestamp)  | Sí                           | Se actualiza también en cada cambio de estado.                                                                              |
+| `createdByUserId`   | string \| null          | No                           | Usuario que creó el ticket; `null` si la sesión es «Sistema» o no está disponible.                                         |
+
+`startDate`, `endDate` y `notes` conservan su comportamiento base y no son obligatorios para Postventa. La tabla muestra el cliente, el asunto, la categoría, la prioridad y el estado vigente; el historial de cambios de estado no se persiste como arreglo separado.
+
+### 9.3 Configuración declarativa
+
+```js
+postventa: {
+  states: ['Abierto', 'En revisión', 'Resuelto'],
+  categoryOptions: [
+    { value: 'soporte_tecnico', label: 'Soporte técnico' },
+    { value: 'facturacion', label: 'Facturación' },
+    { value: 'garantia', label: 'Garantía' },
+    { value: 'consulta', label: 'Consulta' },
+  ],
+  priorityOptions: [
+    { value: 'baja', label: 'Baja' },
+    { value: 'media', label: 'Media' },
+    { value: 'alta', label: 'Alta' },
+  ],
+  transitions: [],
+  cardMapping: { abiertos: 'Abierto', enProceso: 'En revisión', resueltos: 'Resuelto' },
+  resolutionNoteStates: ['Resuelto'],
+}
+```
+
+`transitions: []` significa «sin restricción de par»: cualquier estado puede pasar a cualquier otro, incluida la reapertura `Resuelto → Abierto`. Si el bloque `postventa` está ausente, la vista no se registra y el comportamiento base no cambia (XR-001).
+
+### 9.4 Agregaciones derivadas
+
+`computeTicketStats({ documents })` recorre una sola vez los documentos con `ticket: true` y devuelve `{ abiertos, enProceso, resueltos }` según `cardMapping`. Las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» leen esos contadores; no se persisten ni se calculan a partir de `notes` (FR-105). `listTicketDocuments({ documents, entities, user })` devuelve los tickets visibles para el usuario: todos para N1/N4, solo los clientes con `ejecutivo_asignado === user.id` para N2, y ninguno para N3/visitante (FR-106).
+
+### 9.5 Relaciones y permisos
+
+| Relación                                       | Regla                                                                                                                                                     |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Ticket.entity_id` → `Entidad.entity_id`        | Obligatoria; el formulario solo ofrece clientes ya registrados y la capa de datos rechaza un `entity_id` inexistente.                                      |
+| `Ticket` → ficha de entidad                     | Aparece en el historial de documentos de la ficha del cliente.                                                                                             |
+| `Ticket.createdByUserId` → `Usuario.id`         | Auditoría de creación; no restringe la visibilidad de N1/N4.                                                                                               |
+| `Entidad.ejecutivo_asignado` → visibilidad N2   | Ventas solo ve tickets cuyo cliente tiene asignado su `id`.                                                                                                |
+| `postventa:create` / `postventa:transition`     | N1 y N4; N2 solo `postventa:view_own`; N3 y visitante sin acción. Se validan en `createTicketDocument()` y `changeTicketStatus()` antes de escribir.       |
+
+Las acciones `postventa:*` se añaden al catálogo canónico sin reutilizar `document:edit_any`, de modo que Atención al Cliente pueda gestionar tickets sin editar otras interacciones. Toda denegación usa `No tienes permiso para realizar esta acción` y no modifica `localStorage`.

@@ -41,7 +41,7 @@ Cada registro de documento **base** debe incluir:
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
+Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. El perfil de Postventa declara `ticket` (discriminador booleano), `asunto`, `categoria`, `prioridad` y `nota_resolucion` opcional en `customFields.document`. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
 
 Operaciones:
 
@@ -51,6 +51,12 @@ Operaciones:
 - `updateDocument(id, updates)`: actualiza un documento existente.
 - `deleteDocument(id)`: elimina un documento por id.
 - `deleteDocumentsForEntity(entityId)`: elimina todos los documentos vinculados a una entidad eliminada.
+
+### Operaciones de Postventa
+
+- `listTicketDocuments({ documents, entities, user })`: devuelve solo documentos con `ticket: true` visibles para el usuario resuelto; sin `postventa:view` ni `postventa:view_own` devuelve una lista vacía o lanza la denegación, sin filtrar por texto de `notes`.
+- `createTicketDocument(values)`: valida `entity_id` existente, `asunto`, `categoria`, `prioridad`, `status` y `nota_resolucion` condicional, comprueba `postventa:create` y delega en la ruta interna de creación de `Documento`.
+- `changeTicketStatus(documentId, nextStatus, resolutionNote)`: comprueba `postventa:transition`, acepta cualquier par de estados declarados, actualiza `updatedAt` y persiste o descarta `nota_resolucion` según el estado final.
 
 ## Expectativas de Validación
 
@@ -77,6 +83,11 @@ Operaciones:
 - Con `marketing` activo, una entidad capturada desde el formulario público requiere `consentimiento = true`, `consentimiento_fecha` y `consentimiento_version`; el guardado debe rechazarse sin ellos (FR-071, FR-085).
 - `estado_comercial` debe conservar su valor interno aunque no se renderice en Marketing (FR-068, FR-075).
 - `campaña` es opcional en entidades y documentos; su ausencia significa «Sin campaña» y no debe rechazarse (FR-088).
+- Un documento con `ticket: true` requiere `entity_id` de un cliente existente, `asunto`, `categoria` de las cuatro opciones declaradas, `prioridad` de las tres opciones declaradas y `status` de los tres estados declarados (FR-104, FR-107, FR-108).
+- `prioridad` no tiene valor preseleccionado: su ausencia se rechaza con `Completa los campos obligatorios.` (FR-108).
+- `nota_resolucion` es obligatoria cuando `status = Resuelto` y se descarta cuando el estado final es otro; ambos casos usan `Completa los campos obligatorios.` si falta el texto requerido (FR-108).
+- Cualquier transición entre `Abierto`, `En revisión` y `Resuelto` es válida, incluida `Resuelto → Abierto`; no se aplica el `statusLifecycle` global a los tickets (FR-109).
+- Las operaciones de Postventa no crean una clave nueva de `localStorage`; los tickets se eliminan con `deleteDocumentsForEntity()` al borrar el cliente vinculado.
 
 ## Contrato de Configuración `entityDate`
 
@@ -98,6 +109,35 @@ entityDate: {
 - Si el bloque `entityDate` está ausente, el campo conserva el comportamiento base sin rango y sin obligatoriedad.
 - El centinela `localToday` debe calcularse con componentes locales (`getFullYear`/`getMonth`/`getDate`), nunca con `toISOString()`.
 - La UI debe reflejar `min`, `max` y `label` en el formulario y actualizar `max` sin recargar cuando cambia el día local.
+
+## Contrato de Configuración `postventa`
+
+Cuando `module-config.js` declara `postventa`, debe tener esta forma:
+
+```js
+postventa: {
+  states: ['Abierto', 'En revisión', 'Resuelto'],
+  categoryOptions: [
+    { value: 'soporte_tecnico', label: 'Soporte técnico' },
+    { value: 'facturacion', label: 'Facturación' },
+    { value: 'garantia', label: 'Garantía' },
+    { value: 'consulta', label: 'Consulta' },
+  ],
+  priorityOptions: [
+    { value: 'baja', label: 'Baja' },
+    { value: 'media', label: 'Media' },
+    { value: 'alta', label: 'Alta' },
+  ],
+  transitions: [],
+  cardMapping: { abiertos: 'Abierto', enProceso: 'En revisión', resueltos: 'Resuelto' },
+  resolutionNoteStates: ['Resuelto'],
+}
+```
+
+- `states`, `categoryOptions`, `priorityOptions` y `resolutionNoteStates` son las únicas fuentes de opciones visibles y de validación; el valor persistido es `value`, no `label`.
+- `transitions: []` permite cualquier cambio entre estados declarados; si se declaran pares explícitos, solo esos pares son válidos.
+- `cardMapping` asocia cada tarjeta con un estado exacto; no se cuentan dos veces los documentos que comparten estado.
+- Sin el bloque `postventa`, la ruta `?view=postventa` no se registra y el resto del módulo conserva su comportamiento.
 
 ## Contrato de `fieldRules` y `detailPolicy`
 
@@ -143,7 +183,7 @@ detailPolicy: { entity: { blockWhenInvalid: true, offerEditAction: true } },
 
 Desde la octava tanda, `src/storage.js` depende de `src/auth/permissions.js` antes de mutar datos. `loadEntities()` y `loadDocuments()` siguen siendo de solo lectura; `saveEntities()`, `saveDocuments()`, `addEntity()`, `updateEntity()`, `updateEntityStage()`, `deleteEntity()`, `addDocument()`, `updateDocument()`, `deleteDocument()` y `deleteDocumentsForEntity()` DEBEN resolver la sesión vigente y llamar a `assertPermission(rank, action, context)` con la acción correspondiente.
 
-- Las acciones son las del catálogo canónico de `spec.md` y [`auth.md`](auth.md): `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `campaign:create`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `team:manage` y `users:manage`, entre otras. No se introducen identificadores propios como `entity:edit` o `interaction:manage`.
+- Las acciones son las del catálogo canónico de `spec.md` y [`auth.md`](auth.md): `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `campaign:create`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `postventa:view`, `postventa:view_own`, `postventa:create`, `postventa:transition`, `team:manage` y `users:manage`, entre otras. No se introducen identificadores propios como `entity:edit` o `interaction:manage`.
 - `context.ownerId` se compara con el `id` del usuario resuelto para las reglas «solo mis clientes»; `context.campaignOwnerId` cumple la misma función para campañas.
 - Una operación denegada se rechaza con el mensaje exacto `No tienes permiso para realizar esta acción` y no escribe en `localStorage`; esto cubre también llamadas directas desde consola o enlaces profundos (FR-095, FR-096, SC-035).
 - `Sistema` está exento del rango del usuario conectado únicamente para las automatizaciones declaradas; cada ejecución conserva la identidad «Sistema» y el creador de la campaña.
@@ -163,7 +203,7 @@ FR-004 es la única lista de campos buscables: nombre, código, categoría, desc
 
 ## Rutas relativas
 
-Las vistas se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor: sin parámetro `view` es Panel; las rutas relativas son `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`. No existe `?view=panel`. Carga, recarga y Back/Forward aplican la matriz de permisos en cada resolución.
+Las vistas se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor: sin parámetro `view` es Panel; las rutas relativas son `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`. No existe `?view=panel`. Carga, recarga y Back/Forward aplican la matriz de permisos en cada resolución.
 
 ## Mensajes exactos de validación
 

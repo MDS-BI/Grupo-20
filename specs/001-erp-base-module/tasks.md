@@ -6,13 +6,13 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Entrada**: Documentos de diseño de `/specs/001-erp-base-module/`
 
-**Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`, `contracts/entity-storage.md`, `contracts/marketing.md`, `quickstart.md`
+**Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`, `contracts/entity-storage.md`, `contracts/marketing.md`, `contracts/auth.md`, `contracts/postventa.md`, `quickstart.md`
 
 **Pruebas**: Se incluyen pruebas automatizadas por `plan.md` y `quickstart.md` con Vitest/jsdom (`npm test`, `npm run lint`, `npm run format:check`); cada suite de prueba se escribe antes de la implementación correspondiente y debe fallar primero.
 
-**Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15, US22, US23) y P2 (US2, US6, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable.
+**Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15, US22, US23) y P2 (US2, US6, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21, US25). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable. US24 permanece documentada en `spec.md` pero sin fase en este incremento por no contar con artefactos de diseño propios.
 
-**Incremento actual**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; conservan T001-T133 como historial completado.
+**Incremento actual**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; T195-T210 (Postventa) cubren `FR-104`–`FR-109` y `SC-039`–`SC-040`; conservan T001-T194 como historial completado.
 
 **Convención de historias desglosadas**: `spec.md` conserva `US1`–`US23` como epígrafes de trazabilidad y detalla las responsabilidades en subhistorias `US2a`–`US2d`, `US3a`–`US3b`, `US4a`–`US4c`, `US6a`–`US6b`, `US8a`–`US8b`, `US10a`–`US10c`, `US11a`–`US11b`, `US13a`–`US13b`, `US14a`–`US14b`, `US15a`–`US15b`, `US16a`–`US16d`, `US17a`–`US17b`, `US18a`–`US18b`, `US19a`–`US19b`, `US20a`–`US20c`, `US21a`–`US21b`, `US22a`–`US22c` y `US23a`–`US23c`. Las etiquetas de tarea siguen siendo `[USn]`; cuando una tarea cubre una responsabilidad concreta, la descripción indica la subhistoria sin renumerar IDs.
 
@@ -20,7 +20,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 - El checkbox es siempre `- [ ]`; los ID son secuenciales T001, T002, ...
 - **[P]**: la tarea toca archivos distintos y no depende de tareas incompletas.
-- **[Historia]**: obligatorio solo en las fases de historia de usuario (`[US1]` ... `[US23]`); ausente en Setup, Foundational y Polish.
+- **[Historia]**: obligatorio solo en las fases de historia de usuario (`[US1]` ... `[US23]`, `[US25]`); ausente en Setup, Foundational y Polish.
 - La descripción nombra siempre la ruta de archivo concreta y el resultado esperado.
 
 ## Convenciones de rutas
@@ -614,6 +614,40 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 ---
 
+## Phase 27: US25 - Registrar y gestionar tickets de Postventa (Prioridad: P2)
+
+**Objetivo**: Añadir «Postventa» como quinta opción de la barra lateral con `?view=postventa`, botón «Nuevo Ticket», tres tarjetas derivadas de tickets y una tabla con cambio libre de estado, reutilizando `Documento` como único almacenamiento y validando permisos en la capa de datos.
+
+**Prueba independiente**: Con `atencion` (N1) y `gerente` (N4), abrir `?view=postventa`, crear un ticket en `Abierto` para un cliente existente, ver «Tickets abiertos» en 1, cambiar a `Resuelto` con nota, reabrir a `Abierto`, recargar y confirmar que el ticket sigue en la ficha del cliente y que las tarjetas coinciden con los estados almacenados; con `ventas` (N2) ver solo tickets de sus clientes y sin controles de creación/cambio; con `marketing` (N3) y visitante, denegación también por enlace profundo, consola y llamada directa a `src/storage.js`.
+
+### Pruebas de US25
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [ ] T195 [P] [US25] Crear `tests/unit/postventa.test.js` para exigir que `validatePostventaConfig()` acepte solo `states = ['Abierto', 'En revisión', 'Resuelto']`, `categoryOptions` con «Soporte técnico», «Facturación», «Garantía» y «Consulta», `priorityOptions` con «Baja», «Media» y «Alta» sin preselección, `cardMapping = { abiertos: 'Abierto', enProceso: 'En revisión', resueltos: 'Resuelto' }`, `resolutionNoteStates = ['Resuelto']` y `transitions: []` con significado de cualquier par, incluida `Resuelto → Abierto`; verificar `isTicket()` y que `computeTicketStats()` cuente cada ticket una sola vez en una pasada.
+- [ ] T196 [P] [US25] Crear `tests/unit/postventa-permissions.test.js` para exigir en `src/auth/permissions.js` las acciones canónicas `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, con N4 y N1 creando/cambiando cualquier estado, N2 solo `postventa:view_own` con `ownerId`, y N3/visitante denegados por defecto con `No tienes permiso para realizar esta acción`.
+- [ ] T197 [P] [US25] Crear `tests/unit/postventa-storage.test.js` para exigir que `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` en `src/storage.js` comprueben permisos antes de leer o escribir, rechacen `entity_id` inexistente, vinculen el ticket al cliente, acepten cualquier transición entre `Abierto`, `En revisión` y `Resuelto`, persistan `nota_resolucion` solo en `Resuelto`, actualicen `updatedAt` y no escriban en `localStorage` cuando `can()` sea falso.
+- [ ] T198 [P] [US25] Crear `tests/integration/postventa-view.test.js` para verificar en `src/components/shell.js` y `src/app.js` que «Postventa» aparece como quinta opción después de Marketing, que `?view=postventa` resuelve en carga, recarga y Back/Forward con resaltado activo, que «Nuevo Ticket» va arriba y las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo de la tabla, que el desplegable «Cliente» filtra por nombre y no ofrece clientes con `archivedAt`, y que sin tickets se muestran ceros y un estado vacío explícito.
+- [ ] T199 [P] [US25] Crear `tests/integration/postventa-permissions.test.js` para comprobar que `atencion` y `gerente` crean tickets y cambian cualquier estado, que `ventas` ve solo tickets de clientes con `ejecutivo_asignado` igual a su `id` y no ve botón ni control de estado, que `marketing` y el visitante reciben «Acceso denegado» o login desde `?view=postventa`, y que las llamadas directas a `src/storage.js` o desde consola se rechazan con `No tienes permiso para realizar esta acción` sin mutar datos.
+- [ ] T200 [P] [US25] Crear `tests/integration/postventa-customer-detail.test.js` para verificar que un ticket creado desde Postventa aparece en la ficha de su cliente con «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», que el texto persistido se sanitiza, que un guardado sin prioridad o en `Resuelto` sin nota muestra exactamente `Completa los campos obligatorios.` y que eliminar el cliente elimina sus tickets por `entity_id`.
+
+### Implementación de US25
+
+- [ ] T201 [P] [US25] Crear `src/utils/postventa.js` con `isTicket()`, `validatePostventaConfig()`, `validateTicketValues()` y `computeTicketStats()`, usando `ticket: true` como discriminador, las opciones exactas declaradas, prioridad sin preselección, nota obligatoria solo en `Resuelto` con `Completa los campos obligatorios.`, y una sola pasada para `{ abiertos, enProceso, resueltos }` según `cardMapping`.
+- [ ] T202 [US25] Añadir el bloque opcional `postventa` a `DEFAULT_CONFIG` en `src/module-config.js` y validarlo con `validatePostventaConfig()` desde `src/utils/postventa.js`, manteniendo el comportamiento base intacto cuando el bloque está ausente.
+- [ ] T203 [US25] Ampliar `src/auth/permissions.js` con `postventa:view` para N4/N1, `postventa:view_own` para N4/N2 con `ownerId`, y `postventa:create`/`postventa:transition` para N4/N1, sin conceder `document:edit_any` a N1 ni acciones a N3/visitante.
+- [ ] T204 [US25] Implementar en `src/storage.js` `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` sobre la ruta existente de `Documento`, llamando a `assertPermission()` con las acciones `postventa:*`, validando `entity_id` existente, cualquier par de estados declarado, `nota_resolucion` condicional, `updatedAt` y el mensaje exacto de denegación sin escritura.
+- [ ] T205 [US25] Añadir `postventa` a `NAV_ITEMS` en `src/components/shell.js` inmediatamente después de `marketing`, con etiqueta «Postventa», resaltado por `state.view` y filtrado por `can()` para N1, N2 y N4.
+- [ ] T206 [US25] Registrar `postventa` en `ROUTE_VIEWS`, `VIEW_ROUTES` y `routeFromKey()` en `src/app.js`, resolviendo `?view=postventa` desde `location.search` en carga, recarga y Back/Forward y aplicando la matriz antes de renderizar.
+- [ ] T207 [US25] Crear `src/components/postventa.js` con botón «Nuevo Ticket» arriba, las tres tarjetas y la tabla debajo, campos en orden «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», buscador `#ticket-client-search`, opciones exactas sin preselección, control de estado, mensaje `Completa los campos obligatorios.`, `No tienes permiso para realizar esta acción`, estado vacío y `escapeHtml()` para texto persistido.
+- [ ] T208 [US25] Cablear en `src/app.js` las acciones `ticket-form`, `ticket-client-search`, `ticket-save` y `ticket-status-change` con `src/storage.js`, volviendo a renderizar tarjetas y tabla tras cada mutación sin recarga.
+- [ ] T209 [US25] Adaptar `src/components/entity-detail.js` para mostrar los tickets del cliente desde el historial de documentos con sus campos de Postventa, sin crear una lista persistida adicional.
+- [ ] T210 [US25] Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T195-T209, corregir fallos en `src/` y `tests/` y verificar que T001-T194 siguen en verde sin cambiar sus marcadores `[x]`.
+
+**Punto de control**: Postventa es funcional de forma independiente con N1/N4 creando y reabriendo tickets, N2 limitado a sus clientes y N3/visitante denegado en UI, enlaces profundos y capa de datos; T210 cierra el gate funcional y de calidad del incremento.
+
+---
+
 ## Dependencias y orden de ejecución
 
 ### Dependencias de fases
@@ -624,6 +658,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **Phase 24 (Polish)**: depende de que estén completas las historias que se desean incluir en la entrega.
 - **Phase 25 (Inicio de sesión y rangos)**: se añade tras Polish sin renombrar fases existentes; depende de Setup, Foundational y de los contratos de `src/components/shell.js`, `src/components/dashboard.js`, `src/storage.js` y Marketing definidos en Phase 14-23.
 - **Phase 26 (Remediación de consistencia)**: se ejecuta tras Phase 25 sin renombrar T001-T186; depende de los contratos de rutas relativas, mensajes exactos, terminología, casos límite, rendimiento y búsqueda canónica ya declarados en `spec.md`, `plan.md` y los contratos.
+- **Phase 27 (US25 Postventa)**: se ejecuta tras Phase 26 sin renombrar T001-T194; depende de Setup, Foundational, de la matriz de US23, de la relación entidad-documento de US1/US11 y de los contratos `contracts/postventa.md`, `contracts/auth.md` y `contracts/entity-storage.md`.
 
 ### Dependencias entre historias
 
@@ -652,6 +687,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **US23 (P1)**: depende de US22 para resolver rango y estado del usuario, y de US1/US8/US16-US21 para aplicar la matriz sobre clientes, documentos, equipos, campañas y chat; T182-T184 cierran lecturas/agregaciones y atribución histórica.
 - **Correcciones US5/US15/US16 (P1)**: T178, T179, T180 y T181 dependen respectivamente de las definiciones de SC-003, FR-068, FR-083/FR-085 y del esquema `ModuleConfig` ya corregidos en `spec.md`.
 - **Remediación I1/I2/U1/U2/U3/A1/D1 (P1)**: T187-T194 dependen de Phase 25 y de las definiciones corregidas de rutas relativas, terminología, casos límite, FR-032/SC-004, mensajes exactos y FR-004/FR-020/FR-055; T194 cierra el gate documental y de ejecución sin renumerar T001-T186.
+- **US25 (P2)**: depende de US1/US11 para `Documento` y su vínculo `entity_id`, de US23 para `can()`/`assertPermission()` y de US14 para la barra lateral; no altera los cinco atajos de Marketing, el `statusLifecycle` global ni las acciones `document:*` existentes.
+- **US24 (P1)**: permanece documentada en `spec.md` (FR-103, SC-038) pero sin fase en este incremento; requiere artefactos de diseño propios antes de generar sus tareas.
 
 ### Dentro de cada historia
 
@@ -662,6 +699,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - En US23: matriz y `assertPermission()` antes que filtros de navegación, administración de usuarios o migración de ejecutivos; T185 se ejecuta después de T178-T184 como gate final funcional de US5, US15, US16 y US23, y T186 cierra el gate de formato.
 - En Phase 26: T187/T188 resuelven rutas antes de T189-T193, y T194 se ejecuta al final con `npm test`, `npm run lint` y `npm run format:check`.
 - Clarificaciones Marketing: T134/T135 preceden a T136-T137; T138 precede a T139; T140 depende de T139; T141 precede a T142-T143; T144 y T145 cierran la regresión.
+- En US25: T195-T200 se escriben primero y fallan; T201/T202 definen la configuración y las utilidades puras antes de T203-T209; la matriz T203 precede al filtro de navegación T205 y a la capa de datos T204; el componente T207 y el cableado T208 se integran después de T204/T206; T210 ejecuta el gate final.
 
 ## Oportunidades de paralelismo
 
@@ -676,6 +714,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - Correcciones post-análisis: T178 y T179 usan archivos propios, mientras T180-T184 amplían suites existentes o dependen del esquema/catálogo/atribución definidos; ninguna lleva `[P]`. T185 depende de todas ellas y tampoco lleva `[P]`; T186 depende de T185 y tampoco lleva `[P]`.
 - Remediación: T187/T190/T191/T192 crean suites propias; T188/T189/T193 ajustan módulos existentes y T194 depende de todas ellas sin llevar `[P]`.
 - Clarificaciones Marketing: T134, T135, T138, T140, T141 y T144 son suites independientes; T136-T137, T139 y T142-T143 se implementan después de sus pruebas; T145 se ejecuta al final.
+- US25: T195-T200 son seis suites independientes en `tests/unit/` y `tests/integration/`; T201 también puede avanzar en paralelo porque crea `src/utils/postventa.js`; T202-T210 se encadenan según las dependencias de configuración, permisos, almacenamiento, ruta, componente y cableado, y T210 se ejecuta al final.
 
 ### Ejemplo de paralelismo: US16
 
@@ -713,6 +752,17 @@ T138 "Ampliar tests/integration/marketing-navigation.test.js ..."
 T141 "Ampliar tests/integration/marketing-chat.test.js ..."
 ```
 
+### Ejemplo de paralelismo: US25
+
+```bash
+T195 "Crear tests/unit/postventa.test.js ..."
+T196 "Crear tests/unit/postventa-permissions.test.js ..."
+T197 "Crear tests/unit/postventa-storage.test.js ..."
+T198 "Crear tests/integration/postventa-view.test.js ..."
+T199 "Crear tests/integration/postventa-permissions.test.js ..."
+T200 "Crear tests/integration/postventa-customer-detail.test.js ..."
+```
+
 ## Estrategia de implementación
 
 ### MVP primero
@@ -732,6 +782,7 @@ T141 "Ampliar tests/integration/marketing-chat.test.js ..."
 6. Añadir Phase 25 con US22 y US23 sin reordenar fases: primero sesión y matriz, luego navegación, administración de usuarios y migración de «Ejecutivo Asignado»; cerrar con T178-T184 para usabilidad, conversión interna, chat consent-first, esquema config, lecturas protegidas y atribución histórica, T185 como gate final funcional de US5, US15, US16 y US23, y T186 como gate final de formato.
 7. Cerrar con Phase 26 (T187-T194) sin renumerar T001-T186: rutas relativas, terminología, casos límite, presupuesto de rendimiento, mensajes exactos, redacción verificable y búsqueda canónica.
 8. Aplicar el incremento T134-T145 sobre las fases US15, US16, US17, US19 y Polish para quitar acciones rápidas de Marketing, fijar los cinco atajos y usar «Dudas y consultas» sin cambiar contratos internos.
+9. Añadir Phase 27 (US25) sin renumerar T001-T194: primero las seis suites que fallan, luego configuración/utilidades, matriz, capa de datos, navegación, ruta, componente, cableado y ficha del cliente; T210 cierra el gate funcional y de calidad.
 
 ### Estrategia con equipo paralelo
 
@@ -742,7 +793,7 @@ T141 "Ampliar tests/integration/marketing-chat.test.js ..."
 
 ## Trazabilidad de requisitos a tareas
 
-La tabla declara explícitamente la cobertura de los 139 requisitos buildables (`FR-001`–`FR-102` y `SC-001`–`SC-037`). Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato y `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1.
+La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, y `T210` el gate de US25.
 
 | Requirement Key | Task IDs                                                               | Notes                                                       |
 | --------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -885,6 +936,14 @@ La tabla declara explícitamente la cobertura de los 139 requisitos buildables (
 | SC-035          | `T156`                                                                 | Verificaciones de Nivel 2.                                  |
 | SC-036          | `T157`                                                                 | Verificaciones de Nivel 1.                                  |
 | SC-037          | `T158`                                                                 | Verificaciones de visitante.                                |
+| FR-104          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`                          | Ticket como `Documento`, formulario y desplegable buscable. |
+| FR-105          | `T195`, `T198`, `T201`, `T207`, `T208`                                  | Tres tarjetas derivadas y actualizadas sin recarga.         |
+| FR-106          | `T196`, `T199`, `T203`, `T204`, `T205`                                  | Permisos en UI, rutas y capa de datos.                      |
+| FR-107          | `T195`, `T198`, `T204`, `T207`, `T208`                                  | Categorías y cambios entre cualquier par de estados.        |
+| FR-108          | `T195`, `T200`, `T201`, `T204`, `T207`                                  | Prioridad sin preselección y nota condicional.              |
+| FR-109          | `T195`, `T198`, `T205`, `T206`, `T207`                                  | Quinta opción, layout y estado vacío.                       |
+| SC-039          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T210`                   | Verificaciones funcionales de Postventa.                    |
+| SC-040          | `T196`, `T199`, `T203`, `T204`, `T205`, `T206`, `T210`                   | Verificaciones de permisos de Postventa.                    |
 
 ## Notas
 
@@ -902,3 +961,7 @@ La tabla declara explícitamente la cobertura de los 139 requisitos buildables (
 - T183/T184 conservan `assignedUserIdAtSale` y `createdByUserId` como atribución histórica aunque el usuario cambie de rango o sea desactivado.
 - Phase 26 añade T187-T194 sin renumerar ni cambiar marcadores de T001-T186; T194 verifica que no queden URL absolutas, adjetivos subjetivos sin respaldo medible, variantes de mensajes exactos ni contradicciones entre FR-004, FR-020 y FR-055.
 - En el incremento de clarificaciones, los cambios de terminología son solo visuales: `chat` sigue siendo la clave, el canal y el nombre interno de `ChatConsentError`.
+- Phase 27 añade T195-T210 sin renumerar ni cambiar marcadores de T001-T194; T210 verifica `npm test`, `npm run lint` y `npm run format:check` al cierre de Postventa.
+- Los tickets son `Documento` con `ticket: true` y `entity_id` de un cliente existente: no hay clave `support_tickets`, resultados derivados persistidos ni cambio del `statusLifecycle` global.
+- Las acciones `postventa:*` son aditivas al catálogo canónico; N1 no recibe `document:edit_any` y N3 no recibe `postventa:view` aunque pueda leer documentos genéricos.
+- US24 (FR-103, SC-038) queda fuera de este incremento: sus tareas requieren primero artefactos de diseño propios y no deben inferirse de la implementación de Postventa.

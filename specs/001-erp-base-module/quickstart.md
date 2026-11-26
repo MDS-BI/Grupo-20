@@ -9,7 +9,7 @@
 
 ## Flujo de Usuario Principal
 
-1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos o buscar registros), o abra Marketing desde la barra lateral.
+1. Aterrice en el panel ERP y use un botón de acción rápida (nueva entidad, nuevo documento, gestión de entidades, gestión de documentos o buscar registros), o abra Marketing o Postventa desde la barra lateral.
 2. Cree una entidad usando el formulario y añádale un documento asociado.
 3. Busque una entidad usando la pantalla de búsqueda y abra su ficha para ver el historial de documentos ordenado por fecha.
 4. Edite o elimine una entidad desde el área de gestión; confirme que la ficha de esa entidad refleja el cambio.
@@ -112,9 +112,25 @@ La forma de estos datos y reglas está en [`contracts/marketing.md`](contracts/m
 
 La forma de campañas, atribución e indicadores está en [`contracts/marketing.md`](contracts/marketing.md#forma-de-los-datos) y su efecto en el modelo en [`data-model.md`](data-model.md#6-campañas-de-marketing).
 
+## Validación de Postventa
+
+1. Confirme que la barra lateral muestra «Postventa» como quinta opción, inmediatamente debajo de Marketing, y que abre `?view=postventa` con el marco ERP y «Nuevo Ticket» arriba.
+2. Abra «Nuevo Ticket» y compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
+3. En «Cliente», compruebe que el desplegable ofrece solo clientes existentes y que escribir en el buscador filtra por nombre sin crear un cliente nuevo.
+4. Despliegue «Categoría» y confirme exactamente «Soporte técnico», «Facturación», «Garantía» y «Consulta»; despliegue «Prioridad» y confirme «Baja», «Media» y «Alta» sin selección previa.
+5. Guarde sin elegir prioridad y luego con estado «Resuelto» sin nota: ambos intentos deben mostrar `Completa los campos obligatorios.` y no crear el ticket.
+6. Cree un ticket en «Abierto» para un cliente existente; confirme que «Tickets abiertos» aumenta en uno, que «En proceso» y «Resueltos» no cambian y que el ticket aparece en la ficha del cliente.
+7. Cambie el estado a «En revisión» y luego a «Resuelto» escribiendo una nota; confirme que las tres tarjetas y la tabla se actualizan sin recarga y que «Resueltos» cuenta el ticket una sola vez.
+8. Reabra el ticket de «Resuelto» a «Abierto»; confirme que la transición se acepta, que «Tickets abiertos» vuelve a aumentar y que el ticket sigue en la ficha del cliente.
+9. Guarde un ticket en «Abierto» con texto en «Nota de resolución» y confirme que el texto no se conserva; guárdelo en «Resuelto» con nota y compruebe que sí se conserva.
+10. Inicie sesión como `atencion` (N1) y como `gerente` (N4): ambos deben crear tickets y cambiar cualquier estado. Inicie como `ventas` (N2): debe ver solo los tickets de sus clientes, sin botón «Nuevo Ticket» ni control de estado. Inicie como `marketing` (N3) o sin sesión: no debe acceder ni por enlace profundo, consola o llamada directa a `storage.js`.
+11. Abra directamente `?view=postventa`, use Back/Forward y recargue: la vista debe resolverse con la matriz en cada caso y la denegación debe mostrar `No tienes permiso para realizar esta acción`.
+
+La forma de los tickets y las reglas está en [`contracts/postventa.md`](contracts/postventa.md) y su efecto en el modelo en [`data-model.md`](data-model.md#9-postventa-historia-de-usuario-25).
+
 ## Validación de la Navegación Lateral
 
-1. Recorra todas las pantallas y confirme que la barra lateral mantiene Panel, Buscar, Resumen y Marketing con el elemento activo resaltado.
+1. Recorra todas las pantallas y confirme que la barra lateral mantiene Panel, Buscar, Resumen, Marketing y Postventa con el elemento activo resaltado.
 2. Intente localizar los botones de Clientes e Interacciones en la barra lateral: no deben existir en el marcado.
 3. Navegue a la gestión de entidades y de documentos desde las acciones rápidas del panel y vuelva al panel: los registros deben permanecer intactos.
 4. Abra `?view=manage-entity` y `?view=manage-document`: las vistas deben seguir funcionando como enlaces profundos aunque no figuren en la barra lateral.
@@ -129,13 +145,13 @@ Los módulos ERP personalizados adaptan la base mediante un único archivo de co
 4. Opcionalmente declare `entityDate` (etiqueta, `min`, `max` o `localToday`) para renombrar y restringir la fecha base de la entidad.
 5. Opcionalmente establezca `theme.accentColor` para remarcar los resaltados y controles principales de todo el espacio de trabajo.
 6. Añada reglas de validación específicas del módulo junto a las reglas base donde sea necesario.
-7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional.
+7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional. Si ofrece Postventa, declare el bloque `postventa` con `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates`; sin él, la ruta no se registra.
 
 La generación de identidad, marcas de tiempo, integridad referencial entre entidades y documentos, eliminación en cascada, navegación y búsqueda siguen siendo gestionadas por el módulo base. Sin archivo de configuración, la aplicación se ejecuta con el comportamiento predeterminado Entidad/Documento. Consulte `specs/001-erp-base-module/` para la especificación completa.
 
 ## Validación de Inicio de Sesión y Sesión
 
-1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: debe mostrarse solo el formulario con «Usuario» y «Contraseña», sin Panel, Buscar, Resumen ni Marketing; el formulario público de `?view=capture` y el chat deben seguir disponibles.
+1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: debe mostrarse solo el formulario con «Usuario» y «Contraseña», sin Panel, Buscar, Resumen, Marketing ni Postventa; el formulario público de `?view=capture` y el chat deben seguir disponibles.
 2. Ingrese `gerente`, `marketing`, `ventas` y `atencion`, cada uno con una contraseña cualquiera (por ejemplo, `demo`): los cuatro deben iniciar sesión; se admiten mayúsculas y espacios al inicio o al final del usuario. `gerente` debe mostrar «Nivel 4 - Gerente Comercial» y el menú con «Gestionar usuarios» y «Cerrar sesión».
 3. Deje vacío el campo «Contraseña» e intente ingresar como `gerente`: no debe crearse sesión y debe aparecer exactamente `Ingresa una contraseña`.
 4. Ingrese un usuario que no sea uno de los cuatro, por ejemplo `desconocido`: no debe crearse sesión y debe aparecer exactamente `Usuario no encontrado`.
@@ -148,7 +164,7 @@ La generación de identidad, marcas de tiempo, integridad referencial entre enti
 1. Busque un término sin coincidencias: la vista debe mostrar exactamente `No se encontraron resultados.` y no modificar registros.
 2. Guarde un cliente con RUT inválido y luego con un RUT repetido: debe mostrar `El RUT es inválido.` y `El RUT ya está registrado.`, respectivamente, sin crear ni modificar el registro.
 3. Deje vacía la casilla adicional de contacto o introduzca un formato inválido para el canal elegido: debe mostrar `Revisa el dato de contacto según el canal elegido.`.
-4. Abra `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, use Back/Forward y recargue: la vista solicitada debe resolverse desde `location.search` con la matriz de permisos; no existe `?view=panel` y el Panel se abre quitando el parámetro `view`.
+4. Abra `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, use Back/Forward y recargue: la vista solicitada debe resolverse desde `location.search` con la matriz de permisos; no existe `?view=panel` y el Panel se abre quitando el parámetro `view`.
 5. En `?view=capture`, envíe el formulario con consentimiento y compruebe que el visitante ve exactamente `Prospecto registrado correctamente.`; en el chat sin coincidencia con una pregunta frecuente compruebe exactamente `Consulta registrada; un ejecutivo hará seguimiento.`.
 6. En «Rendimiento de campañas», seleccione una campaña sin registros y compruebe el mensaje exacto `Sin registros para esta campaña.`; una operación denegada debe mostrar exactamente `No tienes permiso para realizar esta acción`.
 
@@ -163,6 +179,9 @@ La forma de la sesión y las operaciones están en [`contracts/auth.md`](contrac
 5. Con `marketing` (Nivel 3), cree la «Campaña Primavera 2026», capture un prospecto y consulte el rendimiento; intente eliminar «Comercial Andina SpA», abrir el resumen y detener una campaña de otro usuario: cada acción debe bloquearse.
 6. Con `gerente` (Nivel 4), elimine «Comercial Andina SpA», vea los 47 seguimientos del equipo, detenga la campaña de `marketing` y gestione usuarios; confirme que no existe ninguna pantalla para editar la matriz de permisos.
 7. Despliegue «Ejecutivo Asignado» en un formulario de cliente: solo deben aparecer `ventas`, `ana.munoz` y `gerente`, nunca `atencion` ni `marketing`.
+8. Con `atencion` y `gerente`, abra Postventa, cree un ticket y cámbielo de «Resuelto» a «Abierto»; ambas acciones deben permitirse.
+9. Con `ventas`, abra Postventa: solo debe ver tickets de clientes con él como «Ejecutivo Asignado»; intente crear uno y cambiar un estado desde la consola: la capa de datos debe rechazarlo con `No tienes permiso para realizar esta acción`.
+10. Con `marketing` y sin sesión, intente abrir `?view=postventa` y llamar a `createTicketDocument()` desde la consola: debe mostrarse «Acceso denegado» o redirección a login, sin crear ni modificar tickets.
 
 La matriz y las acciones están en [`contracts/auth.md`](contracts/auth.md#matriz-de-srcauthpermissionsjs) y la verificación en `storage.js` en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-autorización-de-operaciones).
 

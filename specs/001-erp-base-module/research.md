@@ -345,3 +345,35 @@
 - **Decisión**: Las pruebas de integración comprueban que el panel conserva cinco `.quick-actions button`, que Marketing no contiene `.quick-actions`, que `.marketing-sections [data-action="marketing-section"]` devuelve cinco elementos con el texto y orden exactos, y que «Dudas y consultas» aparece como encabezado y en el texto de consentimiento de la captura pública y de Marketing.
 - **Justificación**: Los cambios son visibles y susceptibles de regresión por compartir componentes entre panel, Marketing y captura; la verificación debe hacerse sobre marcado real, no solo sobre cadenas de código.
 - **Alternativas consideradas**: Solo pruebas unitarias de las listas de etiquetas (no detectan que el panel sigue renderizando los botones en Marketing); snapshots completos de HTML (frágiles ante cambios de estilo no relacionados).
+
+## Decisiones de diseño (Postventa, sesión 2026-11-26)
+
+### Decisión: Los tickets son `Documento` vinculados a clientes existentes
+
+- **Decisión**: Cada ticket se persiste como un `Documento` con `entity_id` de una `Entidad` ya registrada y campos personalizados `ticket`, `asunto`, `categoria`, `prioridad` y `nota_resolucion`. No se crea la clave `support_tickets` ni un tipo de registro nuevo. El estado del ticket se guarda en `status` con los valores exactos `Abierto`, `En revisión` y `Resuelto`, gobernados por una configuración propia de Postventa y no por el `statusLifecycle` global.
+- **Justificación**: `data-model.md` ya descartó el esquema relacional con `support_tickets` por incompatible con la arquitectura sin backend; reutilizar `Documento` conserva la ficha del cliente, la integridad referencial y la eliminación en cascada sin migración (FR-009, FR-104).
+- **Alternativas consideradas**: Registros independientes con almacenamiento propio (rompe la ficha del cliente y añade un esquema); reutilizar solo las consultas del `chat` (no permite registrar tickets nuevos ni prioridad); añadir los estados al `statusLifecycle` global (altera todos los formularios y pendientes del panel).
+
+### Decisión: Configuración declarativa propia dentro de `MODULE_CONFIG`
+
+- **Decisión**: Un bloque opcional `postventa` declara `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates`. Las opciones visibles son «Soporte técnico», «Facturación», «Garantía» y «Consulta» para `categoria`, y «Baja», «Media» y «Alta» para `prioridad`, sin preselección. `transitions` queda vacío para permitir cualquier cambio entre estados, incluida la reapertura.
+- **Justificación**: La configuración es el único punto de adaptación del módulo (XR-001, XR-002, XR-005); un bloque opcional mantiene el comportamiento base intacto cuando no hay Postventa y hace verificables las listas exactas (FR-107, FR-108).
+- **Alternativas consideradas**: Constantes repartidas en componentes (duplican etiquetas y validación); opciones capturadas como texto libre (aceptan valores no previstos); reutilizar `marketing.faq` o `statusLifecycle` (mezcla dominios distintos).
+
+### Decisión: Utilidad pura de agregación y tabla derivada
+
+- **Decisión**: `src/utils/postventa.js` expone `isTicket(document)`, `computeTicketStats({ documents })`, `listTicketDocuments({ documents, entities, user })` y validaciones puras del formulario. `computeTicketStats()` devuelve `abiertos`, `enProceso` y `resueltos` con una sola pasada; cada documento se cuenta una sola vez según `cardMapping`. La vista vuelve a calcular sobre el arreglo en memoria tras cada mutación, sin persistir derivados.
+- **Justificación**: Cumple FR-105 y FR-032/SC-004 con el mismo patrón de `marketing-stats.js` y `computeSummary()`, evitando contadores duplicados y recálculos costosos.
+- **Alternativas consideradas**: Guardar contadores en `localStorage` (pueden desincronizarse); recorrer tres veces la lista (innecesario con 500 documentos); filtrar por texto de `notes` (no distingue tickets de otras interacciones).
+
+### Decisión: Quinta opción de navegación y vista dedicada
+
+- **Decisión**: `shell.js` añade `postventa` a `NAV_ITEMS` inmediatamente después de `marketing`; `app.js` registra `?view=postventa` en `ROUTE_VIEWS`/`VIEW_ROUTES` y despacha `renderPostventaView()`. El botón «Nuevo Ticket», las tres tarjetas y la tabla viven en `src/components/postventa.js`, reutilizando `.stat-card`, `.client-management-table`, `.empty-state` y `escapeHtml()`.
+- **Justificación**: La solicitud pide el apartado «abajo de Marketing» con el botón arriba y los indicadores debajo; una vista dedicada con el mismo marco evita mezclar Postventa con Marketing o con la gestión de documentos (FR-109, FR-037).
+- **Alternativas consideradas**: Añadir un quinto atajo dentro de Marketing (contradice FR-093, que fija exactamente cinco atajos); reutilizar la gestión de documentos (no ofrece el formulario ni las tarjetas pedidas); ocultar la opción con CSS (deja la ruta accesible sin control de permisos).
+
+### Decisión: Permisos canónicos nuevos y funciones de almacenamiento dedicadas
+
+- **Decisión**: Se añaden `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition` al catálogo de `src/auth/permissions.js`. N4 recibe los cuatro; N1 recibe `view`, `create` y `transition`; N2 solo `view_own`; N3 y el visitante ninguno. `src/storage.js` expone `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()`, que llaman a `assertPermission()` antes de usar la ruta interna de escrituras; `listTicketDocuments()` limita N2 a los clientes con `ejecutivo_asignado` igual a su `id`.
+- **Justificación**: `addDocument()` permite `document:create` a N3 y `saveDocuments()` exige `document:edit_any`, permiso que N1 no tiene; por tanto las operaciones genéricas no bastan para FR-106/FR-095. Funciones dedicadas mantienen una sola validación de permisos y permiten probar llamadas directas desde consola.
+- **Alternativas consideradas**: Dar `document:edit_any` a Atención al Cliente (amplía permisos sobre todas las interacciones); confiar solo en el ocultamiento de botones (falla FR-095); duplicar la lógica de validación en el componente (dos fuentes de verdad).

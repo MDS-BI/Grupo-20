@@ -1,6 +1,6 @@
 # Plan de Implementación: Módulo Base de Software de Planificación de Recursos Empresariales (ERP)
 
-**Rama**: `001-erp-base-module` | **Creado**: 2026-07-08 | **Actualizado**: 2026-11-24 | **Especificación**: [spec.md](spec.md)
+**Rama**: `001-erp-base-module` | **Creado**: 2026-07-08 | **Actualizado**: 2026-11-26 | **Especificación**: [spec.md](spec.md)
 **Entrada**: Especificación de la funcionalidad desde `/specs/001-erp-base-module/spec.md`
 
 **Incremento anterior (2026-11-23, séptima tanda)**: completar Marketing con los datos del panel principal (cinco tarjetas y embudo por estados de documento), acceso desde la barra lateral, equipo de ventas con objetivo y real calculados, registro manual de redes sociales, «Dudas y consultas» con respuestas rápidas, campañas internas programadas y seguimiento del rendimiento derivado de los registros existentes.
@@ -9,11 +9,15 @@
 
 **Incremento actual (2026-11-24, octava tanda, autenticación y permisos)**: añadir autenticación local, sesión persistente con expiración, contraseñas con hash, bloqueo temporal, matriz única de permisos por rango y administración de usuarios restringida al Gerente comercial. La estructura incluye `src/auth.js`, `src/auth/permissions.js`, `src/components/login.js` y `src/components/users-admin.js`.
 
+**Incremento actual (2026-11-26, Postventa)**: añadir «Postventa» como quinta opción de la barra lateral, con botón «Nuevo Ticket», tres tarjetas de resumen y una tabla de gestión de casos. Los tickets son `Documento` vinculados a clientes existentes con campos declarados en la configuración, y su creación y cambio de estado se validan con acciones canónicas nuevas en la matriz de permisos.
+
 ## Resumen
 
 Construir una aplicación web Vite sin framework de interfaz que sirva como módulo base de software de planificación de recursos empresariales (ERP). El módulo proporciona la base común que todo módulo ERP personalizado necesita: gestión de datos maestros (Entidades), documentos transaccionales vinculados (Documentos), flujos de crear/editar/eliminar/buscar, validación y persistencia local — construida con HTML, CSS y JavaScript vanilla. La aplicación se presenta como un espacio de trabajo ERP con barra superior (logotipo derivado + nombre del módulo) y barra lateral persistentes en cada pantalla, y la pantalla de entrada es un panel que ofrece las acciones rápidas enumeradas en FR-010 y FR-033 (nueva entidad, nuevo documento, abrir áreas de gestión, buscar registros) además de estadísticas derivadas de los registros almacenados en cada render. La adaptación a un módulo específico (p. ej., Ventas) se realiza mediante un único archivo de configuración (`src/module-config.js`) que cubre terminología, campos personalizados, ciclo de vida de documentos y color de acento, de modo que el código central permanece intacto. En el perfil de clientes, la fecha objetivo pasa a denominarse "Fecha de nacimiento" y se limita al rango comprendido entre el 1 de enero de 1910 y la fecha local actual, con actualización automática del límite al cambiar de día y conservación de los valores históricos que queden fuera de rango. En una segunda tanda de cambios del mismo perfil, el formulario de clientes deja de mostrar «Código», «Categoría», «Descripción» y «Nº de pedidos» (generando y guardando un código interno único sin exposición), exige «Fecha de nacimiento», «Canal de Contacto» y «RUT» con formato chileno válido y único, y despliega una casilla de contacto condicionada al canal elegido con validación propia; la ficha de los clientes heredados incompletos queda bloqueada hasta completarla mediante edición.
 
 Marketing conserva las tarjetas y el embudo del panel, pero no sus botones de acción rápida: en esa vista solo se muestran cinco atajos de sección («Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales»), y el apartado antes llamado «Chat» pasa a denominarse «Dudas y consultas» en todas las etiquetas visibles, conservando `chat` como clave interna.
+
+Postventa es una vista adicional para atender a clientes que ya compraron. Cada ticket se guarda como un `Documento` vinculado al cliente elegido, con «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», de modo que quede visible en la ficha del cliente. El apartado muestra «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y una tabla en la que Atención al Cliente y Gerencia pueden cambiar el estado entre «Abierto», «En revisión» y «Resuelto», sin perder la posibilidad de reabrir un ticket resuelto.
 
 ## Contexto Técnico
 
@@ -56,6 +60,16 @@ Marketing conserva las tarjetas y el embudo del panel, pero no sus botones de ac
 **Vistas de acceso**: `src/components/login.js` renderiza la pantalla de inicio de sesión sin marco ERP y permite las rutas públicas de captura y chat; `src/components/users-admin.js` se abre solo desde el menú del usuario de la barra superior para el rango «Nivel 4 - Gerente comercial».
 **Reglas de sesión**: expiración por 8 horas de inactividad, bloqueo tras 5 intentos fallidos durante 15 minutos, y revoke inmediato al desactivar usuario; un cambio de rango se aplica en la siguiente acción o recarga. La denegación se garantiza en UI, enlaces profundos y la API de `storage.js`, incluidas las llamadas desde consola con sesión íntegra; la manipulación deliberada de `localStorage`, de `erp_session` o del entorno para falsificar identidad/rango queda fuera del alcance demostrativo.
 **Usuarios de demostración**: la semilla local incluye `camila.ramirez` (Nivel 4), `lucia.fernandez` (Nivel 3), `pedro.soto` (Nivel 2) y `sofia.torres` (Nivel 1); las contraseñas se almacenan como hash con sal individual, nunca en texto plano.
+
+### Contexto Técnico del incremento de Postventa
+
+**Vista y ruta**: `state.view = 'postventa'` y `?view=postventa`, quinta entrada de `NAV_ITEMS` inmediatamente después de Marketing; el resaltado activo deriva de `state.view`.
+**Persistencia**: sin clave nueva; cada ticket es un `Documento` con `entity_id` de un cliente existente y campos personalizados `ticket`, `asunto`, `categoria`, `prioridad` y `nota_resolucion`; el discriminador `ticket` separa los tickets del resto del historial.
+**Configuración**: bloque opcional `postventa` en `MODULE_CONFIG` con `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates`; las opciones y etiquetas visibles se derivan de ahí, sin tocar el `statusLifecycle` global.
+**Agregaciones**: `src/utils/postventa.js` calcula `computeTicketStats()` en una sola pasada sobre los documentos en memoria, sin contadores persistidos; la vista se vuelve a renderizar tras cada mutación.
+**Formulario**: `src/components/postventa.js` combina un buscador `#ticket-client-search` con un `select` de clientes activos, y valida prioridad obligatoria y «Nota de resolución» obligatoria solo cuando el estado es «Resuelto».
+**Permisos**: acciones canónicas `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`; N4 las tiene todas, N1 crea y cambia estados, N2 solo consulta los clientes que tiene asignados y N3/visitante no acceden.
+**Capa de datos**: `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` validan con `assertPermission()` antes de escribir o filtrar, sin depender solo de botones ocultos.
 
 ### Aclaraciones integradas (sesión 2026-11-01)
 
@@ -147,6 +161,15 @@ Marketing conserva las tarjetas y el embudo del panel, pero no sus botones de ac
 - La etiqueta visible del equipo cambia de singular a plural: «Equipos de ventas y logros».
 - «Dudas y consultas» sustituye visiblemente a «Chat» en Marketing y en el formulario público; las claves internas `chat`, `canal: 'chat'` y los selectores existentes no cambian.
 
+### Aclaraciones integradas (sesión 2026-11-26, Postventa)
+
+- El ticket se guarda como `Documento` vinculado por `entity_id` a un cliente ya existente; «Nuevo Ticket» muestra «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», en ese orden.
+- «Cliente» es un desplegable con todos los clientes existentes y un buscador por nombre; «Categoría» ofrece «Soporte técnico», «Facturación», «Garantía» y «Consulta».
+- «Tickets abiertos» cuenta «Abierto», «En proceso» cuenta «En revisión» y «Resueltos» cuenta «Resuelto», una tarjeta por estado.
+- Atención al Cliente y Gerencia crean tickets y cambian cualquier estado; Ventas solo consulta los tickets de sus clientes; Marketing y visitantes no acceden.
+- La tabla permite cambiar entre cualquier par de estados, incluida la reapertura desde «Resuelto».
+- «Prioridad» ofrece «Baja», «Media» y «Alta» sin preselección; «Nota de resolución» es obligatoria solo al guardar en «Resuelto».
+
 ### Ajustes posteriores al análisis (2026-11-24)
 
 - FR-005 se limita a búsqueda/ficha; la pantalla de gestión sigue sin lista de entidades conforme a FR-016.
@@ -157,7 +180,7 @@ Marketing conserva las tarjetas y el embudo del panel, pero no sus botones de ac
 - El creador de campaña se persiste en `createdByUserId`, separado de la ejecución como `Sistema`.
 - El catálogo canónico de acciones de `spec.md` gobierna `can()`/`assertPermission()`, las pruebas de permisos y la alineación de contratos/modelo de datos.
 - SC-003 se vuelve medible con cinco participantes y se cubre con una tarea de validación cronometrada.
-- Las seis rutas relativas `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor; sin parámetro `view` el Panel es la vista inicial y no existe `?view=panel`.
+- Las siete rutas relativas `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor; sin parámetro `view` el Panel es la vista inicial y no existe `?view=panel`.
 
 ## Verificación de la Constitución
 
@@ -182,6 +205,10 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 - Pruebas (Autenticación): Se cubrirán con pruebas unitarias el hash, la unicidad, el bloqueo, la expiración y `can()`/`assertPermission()`, y con pruebas de integración el login, el menú del usuario, la administración de usuarios y el rechazo de operaciones directas en `storage.js`.
 - Experiencia de Usuario (Autenticación): La pantalla de inicio de sesión, el mensaje «Usuario o contraseña incorrectos», el mensaje «Acceso denegado» y el retorno al Panel seguirán los mismos patrones de validación y retroalimentación que el resto del marco ERP; «Gestionar usuarios» solo aparecerá en el menú del usuario del Gerente.
 - Rendimiento (Autenticación): La resolución del usuario y del rango se hará en memoria desde una sola lectura de `localStorage` por cambio de vista o mutación, sin recalcular hashes salvo en el inicio de sesión.
+- Calidad (Postventa): Los tickets reutilizarán `Documento` y `customFields.document` con un discriminador `ticket`; las opciones, estados y reglas se declararán en un bloque opcional `postventa` de `MODULE_CONFIG`, sin nuevo esquema de almacenamiento ni dependencias.
+- Pruebas (Postventa): Se cubrirán con pruebas unitarias las agregaciones, las opciones declaradas y la validación condicional de la nota de resolución, y con pruebas de integración el formulario, el desplegable buscable, la tabla, los cambios de estado, la ficha del cliente y las denegaciones por rango.
+- Seguridad y UX (Postventa): La creación y el cambio de estado se validarán en `src/storage.js` con las acciones canónicas nuevas, incluso en llamadas directas; la vista usará mensajes exactos, estados vacíos, texto sanitizado y el mismo marco ERP, con Postventa como quinta opción de la barra lateral.
+- Rendimiento (Postventa): Las tres tarjetas se calcularán en una sola pasada sobre los documentos ya cargados en memoria y se actualizarán al renderizar tras cada mutación, sin contadores persistidos (FR-032, FR-105).
 
 **Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación con recuento antes de la eliminación en cascada. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. La tercera tanda añade presentación declarativa (`order`, `placeholder` y opciones con `{ value, label }`) reutilizando el mismo `module-config.js` y el registro de formatos existente: los valores almacenados, las condiciones `when` y la clave `rubro` no cambian, las pistas grises son solo atributos de ejemplo y la unicidad del RUT sigue una sola regla normalizada. No se introducen dependencias ni violaciones de la constitución.
 
@@ -192,6 +219,8 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 **Reverificación post-diseño del incremento actual (2026-11-24)**: APROBADA. La nueva presentación de Marketing es solo una capa de renderizado: `dashboard.js` expone una opción para no dibujar `.quick-actions`, y `marketing.js` define las cinco secciones y su orden sin alterar las claves internas. «Dudas y consultas» se aplica al componente compartido y al texto visible de consentimiento, preservando `canal: 'chat'`, `#chat-form`, selectores y almacenamiento. No se añaden dependencias, esquemas ni servicios; las pruebas de integración cubren la ausencia de atajos del panel en Marketing, el orden exacto de los nuevos atajos y las etiquetas visibles en ambas superficies.
 
 **Reverificación post-diseño del incremento de autenticación**: APROBADA. La identidad y la matriz viven en módulos separados por responsabilidad sin dependencias nuevas; `src/auth/permissions.js` es la única fuente de permisos y `src/storage.js` la consume antes de mutar, de modo que ocultar botones no sea la única barrera. La sesión guarda solo `userId` y marcas de tiempo, resolviendo el rango desde `erp_users` para cumplir la revocación y el cambio de rango inmediato. El hash con `PBKDF2-SHA-256` y sal por usuario evita contraseñas en texto plano dentro de la limitación demostrativa sin backend; `Sistema` queda fuera de la matriz interactiva pero conserva la auditación de campañas. Los contratos y el modelo de datos documentan estados, mensajes exactos y escenarios verificables para `/speckit.tasks`.
+
+**Reverificación post-diseño del incremento de Postventa (2026-11-26)**: APROBADA. Los tickets reutilizan `Documento` y su vínculo `entity_id`, por lo que no aparece `support_tickets` ni segunda historial; el bloque `postventa` de configuración mantiene las opciones y transiciones declaradas sin alterar el `statusLifecycle` global ni los atajos de Marketing. Las cuatro acciones canónicas nuevas se añaden a la única matriz de permisos y se validan en funciones dedicadas de `src/storage.js`, de modo que N1 no necesite `document:edit_any` ni N3 pueda crear tickets. Las tarjetas derivan de los documentos en una sola pasada, con estados vacíos y mensajes exactos conforme al marco compartido. Los contratos, el modelo de datos y la guía de validación cubren la ruta, el formulario, los rangos y los casos límite; no se introducen dependencias ni violaciones de la constitución.
 
 ## Estructura del Proyecto
 
@@ -234,7 +263,8 @@ src/
 │   ├── marketing-chat.js («Dudas y consultas»: FAQ, respuestas rápidas y consultas de seguimiento)
 │   ├── sales-team-metrics.js (real mensual y objetivo mensual derivados)
 │   ├── marketing-campaigns.js (campañas, atribución, acciones y solapamientos)
-│   └── marketing-performance.js (indicadores globales y por campaña)
+│   ├── marketing-performance.js (indicadores globales y por campaña)
+│   └── postventa.js (discriminador de tickets, agregaciones y validaciones puras del formulario)
 └── components/
     ├── shell.js        (marco del espacio de trabajo: barra superior, logotipo SVG, barra lateral, estado de módulo activo)
     ├── dashboard.js    (vista de inicio: acciones rápidas + tarjetas en vivo; opción para ocultar solo las acciones rápidas en Marketing)
@@ -247,11 +277,12 @@ src/
     ├── marketing-social.js (registro y consulta de interacciones en redes)
     ├── marketing-chat.js   («Dudas y consultas»: preguntas frecuentes, respuestas rápidas y consultas de seguimiento)
     ├── login.js            (pantalla de inicio de sesión sin marco ERP; rutas públicas de captura y «Dudas y consultas»)
-    └── users-admin.js      (alta, edición, desactivación y asignación de rango solo para Nivel 4)
+    ├── users-admin.js      (alta, edición, desactivación y asignación de rango solo para Nivel 4)
+    └── postventa.js        (vista de Postventa: «Nuevo Ticket», tarjetas, tabla y cambios de estado)
 
 tests/
-├── unit/          (incluye entity-date, validación de rango y marketing-stats)
-├── integration/   (incluye etiqueta, min/max, cambio de día, marketing y captura pública)
+├── unit/          (incluye entity-date, validación de rango, marketing-stats y postventa)
+├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública y postventa)
 └── setup/
 ```
 
@@ -269,6 +300,8 @@ tests/
 
 **Decisión adicional (octava tanda)**: La autenticación se separa en `src/auth.js` y `src/auth/permissions.js` para que la identidad, la sesión y la matriz no queden repartidas entre componentes. `src/auth.js` usa `localStorage` con `erp_users` y `erp_session`, guarda contraseñas como hash PBKDF2 con sal por usuario, bloquea temporalmente tras fallos repetidos y controla la expiración por inactividad. `src/auth/permissions.js` define la tabla rango → acción y expone `can()`/`assertPermission()`; `app.js`, `shell.js`, `dashboard.js` y `storage.js` consultan esa única tabla, por lo que ocultar controles nunca es la única protección. `src/components/login.js` y `src/components/users-admin.js` son las dos vistas nuevas: la primera sin marco ERP y la segunda accesible solo desde el menú del usuario del Gerente, sin entrada en la barra lateral. Los usuarios semilla permiten verificar de inmediato los cuatro rangos y el visitante.
 
+**Decisión adicional (sesión 2026-11-26, Postventa)**: Postventa se añade como quinta entrada de `NAV_ITEMS` y como ruta `?view=postventa`, sin tocar los cinco atajos internos de Marketing. Los tickets reutilizan `Documento` con `entity_id` de un cliente ya existente y se distinguen por el campo `ticket`; sus opciones y estados se declaran en un bloque opcional `postventa` de `MODULE_CONFIG`, con `transitions` vacío para permitir cualquier cambio entre «Abierto», «En revisión» y «Resuelto». `src/utils/postventa.js` centraliza la validación y las tres agregaciones en una sola pasada, y `src/components/postventa.js` reutiliza el marco de tarjetas y tablas existente. `src/auth/permissions.js` gana `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`; `src/storage.js` los comprueba en `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()`, de modo que N1 pueda crear y reabrir sin heredar `document:edit_any` y N2 quede limitado a sus clientes. No hay nueva clave de `localStorage`, dependencia externa ni esquema relacional.
+
 ## Seguimiento de Complejidad
 
 Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente, la lógica de RUT ya presente en la semilla y el mismo patrón de pruebas Vitest/jsdom. Las contrapartidas registradas son un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado, y una capa declarativa adicional (`fieldRules`/`detailPolicy`) que se resuelve en un único punto y no modifica el comportamiento de los módulos que no la declaran. El bloqueo de ficha reutiliza el validador de guardado, por lo que no añade una segunda fuente de verdad. La tercera tanda tampoco añade dependencias: `order`, `placeholder` y `options` con valor y etiqueta se resuelven en el mismo punto de configuración, las pistas son texto de ejemplo sin persistencia, y la aceptación de dos formatos de RUT aprovecha el normalizador ya existente en `field-formats.js`.
@@ -280,6 +313,8 @@ La séptima tanda no añade dependencias: reutiliza el panel como fuente de dato
 La octava tanda de Marketing tampoco añade dependencias ni violaciones: introduce una opción booleana en el renderizador compartido y cambia etiquetas visibles. La contrapartida es que el panel y Marketing comparten el componente de tarjetas con distinta configuración de atajos, y que «Dudas y consultas» conserva identificadores internos heredados para no migrar documentos ni romper selectores; ambos puntos quedan cubiertos por pruebas de integración.
 
 La octava tanda de autenticación tampoco añade dependencias: usa Web Crypto API para el hash y `localStorage` para la identidad simulada. La contrapartida registrada es que un hash local con sal y un bloqueo temporal no sustituyen la autenticación de servidor requerida para producción; por eso la sesión guarda solo `userId`, resuelve el rango en cada verificación y documenta la limitación en `research.md` y `contracts/auth.md`. La expiración por inactividad y el bloqueo se implementan como medidas demostrativas para que el flujo sea verificable sin backend. La denegación de permisos se verifica en UI, enlaces profundos y llamadas a la API de `storage.js` con sesión íntegra, incluidas las realizadas desde consola; no se promete resistencia a edición deliberada de `localStorage`/`erp_session` ni a falsificación de identidad/rango. `createdByUserId` y `assignedUserIdAtSale` conservan atribución histórica aunque el usuario cambie de rango o sea desactivado.
+
+La tanda de Postventa no añade dependencias ni claves de almacenamiento: reutiliza `Documento`, `customFields.document`, el marco de tarjetas y la matriz de permisos existente. La contrapartida es que la nota de resolución y la prioridad viven en la configuración activa, por lo que las pruebas deben verificar tanto la forma declarada como el texto exacto de validación; y que las acciones `postventa:*` son aditivas a las de Marketing, sin ampliar `document:create` ni `document:edit_any`. La agregación en una sola pasada evita contadores derivados persistidos, y la denegación se comprueba en la capa de datos para enlaces profundos y llamadas directas.
 
 ## Revisión de la Lista de Verificación Pendiente
 

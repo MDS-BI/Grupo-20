@@ -1,0 +1,69 @@
+# Contrato de Postventa
+
+## Propósito
+
+Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a FR-109): quinta opción de la barra lateral, botón «Nuevo Ticket», tres tarjetas derivadas de los tickets y una tabla cuyo estado puede cambiarse libremente. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#9-postventa-historia-de-usuario-25). No se introduce backend, dependencia nueva ni clave adicional de `localStorage`.
+
+## Datos y configuración
+
+- Cada ticket es un `Documento` con `entity_id` de un cliente existente y `ticket: true`; sus campos personalizados son `asunto`, `categoria`, `prioridad` y `nota_resolucion`, y su estado se guarda en `status`.
+- `categoria` acepta solo `soporte_tecnico`, `facturacion`, `garantia` y `consulta`, mostrados como «Soporte técnico», «Facturación», «Garantía» y «Consulta».
+- `prioridad` acepta solo `baja`, `media` y `alta`, mostrados como «Baja», «Media» y «Alta», sin preselección.
+- `status` acepta solo `Abierto`, `En revisión` y `Resuelto`.
+- La configuración `postventa` de `module-config.js` es la única fuente de opciones, `cardMapping` y `resolutionNoteStates`; `transitions: []` permite cualquier cambio entre estados, incluida la reapertura.
+- Para la forma exacta de la configuración y del documento, ver [`entity-storage.md`](entity-storage.md).
+
+## Operaciones de `src/storage.js`
+
+- `listTicketDocuments({ documents, entities, user })`: devuelve los tickets visibles para el usuario; sin permiso devuelve lista vacía o denegación, nunca todos los documentos.
+- `createTicketDocument(values)`: valida cliente existente y campos obligatorios, comprueba `postventa:create` y crea el `Documento`.
+- `changeTicketStatus(documentId, nextStatus, resolutionNote)`: comprueba `postventa:transition`, acepta cualquier par de estados y actualiza `nota_resolucion` y `updatedAt`.
+- `deleteDocumentsForEntity(entityId)` continúa eliminando los tickets del cliente borrado; no existe borrado independiente en la vista.
+
+## Validación
+
+- El formulario «Nuevo Ticket» muestra los campos en este orden: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
+- «Cliente» es un desplegable `select#ticket-client` con todos los clientes existentes y un buscador de texto `input#ticket-client-search`; escribir filtra por `name` sin crear opciones nuevas.
+- «Categoría» y «Prioridad» son desplegables con las opciones declaradas; «Prioridad» arranca sin selección.
+- «Estado» ofrece los tres estados declarados; si se elige «Resuelto», «Nota de resolución» pasa a ser obligatoria.
+- Cualquier campo obligatorio ausente, incluida la nota en estado «Resuelto» y la prioridad sin elegir, se rechaza con el mensaje exacto `Completa los campos obligatorios.`
+- Al guardar en un estado distinto de «Resuelto», `nota_resolucion` se descarta aunque se haya escrito.
+- Un `entity_id` inexistente o un cliente eliminado se rechaza antes de persistir.
+
+## Permisos
+
+| Rango                    | Ver listado       | Crear | Cambiar estado |
+| ------------------------ | ----------------- | ----- | -------------- |
+| N4 Gerente comercial     | Todos los tickets | Sí    | Cualquiera     |
+| N1 Atención al cliente   | Todos los tickets | Sí    | Cualquiera     |
+| N2 Ejecutivo de Ventas   | Solo sus clientes | No    | No             |
+| N3 Ejecutivo de Marketing| No                | No    | No             |
+| Visitante                | No                | No    | No             |
+
+- Las acciones canónicas son `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, definidas en [`auth.md`](auth.md).
+- La pertenencia de N2 se resuelve con `Entidad.ejecutivo_asignado === user.id`; cambiar el asignado cambia la visibilidad sin mutar los tickets.
+- La denegación exacta es `No tienes permiso para realizar esta acción` y se aplica en la capa de datos, no solo ocultando botones.
+
+## Interfaz
+
+- `src/components/shell.js`: `NAV_ITEMS` incluye `postventa` inmediatamente después de `marketing`, con etiqueta «Postventa» y resaltado derivado de `state.view`.
+- `src/app.js`: `ROUTE_VIEWS`/`VIEW_ROUTES` incluyen `postventa`; la resolución aplica la matriz antes de renderizar, incluso en enlaces profundos y Back/Forward.
+- `src/components/postventa.js`: renderiza «Nuevo Ticket» arriba, las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo y la tabla de gestión después; reutiliza `.stat-card`, `.client-management-table` y `.empty-state`.
+- Las tarjetas leen `computeTicketStats()` de `src/utils/postventa.js`: «Tickets abiertos» = `Abierto`, «En proceso» = `En revisión`, «Resueltos» = `Resuelto`, con una sola pasada y sin contadores persistidos.
+- La tabla muestra cliente, asunto, categoría, prioridad y estado, con un control para cambiar el estado permitido según el rango; cada mutación vuelve a renderizar tarjetas y tabla.
+- El texto persistido se sanitiza con `escapeHtml()` antes de insertarse en el DOM.
+- Sin tickets se muestra un estado vacío; con permiso denegado se muestra `No tienes permiso para realizar esta acción`.
+
+## Rutas y mensajes
+
+- Ruta relativa: `?view=postventa`. No existe `?view=panel`; el Panel se abre quitando el parámetro.
+- Mensajes exactos: `Completa los campos obligatorios.` y `No tienes permiso para realizar esta acción`.
+- Etiquetas exactas: «Postventa», «Nuevo Ticket», «Tickets abiertos», «En proceso», «Resueltos», «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución».
+
+## Expectativas de verificación
+
+- El enlace de Postventa aparece después de Marketing y abre `?view=postventa` con el marco ERP.
+- Crear un ticket con nota vacía en «Resuelto» o sin prioridad muestra el mensaje exacto y no persiste el documento.
+- Crear un ticket para un cliente existente lo añade a la ficha de ese cliente y aumenta solo la tarjeta correspondiente.
+- Cambiar de `Resuelto` a `Abierto` actualiza tabla y tarjetas sin borrar la nota histórica del documento.
+- N1 y N4 crean y cambian cualquier estado; N2 solo ve sus clientes y no ve el botón ni el control de estado; N3 y visitante no acceden ni por enlace profundo, consola o llamada directa a `src/storage.js`.

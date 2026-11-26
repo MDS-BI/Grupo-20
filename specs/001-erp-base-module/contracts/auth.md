@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23). La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se verifica contraseña ni se bloquea por intentos fallidos.
+Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23), incluidas las acciones de Postventa de US25. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se verifica contraseña ni se bloquea por intentos fallidos.
 
 ## Almacenamiento
 
@@ -44,7 +44,7 @@ Objeto único con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`. No conti
 
 ### Catálogo canónico de acciones
 
-Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin introducir identificadores adicionales: `panel:view`, `search:view`, `entity:view_any`, `entity:view_own`, `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `summary:view_all`, `summary:view_own`, `marketing:view`, `marketing:manage`, `team:view_all`, `team:view_own`, `team:manage`, `chat:view`, `chat:answer`, `chat:create_query`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `users:manage`, `permissions:view` y `permissions:edit`.
+Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin introducir identificadores adicionales: `panel:view`, `search:view`, `entity:view_any`, `entity:view_own`, `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `summary:view_all`, `summary:view_own`, `marketing:view`, `marketing:manage`, `team:view_all`, `team:view_own`, `team:manage`, `chat:view`, `chat:answer`, `chat:create_query`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `postventa:view`, `postventa:view_own`, `postventa:create`, `postventa:transition`, `users:manage`, `permissions:view` y `permissions:edit`.
 
 | Acción                                                                       | N4  | N3  | N2                 | N1  | Visitante                               |
 | ---------------------------------------------------------------------------- | --- | --- | ------------------ | --- | --------------------------------------- |
@@ -62,10 +62,12 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 | `chat:create_query`                                                          | Sí  | Sí  | Sí                 | Sí  | Solo en ruta pública con consentimiento |
 | `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | Sí  | Sí  | No                 | No  | No                                      |
 | `campaign:stop_any`                                                          | Sí  | No  | No                 | No  | No                                      |
+| `postventa:view`, `postventa:create`, `postventa:transition`                  | Sí  | No  | No                 | Sí  | No                                      |
+| `postventa:view_own`                                                         | Sí  | No  | Solo con `ownerId` | No  | No                                      |
 | `users:manage`, `permissions:view`                                           | Sí  | No  | No                 | No  | No                                      |
 | `permissions:edit`                                                           | No  | No  | No                 | No  | No                                      |
 
-`ownerId` identifica al usuario asignado, al creador de la campaña o al integrante vinculado según la acción; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. La captura pública de FR-069 y los mensajes del chat de FR-084 son rutas públicas con consentimiento, no acciones de la matriz interactiva.
+`ownerId` identifica al usuario asignado, al creador de la campaña, al integrante vinculado o al ejecutivo a cargo del cliente en `postventa:view_own`; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. La captura pública de FR-069 y los mensajes del chat de FR-084 son rutas públicas con consentimiento, no acciones de la matriz interactiva.
 
 `Sistema` no aparece en `ROLES`: es la identidad de auditoría de las automatizaciones y no inicia sesión. Las campañas creadas por usuarios conservan al creador real en `createdByUserId`.
 
@@ -99,19 +101,22 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 - La sesión persiste al recargar y al reabrir el navegador mientras no haya logout, desactivación ni expiración.
 - Un cambio de rango se refleja en la siguiente acción o recarga; la desactivación se refleja de inmediato.
 - `ejecutivo_asignado` y `Integrante.userId` aceptan solo usuarios activos de rango Nivel 2 o Nivel 4.
+- `?view=postventa` se resuelve solo para N1, N2 y N4; N3 y visitante reciben «Acceso denegado» o redirección a login según corresponda.
+- N2 ve únicamente tickets cuyo cliente tiene `ejecutivo_asignado` igual a su `id`; si cambia el asignado, la vista y `listTicketDocuments()` dejan de mostrarlos sin mutar los tickets.
+- N1 y N4 pueden crear tickets y cambiar cualquier estado, incluida la reapertura; N2 no puede crear ni cambiar estados y N3 no puede verlos aunque conozca el `entity_id`.
 - No se guardan contraseñas, hashes ni sales; el campo solo comprueba que no esté vacío.
 
 ## Integración
 
 - `app.js`: decide entre vista de login, rutas públicas y marco ERP; pasa el usuario resuelto a los componentes.
-- `shell.js`: filtra `NAV_ITEMS` y acciones rápidas con la matriz; muestra el menú del usuario con «Cerrar sesión» y, solo para N4, «Gestionar usuarios».
+- `shell.js`: filtra `NAV_ITEMS` y acciones rápidas con la matriz, mostrando «Postventa» como quinta opción solo para N1, N2 y N4; muestra el menú del usuario con «Cerrar sesión» y, solo para N4, «Gestionar usuarios».
 - `dashboard.js`: filtra sus acciones rápidas según la matriz.
-- `storage.js`: valida permisos antes de crear, editar, eliminar o cambiar estados, incluidas las escrituras directas de listas.
+- `storage.js`: valida permisos antes de crear, editar, eliminar o cambiar estados, incluidas las escrituras directas de listas; `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` usan las acciones `postventa:*`.
 - `module-config.js` / formularios: el campo `ejecutivo_asignado` se puebla con usuarios activos válidos en lugar de texto libre.
 
 ## Rutas relativas y resolución de vista
 
-La aplicación usa un único documento HTML sin host ni ruta de servidor. La vista se resuelve desde `location.search` en carga inicial, recarga y Back/Forward: sin parámetro `view` es Panel; `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` son las seis rutas relativas soportadas. No existe `?view=panel`; el Panel se abre quitando el parámetro. Cada resolución aplica la matriz: sin sesión, una ruta interna conserva la ruta solicitada y redirige a login; con sesión sin permiso muestra «Acceso denegado» y vuelve al Panel; `?view=capture` permanece pública.
+La aplicación usa un único documento HTML sin host ni ruta de servidor. La vista se resuelve desde `location.search` en carga inicial, recarga y Back/Forward: sin parámetro `view` es Panel; `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` son las siete rutas relativas soportadas. No existe `?view=panel`; el Panel se abre quitando el parámetro. Cada resolución aplica la matriz: sin sesión, una ruta interna conserva la ruta solicitada y redirige a login; con sesión sin permiso muestra «Acceso denegado» y vuelve al Panel; `?view=capture` permanece pública.
 
 ## Mensajes exactos
 
