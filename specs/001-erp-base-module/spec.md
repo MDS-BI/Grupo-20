@@ -831,6 +831,44 @@ Se desglosa en permisos sobre datos (US23a), administración de usuarios (US23b)
 
 ---
 
+### Historia de Usuario 24 - Archivar, restaurar y eliminar clientes (Prioridad: P1)
+
+Se desglosa en archivo y restauración (US24a), baja definitiva protegida (US24b) y filtros e indicadores (US24c). Las tres operaciones usan la acción canónica `entity:delete` de FR-094: solo el Gerente Comercial (`n4_manager`) puede ejecutarlas y no se introducen identificadores de permiso nuevos.
+
+#### US24a - Archivar y restaurar clientes conservando el historial
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** archivar un cliente y restaurarlo después desde la búsqueda, **para** conservar sus interacciones sin mantenerlo en la operación diaria.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente activo con interacciones, **cuando** pulso «🗄️ Archivar», **entonces** se guarda `archivedAt` en `erp_entities`, sus documentos siguen intactos en `erp_documents` y el cliente aparece solo en «Archivados» (FR-103).
+2. **Dado** un cliente archivado, **cuando** pulso «↩️ Restaurar», **entonces** se elimina `archivedAt`, el cliente vuelve a «Activos» y su historial queda intacto (FR-103).
+3. **Dado** un cliente ya archivado, **cuando** se archiva de nuevo, **entonces** la operación es idempotente y no cambia la fecha original de archivo (FR-103).
+4. **Dado** `atencion`, `ventas`, `marketing` o un visitante, **cuando** intenta archivar o restaurar desde la interfaz o mediante una llamada directa a `storage.js`, **entonces** no ve los botones y la capa de datos rechaza la operación con `No tienes permiso para realizar esta acción` (FR-094, FR-095, FR-096).
+
+#### US24b - Eliminar definitivamente solo clientes sin registros
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** que la eliminación definitiva pida confirmación y se bloquee cuando exista historial comercial, **para** no destruir interacciones, ventas ni campañas asociadas.
+
+**Criterios de aceptación**:
+
+1. **Dado** un cliente sin documentos asociados, **cuando** pulso «🗑️ Eliminar» y confirmo, **entonces** se elimina solo esa entidad de `erp_entities` (FR-103).
+2. **Dado** un cliente con una o más interacciones o registros comerciales vinculados por `entity_id`, **cuando** pulso «🗑️ Eliminar», **entonces** no se elimina nada y se ofrece archivarlo para conservar el historial (FR-103).
+3. **Dado** el mensaje de historial asociado, **cuando** confirmo el archivo, **entonces** el cliente pasa a «Archivados» y sus documentos permanecen sin cambios; si rechazo, no se muta ningún dato (FR-103).
+4. **Dado** una llamada directa a `deleteEntity()` sobre un cliente con registros, **cuando** se ejecuta, **entonces** se rechaza con `EntityHasRecordsError` sin borrar la entidad ni sus documentos (FR-095, FR-103).
+
+#### US24c - Filtrar clientes activos y archivados con indicadores coherentes
+
+**Como** Gerente Comercial (rango `n4_manager`), **quiero** alternar entre clientes activos y archivados y ver indicadores calculados solo sobre los activos, **para** distinguir la cartera operativa del histórico conservado.
+
+**Criterios de aceptación**:
+
+1. **Dado** la vista de búsqueda, **cuando** abro «Activos (n)» o «Archivados (n)», **entonces** solo se listan los clientes del estado elegido, con sus acciones correspondientes (FR-103).
+2. **Dado** un cliente archivado, **cuando** consulto el panel, el resumen o Marketing, **entonces** ni ese cliente ni sus documentos cuentan en tarjetas, embudo, pendientes ni rendimiento (FR-035, FR-073, FR-103).
+3. **Dado** un cliente archivado, **cuando** lo restauro, **entonces** los indicadores se recalculan sin recarga y vuelven a incluirlo (FR-074, FR-103).
+
+---
+
 ### Funcionalidades pendientes detectadas
 
 - **FR-058 / acceso a fichas bloqueadas**: `detailPolicy.entity.offerEditAction` muestra «Editar» sin consultar la matriz de permisos; en los rangos N1 y N3 esa acción puede aparecer y luego rechazarse con `No tienes permiso para realizar esta acción`. Falta decidir si la completación guiada la hace un usuario con `entity:edit_own`/`entity:edit_any` o si la ficha bloqueada debe ofrecer solo lectura y una solicitud de corrección.
@@ -849,7 +887,8 @@ Se desglosa en permisos sobre datos (US23a), administración de usuarios (US23b)
 - Búsqueda sin coincidencias: se muestra exactamente `No se encontraron resultados.` y no se modifica ningún registro (FR-005).
 - Editar o eliminar una entidad que ya no existe: la operación falla sin mutar datos, se muestra un error visible y la lista y el resumen quedan sin cambios.
 - Fecha objetivo inválida: se rechaza y no se guarda. En el perfil de clientes se rechazan además las fechas anteriores al 1 de enero de 1910 o posteriores a la fecha local actual (FR-047); si el valor ya estaba guardado se conserva y se exige corregirlo al editar (FR-050).
-- Eliminar una entidad: tras la confirmación con recuento se eliminan también todos sus documentos en la misma operación; sin confirmación no se elimina nada (FR-003, FR-009).
+- Eliminar una entidad: sin registros vinculados, tras la confirmación se elimina solo la entidad; con documentos o registros comerciales asociados, la operación se rechaza sin borrar nada y se ofrece archivarla para conservar el historial (FR-003, FR-009, FR-103).
+- Archivar o restaurar una entidad: la operación conserva todos sus documentos y campos, es idempotente y solo la puede ejecutar un usuario con `entity:delete`; un cliente archivado deja de contar en panel, resumen y Marketing (FR-094, FR-103).
 - Documento con `endDate` anterior a `startDate`: se rechaza el guardado, se muestra un error visible y el documento permanece sin cambios.
 - Colisión de clave de campo personalizado con un campo base: se descarta la definición conflictiva, se aplican los valores predeterminados y se muestra una advertencia visible; el campo base conserva su comportamiento (FR-025).
 - Tipo de campo desconocido o transición de ciclo de vida inválida: se aplica el fallback a `DEFAULT_CONFIG` con advertencia visible; no se guarda la definición inválida ni se permite la transición (FR-025, FR-030).
@@ -991,6 +1030,7 @@ La aplicación usa únicamente rutas relativas de un mismo documento HTML, sin h
 - **FR-100**: Cada integrante de «Equipos de ventas y logros» DEBE vincularse a un usuario activo de rango «Nivel 2 - Ejecutivo de Ventas» o «Nivel 4 - Gerente Comercial» (FR-099). El real mensual y el objetivo mensual DEBEN calcularse con los clientes asignados a ese usuario vinculado, y NO con el nombre capturado del integrante (FR-078, FR-079).
 - **FR-101**: Las interacciones, los documentos y las campañas generados por reglas automáticas DEBEN ejecutarse bajo la identidad «Sistema», sin depender del rango del usuario conectado en ese momento. El historial de cada campaña DEBE registrar además qué usuario la creó (FR-086), conservando ese dato aunque el usuario cambie de rango o sea desactivado. El campo persistido es `createdByUserId`, separado de la identidad de ejecución `Sistema`.
 - **FR-102**: La sesión iniciada DEBE persistir localmente al recargar la página y al cerrar y reabrir el navegador, y DEBE finalizar cuando el usuario pulse «Cerrar sesión» o cuando el usuario sea desactivado (FR-098). En caso de desactivación, la revocación DEBE ser inmediata y la siguiente acción o recarga DEBE redirigir a inicio de sesión. Un cambio de rango del usuario autenticado DEBE aplicarse también en la siguiente acción o recarga, actualizando el rango mostrado y los permisos derivados de la matriz (FR-094, FR-098). Mientras la sesión persista, la identidad y el rango mostrados en la barra superior DEBEN seguir siendo los del usuario autenticado.
+- **FR-103**: La gestión de clientes DEBE ofrecer archivar, restaurar y eliminar definitivamente cada registro con botones iconográficos coherentes con la interfaz. Archivar DEBE persistir `archivedAt` en la entidad sin borrar documentos; restaurar DEBE eliminar esa marca; ambas operaciones DEBEN ser idempotentes y ejecutarse solo con `entity:delete` (FR-094, FR-095). La eliminación definitiva DEBE pedir confirmación y DEBE rechazarse con `EntityHasRecordsError` cuando existan documentos o registros comerciales vinculados por `entity_id`; en ese caso la interfaz DEBE ofrecer archivar el cliente para conservar su historial (US24b). La búsqueda DEBE permitir alternar entre «Activos» y «Archivados»; el panel, el resumen y Marketing DEBEN calcular sus indicadores únicamente con clientes activos y sus documentos, y recalcularlos sin recarga tras archivar o restaurar (FR-035, FR-073, FR-074).
 
 ### Matriz de permisos (fuente única)
 
@@ -1000,7 +1040,7 @@ La aplicación usa únicamente rutas relativas de un mismo documento HTML, sin h
 | Nivel 1 - Atencion al Cliente    | Busca y ve ficha e historial de cualquier cliente | No                               | No                            | No                                          | No                            | No                                                                            | Registra solo «Llamada» o «Correo» en cualquier cliente y da seguimiento a consultas del chat (FR-083); no cambia estados | No                                                                      |
 | Nivel 2 - Ejecutivo de Ventas    | Busca y ve ficha de cualquier cliente             | Solo sus seguimientos pendientes | No                            | Solo su real y objetivo mensuales           | No                            | Crea clientes; edita solo los que tenga como «Ejecutivo Asignado»; no elimina | Registra y cambia el estado solo en sus clientes                                                                          | No                                                                      |
 | Nivel 3 - Ejecutivo de Marketing | Busca y ve ficha de cualquier cliente y prospecto | No                               | Acceso completo (US16 a US21) | Solo lectura                                | No                            | No; crea prospectos desde Marketing                                           | Consulta conversaciones del chat                                                                                          | Crea, edita, detiene y consulta; no puede detener las de otros usuarios |
-| Nivel 4 - Gerente Comercial      | Acceso total                                      | De todo el equipo                | Acceso total                  | Crea, edita y elimina equipos e integrantes | Sí, desde el menú del usuario | Crea, edita y elimina cualquier cliente (FR-003)                              | Acceso total                                                                                                              | Crea y detiene cualquier campaña                                        |
+| Nivel 4 - Gerente Comercial      | Acceso total                                      | De todo el equipo                | Acceso total                  | Crea, edita y elimina equipos e integrantes | Sí, desde el menú del usuario | Crea, edita, archiva, restaura y elimina clientes sin registros; archiva en lugar de eliminar si hay historial (FR-003, FR-103) | Acceso total                                                                                                              | Crea y detiene cualquier campaña                                        |
 
 #### Catálogo canónico de acciones
 
@@ -1020,7 +1060,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 
 ### Entidades Clave _(incluir si la funcionalidad implica datos)_
 
-- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). En el apartado de Marketing, una Entidad con estado inicial «Prospecto» representa una visita capturada que puede convertirse en Cliente conservando su identidad e historial (FR-068). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo).
+- **Entidad**: Un registro de datos maestros gestionado por el módulo, que incluye un `id` interno único, un entity_id autogenerado de exposición, su nombre, código de negocio, detalles descriptivos, categoría de clasificación, una fecha objetivo opcional, marcas de tiempo y los campos personalizados declarados por la configuración. En el perfil de clientes, esta fecha se etiqueta como "Fecha de nacimiento" y se restringe según FR-047, el código de negocio se genera automáticamente de forma oculta y única (FR-052), y el dato de contacto adicional se guarda únicamente para el canal elegido (FR-060). En el apartado de Marketing, una Entidad con estado inicial «Prospecto» representa una visita capturada que puede convertirse en Cliente conservando su identidad e historial (FR-068). Los módulos personalizados definen qué representa una Entidad en el mundo real (p. ej., cliente, producto, activo). Una entidad archivada conserva la marca opcional `archivedAt` y todo su historial, y se distingue de una entidad activa en la búsqueda sin borrar sus documentos (FR-103).
 - **Documento**: Detalles transaccionales adjuntos a una entidad, vinculados a ella por el entity_id de la entidad. Sus campos base son `id`, `entity_id`, `startDate` y `endDate` opcionales (con `endDate` igual o posterior a `startDate`), `notes` opcional, `status` y marcas de tiempo; los campos de dominio (p. ej. tipo de interacción, serie/folio, importes, moneda, condiciones) se declaran como campos personalizados (Historia de Usuario 8) y su estado se gobierna por el ciclo de vida de documentos configurado (Historia de Usuario 13), sin introducir una estructura de almacenamiento distinta a la de un Documento base. Los módulos personalizados definen qué representa un Documento (p. ej., pedido, factura, contrato). En el perfil CRM ilustrado por las Historias de Usuario 2, 3 y 6, cada Documento representa una interacción comercial o un seguimiento (p. ej., llamada, correo, reunión).
 - **Estado comercial**: Clasificación interna de cada prospecto en `prospecto` («Prospecto»), `en_proceso` («En proceso»), `en_recontacto` («En recontacto»), `ganado` («Ganado») o `perdido` («Perdido») para la captura y la automatización (FR-068 a FR-071); `ganado` identifica la conversión de la entidad a Cliente, conserva su identificador, su historial de documentos y sus campos personalizados, registra la auditoría de la transición y su resultado visible, cuando se necesite, es «Cliente ganado», distinto del estado de documento «Cerrado ganado» (FR-068). Ya NO ES la fuente de las tarjetas ni del embudo del apartado de Marketing, que se derivan de los documentos del panel principal (FR-072 a FR-074), y NO se ofrece como selector en esa vista (FR-075).
 - **Equipo de ventas**: Agrupación editable de integrantes creada desde el acceso «Equipos de ventas y logros» —antes «Equipo de ventas y logros»— de Marketing; contiene un nombre y la lista de integrantes (FR-076).
@@ -1074,6 +1114,7 @@ Los módulos personalizados construidos sobre esta base DEBEN poder:
 - **SC-035**: El 100% de las verificaciones del rango «Nivel 2 - Ejecutivo de Ventas» (`ventas`) confirman al menos una acción permitida —crear el cliente «Ferretería Central» con `ventas` como «Ejecutivo Asignado»— y una denegada —eliminar «Transportes del Norte Ltda.» mediante llamada directa a `storage.js`—, rechazada con «No tienes permiso para realizar esta acción» (FR-095, FR-096, FR-099).
 - **SC-036**: El 100% de las verificaciones del rango «Nivel 1 - Atencion al Cliente» (`atencion`) confirman al menos una acción permitida —registrar una «Llamada» en la ficha de «Comercial Andina SpA»— y una denegada —abrir Marketing o el resumen—, rechazada con «No tienes permiso para realizar esta acción» y mostrando «Acceso denegado» con retorno al Panel cuando se intente por enlace profundo (FR-094, FR-096, FR-097).
 - **SC-037**: El 100% de las verificaciones del rango «Visitante (sin sesión)» confirman al menos una acción permitida —enviar el formulario público de captura con consentimiento o usar «Dudas y consultas» (`chat`) del sitio— y una denegada —abrir la URL raíz sin parámetro `?view=` (Panel)—, que redirige a la pantalla de inicio de sesión sin mostrar vistas internas; además, el formulario rechaza la contraseña vacía con «Ingresa una contraseña» y cualquier usuario distinto de los cuatro usuarios demostrativos con «Usuario no encontrado» (FR-006, FR-069, FR-084, FR-097, US22).
+- **SC-038**: El 100% de las verificaciones de ciclo de vida de clientes confirman que archivar conserva `archivedAt`, documentos y campos; que restaurar devuelve el cliente a «Activos»; que la eliminación pide confirmación y se bloquea con registros vinculados ofreciendo el archivado; que los filtros separan activos de archivados; y que panel, resumen y Marketing recalculan sus indicadores sin contar clientes archivados (FR-103, US24).
 
 ## Suposiciones
 

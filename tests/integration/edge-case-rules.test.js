@@ -15,6 +15,8 @@ import {
   addDocument,
   addEntity,
   computeSummary,
+  EntityHasRecordsError,
+  archiveEntity,
   deleteEntity,
   loadDocuments,
   loadEntities,
@@ -105,15 +107,16 @@ describe('Fechas y relaciones', () => {
     ).toThrow(ValidationError);
   });
 
-  it('elimina en cascada los documentos asociados', () => {
+  it('impide eliminar con documentos asociados y permite archivar conservándolos', () => {
     const entity = addEntity(validClient(), {
       customFieldDefs: MODULE_CONFIG.customFields.entity,
     });
     addDocument({ entity_id: entity.entity_id, notes: 'Primera' });
     addDocument({ entity_id: entity.entity_id, notes: 'Segunda' });
 
-    expect(deleteEntity(entity.id)).toEqual({ deletedDocumentCount: 2 });
-    expect(loadDocuments().filter((doc) => doc.entity_id === entity.entity_id)).toEqual([]);
+    expect(() => deleteEntity(entity.id)).toThrow(EntityHasRecordsError);
+    expect(archiveEntity(entity.id).archivedAt).toBeTruthy();
+    expect(loadDocuments().filter((doc) => doc.entity_id === entity.entity_id)).toHaveLength(2);
   });
 
   it('conserva valores históricos aunque las defs pasadas no los declaren', () => {

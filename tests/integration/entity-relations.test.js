@@ -15,7 +15,7 @@ function createClient() {
   });
 }
 
-describe('Vínculo entidad-documento y borrado en cascada (T016)', () => {
+describe('Vínculo entidad-documento y conservación del historial (T016)', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div>';
     app = initApp(document.getElementById('app'));
@@ -42,7 +42,7 @@ describe('Vínculo entidad-documento y borrado en cascada (T016)', () => {
     expect(document.querySelector(`[data-entity-id="${entity.entity_id}"]`)).toBeTruthy();
   });
 
-  it('elimina los documentos asociados al borrar la entidad', () => {
+  it('archiva la entidad y conserva los documentos al intentar borrarla con historial', () => {
     const entity = createClient();
     addDocument({ entity_id: entity.entity_id, notes: 'Primera interacción' });
     addDocument({ entity_id: entity.entity_id, notes: 'Segunda interacción' });
@@ -51,9 +51,8 @@ describe('Vínculo entidad-documento y borrado en cascada (T016)', () => {
     app.navigate('search');
     document.querySelector(`[data-action="delete-entity"][data-id="${entity.id}"]`).click();
 
-    expect(loadEntities()).toHaveLength(0);
-    expect(loadDocuments()).toHaveLength(0);
-    expect(localStorage.getItem('erp_entities')).toBe('[]');
-    expect(localStorage.getItem('erp_documents')).toBe('[]');
+    expect(loadEntities()).toHaveLength(1);
+    expect(loadEntities()[0].archivedAt).toBeTruthy();
+    expect(loadDocuments()).toHaveLength(2);
   });
 });

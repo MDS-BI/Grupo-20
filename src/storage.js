@@ -29,6 +29,18 @@ export class ValidationError extends Error {
   }
 }
 
+export class EntityHasRecordsError extends Error {
+  constructor(recordCount) {
+    super('La entidad tiene registros asociados y no se puede eliminar.');
+    this.name = 'EntityHasRecordsError';
+    this.recordCount = recordCount;
+  }
+}
+
+export function isArchivedEntity(entity) {
+  return Boolean(entity?.archivedAt);
+}
+
 function readJson(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -536,14 +548,43 @@ function removeDocumentsForEntity(entityId) {
   return deletedCount;
 }
 
+export function archiveEntity(id) {
+  authorize('entity:delete');
+  const entities = loadEntities();
+  const index = entities.findIndex((e) => e.id === id);
+  if (index === -1) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
+  const entity = entities[index];
+  if (isArchivedEntity(entity)) return entity;
+  const now = new Date().toISOString();
+  const archived = { ...entity, archivedAt: now, updatedAt: now };
+  entities[index] = archived;
+  writeEntities(entities);
+  return archived;
+}
+
+export function restoreEntity(id) {
+  authorize('entity:delete');
+  const entities = loadEntities();
+  const index = entities.findIndex((e) => e.id === id);
+  if (index === -1) throw new ValidationError({ _entity: 'La entidad ya no existe.' });
+  const entity = entities[index];
+  if (!isArchivedEntity(entity)) return entity;
+  const { archivedAt: _archivedAt, ...rest } = entity;
+  const restored = { ...rest, updatedAt: new Date().toISOString() };
+  entities[index] = restored;
+  writeEntities(entities);
+  return restored;
+}
+
 export function deleteEntity(id) {
   authorize('entity:delete');
   const entities = loadEntities();
   const entity = entities.find((e) => e.id === id);
   if (!entity) return { deletedDocumentCount: 0 };
+  const associatedRecordCount = countDocumentsForEntity(entity.entity_id);
+  if (associatedRecordCount > 0) throw new EntityHasRecordsError(associatedRecordCount);
   writeEntities(entities.filter((e) => e.id !== id));
-  const deletedDocumentCount = removeDocumentsForEntity(entity.entity_id);
-  return { deletedDocumentCount };
+  return { deletedDocumentCount: 0 };
 }
 
 export function countDocumentsForEntity(entityId, documents = loadDocuments()) {

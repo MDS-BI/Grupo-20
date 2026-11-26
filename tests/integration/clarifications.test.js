@@ -72,7 +72,7 @@ describe('Clarifications 2026-11-01', () => {
     expect(window.__xss).toBeUndefined();
   });
 
-  it('asks for confirmation before deleting an entity and reports how many documents will be removed', () => {
+  it('asks for confirmation and archives an entity with linked documents instead of deleting it', () => {
     mount(undefined);
     const entity = addEntity({ name: 'Acme', code: 'AC-001' });
     addDocument({ entity_id: entity.entity_id, notes: 'Llamada 1', startDate: '2026-08-01' });
@@ -83,8 +83,9 @@ describe('Clarifications 2026-11-01', () => {
     document.querySelector('[data-action="delete-entity"]').click();
 
     expect(globalThis.confirm).toHaveBeenCalledTimes(1);
-    expect(globalThis.confirm.mock.calls[0][0]).toContain('2 documento');
-    expect(loadEntities().length).toBe(0);
-    expect(loadDocuments().length).toBe(0);
+    expect(globalThis.confirm.mock.calls[0][0]).toContain('2 registros vinculados');
+    expect(loadEntities().length).toBe(1);
+    expect(loadEntities()[0].archivedAt).toBeTruthy();
+    expect(loadDocuments().length).toBe(2);
   });
 });

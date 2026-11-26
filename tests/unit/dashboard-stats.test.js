@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
 import { formatCurrencyUsd, formatPercent } from '../../src/components/dashboard.js';
-import { addEntity, addDocument, deleteEntity } from '../../src/storage.js';
+import { addEntity, addDocument, archiveEntity } from '../../src/storage.js';
 import { initApp } from '../../src/app.js';
 
 let dom;
@@ -67,7 +67,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     app.destroy();
   });
 
-  it('recalcula los indicadores al crear y eliminar registros reales', () => {
+  it('recalcula los indicadores al crear y archivar registros reales', () => {
     const app = initApp(document.getElementById('app'));
     const client = createClient();
     addDocument({ entity_id: client.entity_id, status: 'cerrado ganado', startDate: '2026-10-01' });
@@ -90,7 +90,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
       [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
     ).toEqual(['0', '0', '1', '1', '0', '0']);
 
-    deleteEntity(client.id);
+    archiveEntity(client.id);
     app.navigate('dashboard');
     expect(cards().map((card) => card.value)).toEqual(['0', '0', '0', '0%', '$0']);
     app.destroy();

@@ -7,6 +7,10 @@ import {
   addEntity,
   updateEntity,
   deleteEntity,
+  archiveEntity,
+  restoreEntity,
+  EntityHasRecordsError,
+  isArchivedEntity,
   countDocumentsForEntity,
   addDocument,
   updateDocument,
@@ -273,6 +277,7 @@ export function initApp(rootEl = null, options = {}) {
     documentEntityId: null,
     detailEntityId: null,
     searchQuery: '',
+    clientStatusFilter: 'active',
     entityFormErrors: {},
     documentFormErrors: {},
     entityFormDraft: null,
@@ -438,6 +443,19 @@ export function initApp(rootEl = null, options = {}) {
     );
   }
 
+  function activeEntities() {
+    return state.entities.filter((entity) => !isArchivedEntity(entity));
+  }
+
+  function archivedEntities() {
+    return state.entities.filter(isArchivedEntity);
+  }
+
+  function activeDocuments() {
+    const activeIds = new Set(activeEntities().map((entity) => entity.entity_id));
+    return state.documents.filter((document) => activeIds.has(document.entity_id));
+  }
+
   function applyPermissionFilters() {
     if (!state.authEnabled || !state.currentUser) return;
     rootEl.querySelectorAll('[data-action="navigate"][data-view]').forEach((button) => {
@@ -472,7 +490,11 @@ export function initApp(rootEl = null, options = {}) {
       if (!canEditEntity(entity)) button.remove();
     });
     if (!can(state.role, 'entity:delete')) {
-      rootEl.querySelectorAll('[data-action="delete-entity"]').forEach((button) => button.remove());
+      rootEl
+        .querySelectorAll(
+          '[data-action="archive-entity"], [data-action="restore-entity"], [data-action="delete-entity"]'
+        )
+        .forEach((button) => button.remove());
     }
     if (!can(state.role, 'document:create')) {
       rootEl.querySelectorAll('[data-action="edit-document"]').forEach((button) => button.remove());
@@ -531,8 +553,8 @@ export function initApp(rootEl = null, options = {}) {
 
   function renderDashboardView() {
     const stats = computeDashboardStats({
-      entities: state.entities,
-      documents: state.documents,
+      entities: activeEntities(),
+      documents: activeDocuments(),
       config: state.config,
     });
     return renderDashboardHtml(state.config, stats);
@@ -562,12 +584,16 @@ export function initApp(rootEl = null, options = {}) {
         ${renderEntityFormHtml(state.config, values, state.entityFormErrors)}
         ${
           editing
-            ? `<button type="button" data-action="delete-entity" data-id="${escapeHtml(editing.id)}">Eliminar ${escapeHtml(entityLabel.toLowerCase())}</button>`
+            ? `<div class="record-actions">
+                <button type="button" data-action="${isArchivedEntity(editing) ? 'restore-entity' : 'archive-entity'}" data-id="${escapeHtml(editing.id)}">${isArchivedEntity(editing) ? '↩️ Restaurar' : '🗄️ Archivar'} ${escapeHtml(entityLabel.toLowerCase())}</button>
+                <button type="button" data-action="delete-entity" data-id="${escapeHtml(editing.id)}">🗑️ Eliminar ${escapeHtml(entityLabel.toLowerCase())}</button>
+              </div>`
             : ''
         }
       `;
     } else {
-      const options = state.entities
+      const availableEntities = activeEntities();
+      const options = availableEntities
         .map(
           (e) =>
             `<option value="${escapeHtml(e.entity_id)}" ${e.entity_id === state.documentEntityId ? 'selected' : ''}>${escapeHtml(e.name)} (${escapeHtml(e.code)})</option>`
@@ -584,13 +610,13 @@ export function initApp(rootEl = null, options = {}) {
         <h2>${editingDoc ? 'Editar' : 'Nuevo'} ${escapeHtml(documentLabel.toLowerCase())}</h2>
         <div class="form-field">
           <label for="document-entity-select">${escapeHtml(entityLabel)}</label>
-          <select id="document-entity-select" ${state.entities.length === 0 ? 'disabled' : ''}>
+          <select id="document-entity-select" ${availableEntities.length === 0 ? 'disabled' : ''}>
             <option value="">-- Selecciona --</option>
             ${options}
           </select>
         </div>
         ${
-          state.entities.length === 0
+          availableEntities.length === 0
             ? `<p class="empty-state">Crea una ${escapeHtml(entityLabel.toLowerCase())} primero.</p>`
             : ''
         }
@@ -611,8 +637,10 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function currentSearchResults() {
+    const entities =
+      state.clientStatusFilter === 'archived' ? archivedEntities() : activeEntities();
     return searchEntities(state.searchQuery, {
-      entities: state.entities,
+      entities,
       documents: state.documents,
       customFieldKeys: customFieldKeys('entity'),
       documentCustomFieldKeys: customFieldKeys('document'),
@@ -620,11 +648,24 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function renderSearchView() {
+    const archived = state.clientStatusFilter === 'archived';
+    const filterHtml = `
+      <div class="tabs client-status-filter" role="tablist" aria-label="Estado del cliente">
+        <button type="button" role="tab" data-action="client-status-filter" data-status="active"
+          class="tab-button${archived ? '' : ' active'}" aria-selected="${!archived}">
+          Activos (${activeEntities().length})
+        </button>
+        <button type="button" role="tab" data-action="client-status-filter" data-status="archived"
+          class="tab-button${archived ? ' active' : ''}" aria-selected="${archived}">
+          Archivados (${archivedEntities().length})
+        </button>
+      </div>`;
     return `
       <div class="search-view">
         ${renderSearchBarHtml(state.config, state.searchQuery)}
+        ${filterHtml}
         <div id="search-results-list">
-          <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config)}</div>
+          <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config, { archived })}</div>
         </div>
       </div>
     `;
@@ -640,8 +681,8 @@ export function initApp(rootEl = null, options = {}) {
     const ownerId =
       !uiCan('summary:view_all') && state.currentUser?.id ? state.currentUser.id : null;
     const summary = computeSummary({
-      entities: state.entities,
-      documents: state.documents,
+      entities: activeEntities(),
+      documents: activeDocuments(),
       statusLifecycle: state.config.statusLifecycle,
       ownerId,
     });
@@ -649,9 +690,11 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function renderMarketingView() {
+    const visibleEntities = activeEntities();
+    const visibleDocuments = activeDocuments();
     const stats = computeMarketingStats({
-      entities: state.entities,
-      documents: state.documents,
+      entities: visibleEntities,
+      documents: visibleDocuments,
       config: state.config,
     });
     let teams = (state.marketingConfig.salesTeams || []).map((team) => ({
@@ -674,8 +717,8 @@ export function initApp(rootEl = null, options = {}) {
         executive: member.userId || member.executive,
       })),
     }));
-    const metricsEntities = state.entities.map((entity) => {
-      const saleDoc = state.documents.find(
+    const metricsEntities = visibleEntities.map((entity) => {
+      const saleDoc = visibleDocuments.find(
         (d) =>
           d.entity_id === entity.entity_id &&
           d.assignedUserIdAtSale &&
@@ -686,15 +729,15 @@ export function initApp(rootEl = null, options = {}) {
     const metrics = computeSalesTeamMetrics({
       teams: metricsTeams,
       entities: metricsEntities,
-      documents: state.documents,
+      documents: visibleDocuments,
     });
     const allowedSections = new Set(['team', 'social', 'chat', 'campaigns', 'performance']);
     const section = allowedSections.has(state.marketingSection) ? state.marketingSection : 'team';
     const canManageTeam = uiCan('team:manage');
     const canManageCampaigns = uiCan('marketing:manage');
     return renderMarketingHtml(state.config, stats, {
-      entities: state.entities,
-      documents: state.documents,
+      entities: visibleEntities,
+      documents: visibleDocuments,
       marketingConfig: state.marketingConfig,
       section,
       team: {
@@ -838,7 +881,9 @@ export function initApp(rootEl = null, options = {}) {
   function updateSearchResults() {
     const resultsEl = rootEl.querySelector('#search-results');
     if (!resultsEl) return;
-    resultsEl.innerHTML = renderEntityListHtml(currentSearchResults(), state.config);
+    resultsEl.innerHTML = renderEntityListHtml(currentSearchResults(), state.config, {
+      archived: state.clientStatusFilter === 'archived',
+    });
     applyPermissionFilters();
   }
 
@@ -989,20 +1034,47 @@ export function initApp(rootEl = null, options = {}) {
     render();
   }
 
+  function onArchiveEntity(id) {
+    const entity = state.entities.find((e) => e.id === id);
+    if (!entity || isArchivedEntity(entity)) return;
+    try {
+      archiveEntity(id);
+    } catch (err) {
+      if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
+      throw err;
+    }
+    if (state.editingEntityId === id) state.editingEntityId = null;
+    render();
+  }
+
+  function onRestoreEntity(id) {
+    const entity = state.entities.find((e) => e.id === id);
+    if (!entity || !isArchivedEntity(entity)) return;
+    try {
+      restoreEntity(id);
+    } catch (err) {
+      if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
+      throw err;
+    }
+    if (state.editingEntityId === id) state.editingEntityId = null;
+    render();
+  }
+
   function onDeleteEntity(id) {
     const entity = state.entities.find((e) => e.id === id);
     if (!entity) return;
-    const docCount = countDocumentsForEntity(entity.entity_id, state.documents);
     const label = getLabel(state.config, 'entity').toLowerCase();
-    const docLabel = getLabel(state.config, 'documentPlural').toLowerCase();
-    const message =
-      docCount > 0
-        ? `¿Eliminar esta ${label}? También se eliminarán ${docCount} ${docLabel} asociados.`
-        : `¿Eliminar esta ${label}?`;
-    if (!window.confirm(message)) return;
+    const recordCount = countDocumentsForEntity(entity.entity_id, state.documents);
+    if (recordCount > 0) {
+      const message = `No se puede eliminar este ${label} porque tiene ${recordCount} registros vinculados. ¿Deseas archivarlo para conservar su historial?`;
+      if (window.confirm(message)) onArchiveEntity(id);
+      return;
+    }
+    if (!window.confirm(`¿Eliminar este ${label}?`)) return;
     try {
       deleteEntity(id);
     } catch (err) {
+      if (err instanceof EntityHasRecordsError) return;
       if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
       throw err;
     }
@@ -1240,6 +1312,16 @@ export function initApp(rootEl = null, options = {}) {
         navigate('manage-entity', { skipDirtyCheck: true });
         break;
       }
+      case 'client-status-filter':
+        state.clientStatusFilter = target.dataset.status === 'archived' ? 'archived' : 'active';
+        render();
+        break;
+      case 'archive-entity':
+        onArchiveEntity(target.dataset.id);
+        break;
+      case 'restore-entity':
+        onRestoreEntity(target.dataset.id);
+        break;
       case 'delete-entity':
         onDeleteEntity(target.dataset.id);
         break;

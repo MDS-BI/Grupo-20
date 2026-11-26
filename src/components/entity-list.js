@@ -3,7 +3,7 @@ import { resolveEntityDateRule } from '../utils/entity-date.js';
 import { isFieldVisible, resolveFieldRules } from '../utils/field-rules.js';
 import { MESSAGES } from '../utils/messages.js';
 
-export function renderEntityListHtml(entities, config) {
+export function renderEntityListHtml(entities, config, { archived = false } = {}) {
   if (!entities.length) {
     return `<p class="empty-state">${MESSAGES.noResults}</p>`;
   }
@@ -16,6 +16,7 @@ export function renderEntityListHtml(entities, config) {
       <li class="list-item entity-item" data-entity-id="${escapeHtml(e.entity_id)}">
         <div class="list-item-main">
           <span class="list-item-title">${escapeHtml(e.name)}</span>
+          ${archived ? '<span class="status-badge archived">Archivado</span>' : ''}
           ${isFieldVisible(rules, 'code', e) ? `<span class="list-item-code">${escapeHtml(e.code)}</span>` : ''}
           ${e.targetDate ? `<span class="list-item-date">${escapeHtml(dateLabel)}: ${escapeHtml(e.targetDate)}</span>` : ''}
           ${customFieldDefs
@@ -33,9 +34,14 @@ export function renderEntityListHtml(entities, config) {
             .join('')}
         </div>
         <div class="list-item-actions">
-          <button type="button" data-action="view-entity" data-entity-id="${escapeHtml(e.entity_id)}">Ver ficha</button>
-          <button type="button" data-action="edit-entity" data-id="${escapeHtml(e.id)}">Editar</button>
-          <button type="button" data-action="delete-entity" data-id="${escapeHtml(e.id)}">Eliminar</button>
+          <button type="button" data-action="view-entity" data-entity-id="${escapeHtml(e.entity_id)}">👁 Ver ficha</button>
+          ${
+            archived
+              ? `<button type="button" data-action="restore-entity" data-id="${escapeHtml(e.id)}">↩️ Restaurar</button>`
+              : `<button type="button" data-action="edit-entity" data-id="${escapeHtml(e.id)}">✎ Editar</button>
+                 <button type="button" data-action="archive-entity" data-id="${escapeHtml(e.id)}">🗄️ Archivar</button>`
+          }
+          <button type="button" data-action="delete-entity" data-id="${escapeHtml(e.id)}">🗑️ Eliminar</button>
         </div>
       </li>`
     )

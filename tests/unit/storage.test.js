@@ -21,6 +21,10 @@ import {
   updateEntity,
   updateEntityStage,
   deleteEntity,
+  archiveEntity,
+  restoreEntity,
+  EntityHasRecordsError,
+  isArchivedEntity,
   deleteDocumentsForEntity,
   loadEntities,
   addDocument,
@@ -99,14 +103,37 @@ describe('Edición, eliminación y cascada (H4)', () => {
     expect(updated.updatedAt).not.toBe(entity.createdAt === updated.updatedAt);
   });
 
-  it('elimina una entidad y sus documentos asociados en cascada', () => {
+  it('archiva una entidad conservando sus documentos y permite restaurarla', () => {
     const entity = addEntity({ name: 'Acme', code: 'AC-1' });
     addDocument({ entity_id: entity.entity_id });
     addDocument({ entity_id: entity.entity_id });
-    const result = deleteEntity(entity.id);
-    expect(result.deletedDocumentCount).toBe(2);
+
+    const archived = archiveEntity(entity.id);
+    expect(isArchivedEntity(archived)).toBe(true);
+    expect(archived.archivedAt).toBeTruthy();
+    expect(loadEntities()).toHaveLength(1);
+    expect(loadDocuments()).toHaveLength(2);
+    expect(archiveEntity(entity.id).archivedAt).toBe(archived.archivedAt);
+
+    const restored = restoreEntity(entity.id);
+    expect(isArchivedEntity(restored)).toBe(false);
+    expect(restored.archivedAt).toBeUndefined();
+    expect(loadDocuments()).toHaveLength(2);
+  });
+
+  it('impide la eliminación definitiva cuando hay registros vinculados', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    addDocument({ entity_id: entity.entity_id });
+
+    expect(() => deleteEntity(entity.id)).toThrow(EntityHasRecordsError);
+    expect(loadEntities()).toHaveLength(1);
+    expect(loadDocuments()).toHaveLength(1);
+  });
+
+  it('elimina definitivamente una entidad sin registros vinculados', () => {
+    const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    expect(deleteEntity(entity.id)).toMatchObject({ deletedDocumentCount: 0 });
     expect(loadEntities()).toHaveLength(0);
-    expect(loadDocuments()).toHaveLength(0);
   });
 
   it('actualiza y elimina un documento individualmente', () => {
@@ -615,6 +642,8 @@ describe('Autorización de escrituras con sesión vigente', () => {
     ['addEntity', () => addEntity({ name: 'Intrusa', code: 'INT-1' })],
     ['updateEntity', () => updateEntity('ent-victima', { name: 'Manipulada' })],
     ['updateEntityStage', () => updateEntityStage('ent-victima', 'en_proceso')],
+    ['archiveEntity', () => archiveEntity('ent-victima')],
+    ['restoreEntity', () => restoreEntity('ent-victima')],
     ['deleteEntity', () => deleteEntity('ent-victima')],
     ['saveDocuments', () => saveDocuments([{ id: 'doc-intruso' }])],
     ['addDocument', () => addDocument({ entity_id: 'CLI-VICTIMA' })],
@@ -676,6 +705,8 @@ describe('Permisos aplicados a storage con sesión íntegra', () => {
     saveMarketingConfig({ ...loadMarketingConfig(), faq: [] });
 
     expect(deleteDocumentsForEntity(entity.entity_id)).toBe(1);
+    expect(isArchivedEntity(archiveEntity(entity.id))).toBe(true);
+    expect(isArchivedEntity(restoreEntity(entity.id))).toBe(false);
     expect(deleteEntity(entity.id)).toMatchObject({ deletedDocumentCount: 0 });
   });
 
