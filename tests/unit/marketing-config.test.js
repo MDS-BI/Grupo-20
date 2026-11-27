@@ -31,6 +31,38 @@ describe('Configuración de Marketing (T075)', () => {
     expect(config.captureFields).toEqual(['name', 'rut']);
   });
 
+  it('conserva las acciones declaradas en marketing.campaigns.actions', () => {
+    const campaigns = [{ id: 'c1', name: 'Campaña', stage: 'prospecto' }];
+    Object.defineProperty(campaigns, 'actions', { value: ['create_document'], enumerable: false });
+    const { config, errors } = normalizeMarketingConfig({
+      privacyNoticeVersion: 'v1',
+      automationRules: [
+        { event: 'entity_created', action: 'create_document', label: 'Bienvenida' },
+      ],
+      captureFields: [],
+      campaigns,
+    });
+
+    expect(errors).toEqual([]);
+    expect(config.campaigns).toHaveLength(1);
+    expect(config.campaigns.actions).toEqual(['create_document']);
+  });
+
+  it('rechaza una regla cuya acción no está declarada', () => {
+    const campaigns = [];
+    Object.defineProperty(campaigns, 'actions', { value: ['create_document'], enumerable: false });
+    const errors = validateMarketingConfig(
+      {
+        privacyNoticeVersion: 'v1',
+        automationRules: [{ event: 'entity_created', action: 'notify', label: 'Aviso' }],
+        captureFields: [],
+        campaigns,
+      },
+      []
+    );
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
   it('rechaza eventos y acciones desconocidos', () => {
     const errors = [];
     validateMarketingConfig(

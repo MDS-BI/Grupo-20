@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { signIn, seedAuth } from '../helpers/auth-session.js';
-import { deactivateUser, DEMO_PASSWORD, listUsers } from '../../src/auth.js';
+import { deactivateUser, listUsers } from '../../src/auth.js';
 import { RANK_OPTIONS } from '../../src/components/users-admin.js';
 import { MESSAGES } from '../../src/utils/messages.js';
 
@@ -28,11 +28,10 @@ function click(selector) {
   element.click();
 }
 
-function submitUserForm({ username, password, rank }) {
+function submitUserForm({ username, rank }) {
   const form = document.querySelector('#user-form');
   expect(form).toBeTruthy();
   form.querySelector('[name="username"]').value = username;
-  form.querySelector('[name="password"]').value = password;
   form.querySelector('[name="rank"]').value = rank;
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
@@ -73,7 +72,7 @@ describe('Gestionar usuarios', () => {
     click('[data-action="navigate"][data-view="users-admin"]');
     expect(document.querySelector('.users-admin-view')).toBeTruthy();
 
-    submitUserForm({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
+    submitUserForm({ username: 'ana.munoz', rank: 'n2_sales' });
 
     await vi.waitFor(() =>
       expect(document.querySelector('.users-admin-view').textContent).toContain('ana.munoz')
@@ -93,7 +92,7 @@ describe('Gestionar usuarios', () => {
     const form = document.querySelector('#user-form');
     expect(form.querySelector('[name="username"]').value).toBe('ventas');
     form.querySelector('[name="rank"]').value = 'n1_support';
-    submitUserForm({ username: 'ventas', password: '', rank: 'n1_support' });
+    submitUserForm({ username: 'ventas', rank: 'n1_support' });
 
     expect(listUsers().find((user) => user.id === pedro.id).rank).toBe('n1_support');
     expect(document.querySelector('.users-admin-view').textContent).toContain(
@@ -105,7 +104,7 @@ describe('Gestionar usuarios', () => {
     await mountAs('gerente');
     app.navigate('users-admin');
 
-    submitUserForm({ username: ' VENTAS ', password: DEMO_PASSWORD, rank: 'n4_manager' });
+    submitUserForm({ username: ' VENTAS ', rank: 'n4_manager' });
 
     await vi.waitFor(() => expect(document.querySelector('#users-admin-error')).toBeTruthy());
     expect(document.querySelector('#users-admin-error').textContent).toBe(MESSAGES.required);
@@ -132,10 +131,13 @@ describe('Gestionar usuarios', () => {
     expect(localStorage.getItem('erp_session')).toBeNull();
   });
 
-  it('no expone edición de la matriz de permisos', async () => {
+  it('no expone edición de la matriz de permisos ni campo de contraseña', async () => {
     await mountAs('gerente');
     app.navigate('users-admin');
 
+    expect(document.querySelector('#user-form [name="password"]')).toBeNull();
+    expect(document.querySelector('#user-form input[type="password"]')).toBeNull();
+    expect(document.querySelector('label[for="user-password"]')).toBeNull();
     expect(document.getElementById('app').innerHTML).toContain(
       'La matriz de permisos se define en el código'
     );

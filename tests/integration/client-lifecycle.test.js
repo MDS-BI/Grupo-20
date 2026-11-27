@@ -223,4 +223,17 @@ describe('Ciclo de vida de clientes: archivar, restaurar y eliminar', () => {
     click(`.client-management-table [data-action="delete-entity"][data-id="${entity.id}"]`);
     expect(loadEntities().some((item) => item.id === entity.id)).toBe(false);
   });
+
+  it('abre la ficha rápida desde gestión sin modificar los registros', async () => {
+    await signIn('gerente');
+    const entity = createEntity('Cliente Consulta Rápida');
+    mount();
+    const snapshot = localStorage.getItem('erp_entities');
+
+    app.navigate('manage-entity');
+    click(`[data-action="open-client-quick-view"][data-entity-id="${entity.entity_id}"]`);
+
+    expect(document.querySelector('#client-quick-view')).toBeTruthy();
+    expect(localStorage.getItem('erp_entities')).toBe(snapshot);
+  });
 });

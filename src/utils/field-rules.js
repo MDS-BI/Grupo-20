@@ -32,9 +32,9 @@ export const CANONICAL_SEARCH_KEYS = Object.freeze({
   document: Object.freeze(['notes', 'status']),
 });
 
-export function canonicalSearchKeys(entityType = 'entity', customKeys = []) {
+export function canonicalSearchKeys(entityType = 'entity', customKeys = [], config = getConfig()) {
   const base = CANONICAL_SEARCH_KEYS[entityType] || CANONICAL_SEARCH_KEYS.entity;
-  const rules = resolveFieldRules(getConfig(), entityType);
+  const rules = resolveFieldRules(config, entityType);
   const isSearchable = (key) => !rules[key] || isFieldPotentiallySearchable(rules, key);
   return [...new Set([...base, ...customKeys].filter(isSearchable))];
 }
@@ -47,6 +47,11 @@ export function isFieldVisible(rules, key, values = {}) {
 export function isFieldSearchable(rules, key, values = {}) {
   const rule = rules?.[key] || {};
   return isFieldVisible(rules, key, values) && rule.searchable !== false;
+}
+
+export function isFieldRequired(rules, key, values = {}) {
+  const rule = rules?.[key] || {};
+  return isFieldVisible(rules, key, values) && rule.required === true;
 }
 
 export function isFieldPotentiallySearchable(rules, key) {

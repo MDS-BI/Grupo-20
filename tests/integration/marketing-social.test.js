@@ -89,6 +89,9 @@ describe('Interacciones en Redes sociales en Marketing (T100)', () => {
       rut: formatRut(`1111111${sequence}`),
       canal_contacto: 'correo',
       contacto_correo: `social${sequence}@ejemplo.cl`,
+      consentimiento: true,
+      consentimiento_fecha: '2026-11-20T12:00:00.000Z',
+      consentimiento_version: '2026-11-23',
     });
     document.body.innerHTML = '<div id="app"></div>';
     app = initApp(document.getElementById('app'), { rawConfig: SOCIAL_CONFIG });

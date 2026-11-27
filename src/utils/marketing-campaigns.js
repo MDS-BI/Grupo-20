@@ -17,6 +17,18 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function declaredActions(campaigns) {
+  const declared = Array.isArray(campaigns) ? campaigns.actions : campaigns?.actions;
+  return Array.isArray(declared) ? declared : null;
+}
+
+function allowedActions(campaigns) {
+  const declared = declaredActions(campaigns);
+  return declared === null
+    ? INTERNAL_ACTIONS
+    : declared.filter((action) => INTERNAL_ACTIONS.includes(action));
+}
+
 function localDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -61,7 +73,7 @@ function validationError(errors) {
   return error;
 }
 
-function validateCampaign(values, requireDates) {
+function validateCampaign(values, requireDates, actions = INTERNAL_ACTIONS) {
   const errors = [];
   const safe = isPlainObject(values) ? values : {};
   const name = safe.name;
@@ -83,6 +95,14 @@ function validateCampaign(values, requireDates) {
   const end = campaignDateKey(safe.endDate);
   if (start && end && end < start) {
     addError(errors, 'endDate', 'La endDate no puede ser anterior a la startDate.');
+  }
+  if (
+    actions !== null &&
+    safe.action !== undefined &&
+    safe.action !== '' &&
+    !actions.includes(safe.action)
+  ) {
+    addError(errors, 'action', 'La acción de la campaña no está declarada.');
   }
   return errors;
 }
@@ -111,7 +131,7 @@ function isMoreRecent(left, right) {
 }
 
 export function createCampaign(values = {}, campaigns = []) {
-  const errors = validateCampaign(values, true);
+  const errors = validateCampaign(values, true, declaredActions(campaigns));
   if (errors.length) throw validationError(errors);
 
   const safeValues = isPlainObject(values) ? values : {};
@@ -144,7 +164,9 @@ export function updateCampaign(id, updates = {}, campaigns = []) {
     if (Object.prototype.hasOwnProperty.call(safeUpdates, field))
       changes[field] = safeUpdates[field];
   }
-  const errors = Object.keys(changes).length ? validateCampaign(changes, false) : [];
+  const errors = Object.keys(changes).length
+    ? validateCampaign(changes, false, declaredActions(campaigns))
+    : [];
   if (errors.length) throw validationError(errors);
 
   return (Array.isArray(campaigns) ? campaigns : []).map((campaign) => {
@@ -189,6 +211,7 @@ export function selectCampaignsForEvent({
     safeContext.to ?? entityContext.to ?? safeEntity.estado_comercial ?? 'prospecto';
   const entityId = safeEntity.entity_id ?? safeEntity.id ?? '';
   const currentDate = comparisonDate(now);
+  const configuredActions = allowedActions(campaigns);
 
   const applicable = (Array.isArray(campaigns) ? campaigns : []).filter((campaign) => {
     if (!isPlainObject(campaign) || !isCampaignActive(campaign, currentDate)) return false;
@@ -202,7 +225,7 @@ export function selectCampaignsForEvent({
     ) {
       return false;
     }
-    return INTERNAL_ACTIONS.includes(campaign.action ?? 'create_document');
+    return configuredActions.includes(campaign.action ?? 'create_document');
   });
 
   if (!applicable.length) return { selected: null, skipped: [] };

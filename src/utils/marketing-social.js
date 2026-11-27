@@ -5,6 +5,11 @@ export function registerSocialInteraction(values = {}, entity = null, config = {
   if (!entity?.entity_id) {
     throw new ValidationError({ entity_id: 'La interacción debe estar asociada a una entidad.' });
   }
+  if (entity.consentimiento !== true) {
+    throw new ValidationError({
+      consentimiento: 'La interacción requiere el consentimiento ya registrado de la entidad.',
+    });
+  }
 
   const fields = values || {};
   const options = config || {};
@@ -20,6 +25,11 @@ export function registerSocialInteraction(values = {}, entity = null, config = {
       : { campaña: fields.campaña }),
     canal: 'redes',
     status: 'pendiente',
+    consentimiento: true,
+    ...(entity.consentimiento_fecha ? { consentimiento_fecha: entity.consentimiento_fecha } : {}),
+    ...(entity.consentimiento_version
+      ? { consentimiento_version: entity.consentimiento_version }
+      : {}),
   };
 
   return addDocument(data, {

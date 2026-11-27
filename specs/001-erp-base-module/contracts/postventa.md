@@ -18,7 +18,7 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - `listTicketDocuments({ documents, entities, user })`: devuelve los tickets visibles para el usuario; sin permiso devuelve lista vacía o denegación, nunca todos los documentos.
 - `createTicketDocument(values)`: valida cliente existente y campos obligatorios, comprueba `postventa:create` y crea el `Documento`.
 - `changeTicketStatus(documentId, nextStatus, resolutionNote)`: comprueba `postventa:transition`, acepta cualquier par de estados y actualiza `nota_resolucion` y `updatedAt`.
-- `deleteDocumentsForEntity(entityId)` continúa eliminando los tickets del cliente borrado; no existe borrado independiente en la vista.
+- `deleteEntity()` no elimina tickets en cascada: si el cliente tiene tickets u otros documentos vinculados, la baja se rechaza con `EntityHasRecordsError` y se ofrece archivarlo. `deleteDocumentsForEntity()` solo actúa si se invoca explícitamente; en la vista de Postventa no existe borrado independiente.
 - La acción «Abrir Ticket» de la tabla «Clientes» no llama directamente a `createTicketDocument()`: navega a `?view=postventa`, abre el panel y precarga el cliente. La creación sigue pasando por `createTicketDocument()` y su comprobación de `postventa:create`.
 
 ## Validación

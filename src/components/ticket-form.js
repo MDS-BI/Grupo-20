@@ -13,13 +13,14 @@ export function ticketOptionsHtml(options, selected, placeholder) {
     .join('')}`;
 }
 
-function renderFieldHtml({ id, label, hint, required, control }) {
-  return `<div class="form-field"><label for="${id}">${escapeHtml(label)}${required ? ' *' : ''}</label>${control}<p class="field-hint">${escapeHtml(hint)}</p></div>`;
+function renderFieldHtml({ id, label, hint, required, control, attrs = '' }) {
+  return `<div class="form-field"${attrs}><label for="${id}">${escapeHtml(label)}${required ? ' *' : ''}</label>${control}<p class="field-hint">${escapeHtml(hint)}</p></div>`;
 }
 
 export function renderTicketFormHtml(config, options = {}) {
   const { clients = [], formValues = {}, formErrors = {}, ticketClientSearch = '' } = options;
   const postventa = config?.postventa || DEFAULT_POSTVENTA_CONFIG;
+  const resolutionState = postventa.resolutionNoteStates?.[0] || 'Resuelto';
   const searchText = String(ticketClientSearch || '')
     .trim()
     .toLowerCase();
@@ -100,6 +101,7 @@ export function renderTicketFormHtml(config, options = {}) {
       label: 'Nota de resolución',
       hint: 'Solo se guarda cuando el estado es Resuelto.',
       required: false,
+      attrs: ` data-when-key="status" data-when-equals="${escapeHtml(resolutionState)}"`,
       control: `<textarea id="ticket-nota" name="nota_resolucion">${escapeHtml(formValues.nota_resolucion || '')}</textarea>`,
     })}
     <div class="form-actions">

@@ -111,7 +111,7 @@ describe('Panel y Marketing comparten tarjetas y embudo (T086/T133)', () => {
       'Pipeline (USD)',
     ]);
     expect(panel.values).toEqual(['5', '4', '1', '20%', '$350']);
-    expect(panel.funnel).toHaveLength(6);
+    expect(panel.funnel).toHaveLength(8);
     expect(panel.recent).toContain('Últimas Interacciones / Próximos Seguimientos');
     expect(panel.recent).toContain('Ver ficha');
   });

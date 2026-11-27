@@ -6,14 +6,7 @@ import {
   loadModuleConfig,
 } from '../../src/module-config.js';
 import { localTodayISO } from '../../src/utils/entity-date.js';
-import {
-  DEMO_PASSWORD,
-  createUser,
-  deactivateUser,
-  listUsers,
-  logout,
-  updateUser,
-} from '../../src/auth.js';
+import { createUser, deactivateUser, listUsers, logout, updateUser } from '../../src/auth.js';
 import { seedAuth, signIn } from '../helpers/auth-session.js';
 import * as permissions from '../../src/auth/permissions.js';
 import {
@@ -745,7 +738,6 @@ describe('Permisos aplicados a storage con sesión íntegra', () => {
     seedAuth();
     const ana = await createUser({
       username: 'ana.munoz',
-      password: DEMO_PASSWORD,
       rank: 'n2_sales',
     });
     deactivateUser(ana.id);

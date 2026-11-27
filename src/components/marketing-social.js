@@ -2,6 +2,7 @@ import { escapeHtml, safeUrl } from '../utils/sanitize.js';
 
 function entityOptions(entities, selectedId) {
   return entities
+    .filter((entity) => entity.consentimiento === true)
     .map(
       (entity) =>
         `<option value="${escapeHtml(entity.entity_id)}" ${entity.entity_id === selectedId ? 'selected' : ''}>${escapeHtml(entity.name)}</option>`
@@ -33,6 +34,7 @@ export function renderMarketingSocialHtml({
   return `
     <section class="marketing-social marketing-panel">
       <h2>Redes sociales</h2>
+      <p class="consent-note">Se usa el consentimiento ya registrado del prospecto o cliente.</p>
       <form id="social-form" class="marketing-form" novalidate>
         <label>Prospecto o cliente
           <select name="entity_id" required><option value="">-- Selecciona --</option>${entityOptions(entities, values.entity_id)}</select>

@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
-import { signIn, seedAuth } from '../helpers/auth-session.js';
-import { deactivateUser, listUsers, updateUser } from '../../src/auth.js';
+import {
+  createUser,
+  deactivateUser,
+  listUsers,
+  SESSION_HOURS,
+  updateUser,
+} from '../../src/auth.js';
+import { seedAuth, signIn } from '../helpers/auth-session.js';
+
+const FORBIDDEN_MESSAGES = ['Ingresa una contraseña', 'Usuario no encontrado'];
 
 let app;
 
@@ -21,15 +29,21 @@ function click(selector) {
   element.click();
 }
 
-async function submitLogin(username, password) {
-  const form = document.querySelector('#login-form');
-  expect(form, 'Debe existir el formulario de inicio de sesión').toBeTruthy();
-  form.querySelector('#login-username').value = username;
-  form.querySelector('#login-password').value = password;
-  form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+function userId(usernameKey) {
+  const user = listUsers().find((candidate) => candidate.usernameKey === usernameKey);
+  expect(user, `No se encontró el usuario ${usernameKey}`).toBeTruthy();
+  return user.id;
 }
 
-describe('Inicio de sesión y sesión persistente', () => {
+function clickLogin(usernameKey) {
+  click(`[data-action="login-user"][data-user-id="${userId(usernameKey)}"]`);
+}
+
+function loginButtons() {
+  return [...document.querySelectorAll('[data-action="login-user"]')];
+}
+
+describe('Inicio de sesión por botones y sesión persistente', () => {
   beforeEach(() => {
     seedAuth();
     setSearch('');
@@ -41,17 +55,34 @@ describe('Inicio de sesión y sesión persistente', () => {
     setSearch('');
   });
 
-  it('la raíz sin sesión muestra solo Usuario y Contraseña, sin marco ERP', () => {
+  it('muestra exactamente cuatro botones sin campos de credenciales ni marco ERP', () => {
     mount();
 
-    expect(document.querySelector('.login-view')).toBeTruthy();
-    expect(document.querySelector('label[for="login-username"]').textContent.trim()).toBe(
-      'Usuario'
-    );
-    expect(document.querySelector('label[for="login-password"]').textContent.trim()).toBe(
-      'Contraseña'
-    );
-    expect(document.querySelector('#login-form')).toBeTruthy();
+    const buttons = loginButtons();
+    expect(buttons.map((button) => button.textContent.trim())).toEqual([
+      'Gerente',
+      'Marketing',
+      'Ventas',
+      'Atención al Cliente',
+    ]);
+    expect(buttons.map((button) => button.dataset.userId)).toEqual([
+      'user-gerente',
+      'user-marketing',
+      'user-ventas',
+      'user-atencion',
+    ]);
+    for (const button of buttons) {
+      expect(button.getAttribute('type')).toBe('button');
+      expect(button.getAttribute('data-action')).toBe('login-user');
+    }
+    expect(document.querySelector('#login-form')).toBeNull();
+    expect(document.querySelector('#login-username')).toBeNull();
+    expect(document.querySelector('#login-password')).toBeNull();
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    const labels = [...document.querySelectorAll('label')].map((label) => label.textContent.trim());
+    expect(labels).not.toContain('Usuario');
+    expect(labels).not.toContain('Contraseña');
+    for (const text of FORBIDDEN_MESSAGES) expect(document.body.textContent).not.toContain(text);
     expect(document.querySelector('.sidebar')).toBeNull();
     expect(document.querySelector('.topbar')).toBeNull();
     expect(document.querySelector('#view-root')).toBeNull();
@@ -60,20 +91,26 @@ describe('Inicio de sesión y sesión persistente', () => {
   });
 
   it.each([
-    ['gerente', 'Nivel 4 - Gerente Comercial'],
-    ['marketing', 'Nivel 3 - Ejecutivo de Marketing'],
-    ['ventas', 'Nivel 2 - Ejecutivo de Ventas'],
-    ['atencion', 'Nivel 1 - Atencion al Cliente'],
-  ])('%s inicia sesión con una contraseña cualquiera', async (username, rankLabel) => {
+    ['gerente', 'Nivel 4 - Gerente Comercial', 'Gerente'],
+    ['marketing', 'Nivel 3 - Ejecutivo de Marketing', 'Marketing'],
+    ['ventas', 'Nivel 2 - Ejecutivo de Ventas', 'Ventas'],
+    ['atencion', 'Nivel 1 - Atencion al Cliente', 'Atención al Cliente'],
+  ])('el botón %s inicia sesión con su rango', async (usernameKey, rankLabel, buttonLabel) => {
     mount();
-    await submitLogin(`  ${username.toUpperCase()}  `, `clave-${username}-cualquiera`);
+    const button = loginButtons().find((item) => item.textContent.trim() === buttonLabel);
+    expect(button).toBeTruthy();
+    button.click();
 
-    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe(username));
-    expect(document.querySelector('#current-user').textContent).toBe(username);
+    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe(usernameKey));
+    expect(document.querySelector('#current-user').textContent).toBe(usernameKey);
     expect(document.querySelector('#current-rank').textContent).toBe(rankLabel);
     expect(document.querySelector('.user-meta')).toBeTruthy();
-    expect(document.querySelector('#login-form')).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeTruthy();
+    expect(document.querySelector('.login-view')).toBeNull();
+    const session = JSON.parse(localStorage.getItem('erp_session'));
+    expect(session.userId).toBe(userId(usernameKey));
+    expect(Date.parse(session.expiresAt) - Date.parse(session.issuedAt)).toBe(
+      SESSION_HOURS * 60 * 60 * 1000
+    );
 
     click('[data-action="logout"]');
     await vi.waitFor(() => expect(document.querySelector('.login-view')).toBeTruthy());
@@ -81,48 +118,63 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.querySelector('.user-meta')).toBeNull();
   });
 
-  it('el menú de gerente ofrece Gestionar usuarios y Cerrar sesión', async () => {
+  it('muestra los usuarios creados detrás de los cuatro semilla', async () => {
+    const ana = createUser({ username: 'ana.munoz', rank: 'n2_sales' });
     mount();
-    await submitLogin('gerente', 'clave-cualquiera');
 
+    expect(loginButtons().map((button) => button.textContent.trim())).toEqual([
+      'Gerente',
+      'Marketing',
+      'Ventas',
+      'Atención al Cliente',
+      'ana.munoz',
+    ]);
+    click(`[data-action="login-user"][data-user-id="${ana.id}"]`);
+
+    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe('ana.munoz'));
+    expect(document.querySelector('#current-rank').textContent).toBe(
+      'Nivel 2 - Ejecutivo de Ventas'
+    );
+  });
+
+  it('no ofrece botón para usuarios desactivados', () => {
+    deactivateUser(userId('ventas'));
+    mount();
+
+    const buttons = loginButtons();
+    expect(buttons.map((button) => button.textContent.trim())).toEqual([
+      'Gerente',
+      'Marketing',
+      'Atención al Cliente',
+    ]);
+    expect(document.querySelector(`[data-user-id="${userId('ventas')}"]`)).toBeNull();
+  });
+
+  it('la sesión se niega al expirar y vuelve a la pantalla de botones', async () => {
+    mount();
+    clickLogin('gerente');
     await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe('gerente'));
-    const menu = document.querySelector('.user-meta');
-    expect(menu.textContent).toContain('Gestionar usuarios');
-    expect(menu.textContent).toContain('Cerrar sesión');
-  });
+    const session = JSON.parse(localStorage.getItem('erp_session'));
 
-  it('rechaza la contraseña vacía con el mensaje exacto y no crea sesión', async () => {
-    mount();
-    await submitLogin('gerente', '');
-
-    await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe('Ingresa una contraseña')
+    localStorage.setItem(
+      'erp_session',
+      JSON.stringify({ ...session, expiresAt: new Date(Date.now() - 1000).toISOString() })
     );
-    expect(document.querySelector('.user-meta')).toBeNull();
-    expect(document.querySelector('.dashboard')).toBeNull();
+    app.navigate('search');
+
+    await vi.waitFor(() => expect(document.querySelector('.login-view')).toBeTruthy());
     expect(localStorage.getItem('erp_session')).toBeNull();
+    expect(loginButtons()).toHaveLength(4);
   });
 
-  it('rechaza un usuario inexistente con el mensaje exacto y no crea sesión', async () => {
-    mount();
-    await submitLogin('desconocido', 'clave-cualquiera');
-
-    await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe('Usuario no encontrado')
-    );
-    expect(document.querySelector('.user-meta')).toBeNull();
-    expect(document.querySelector('.dashboard')).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeNull();
-  });
-
-  it('?view=summary sin sesión redirige a login y restaura el resumen tras autenticarse', async () => {
+  it('?view=summary sin sesión redirige a login y restaura el resumen tras elegir usuario', async () => {
     setSearch('?view=summary');
     mount();
 
     expect(document.querySelector('.login-view')).toBeTruthy();
     expect(app.getState().pendingRoute?.view).toBe('summary');
+    clickLogin('gerente');
 
-    await submitLogin('gerente', 'clave-cualquiera');
     await vi.waitFor(() => expect(document.querySelector('.commercial-summary')).toBeTruthy());
     expect(window.location.search).toBe('?view=summary');
   });
@@ -130,7 +182,7 @@ describe('Inicio de sesión y sesión persistente', () => {
   it('la ruta del resumen se conserva en recarga y en Back/Forward', async () => {
     setSearch('?view=summary');
     mount();
-    await submitLogin('gerente', 'clave-cualquiera');
+    clickLogin('gerente');
     await vi.waitFor(() => expect(document.querySelector('.commercial-summary')).toBeTruthy());
 
     app.navigate('search');
@@ -155,6 +207,16 @@ describe('Inicio de sesión y sesión persistente', () => {
     expect(document.querySelector('#current-user').textContent).toBe('gerente');
     expect(document.querySelector('#current-rank').textContent).toBe('Nivel 4 - Gerente Comercial');
     expect(document.querySelector('.login-view')).toBeNull();
+  });
+
+  it('el menú de gerente ofrece Gestionar usuarios y Cerrar sesión', async () => {
+    mount();
+    clickLogin('gerente');
+    await vi.waitFor(() => expect(app.getState().currentUser?.username).toBe('gerente'));
+
+    const menu = document.querySelector('.user-meta');
+    expect(menu.textContent).toContain('Gestionar usuarios');
+    expect(menu.textContent).toContain('Cerrar sesión');
   });
 
   it('desactivar ventas con sesión activa redirige a login en la siguiente acción', async () => {

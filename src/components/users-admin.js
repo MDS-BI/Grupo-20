@@ -11,7 +11,6 @@ export function collectUserData(form) {
   const values = new FormData(form);
   return {
     username: String(values.get('username') || ''),
-    password: String(values.get('password') || ''),
     rank: String(values.get('rank') || ''),
   };
 }
@@ -47,8 +46,6 @@ export function renderUsersAdminHtml({ users = [], error = '', editing = null } 
       <form id="user-form" novalidate>
         <label for="user-username">Usuario</label>
         <input id="user-username" name="username" value="${escapeHtml(editing?.username || '')}" required />
-        <label for="user-password">Contraseña</label>
-        <input id="user-password" name="password" type="password" ${editing ? '' : 'required'} />
         <label for="user-rank">Rango</label>
         <select id="user-rank" name="rank">${options}</select>
         <button type="submit">${editing ? 'Guardar' : 'Crear usuario'}</button>

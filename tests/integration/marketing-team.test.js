@@ -87,6 +87,7 @@ function seedSale(executive, importe, { status = 'cerrado ganado', startDate = M
     importe,
     startDate,
     notes: `Venta ${suffix}`,
+    ...(status === 'cerrado perdido' ? { motivo_perdida: 'Precio alto' } : {}),
   });
 }
 

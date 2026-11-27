@@ -1,8 +1,11 @@
-import { DEMO_PASSWORD, ensureSeedUsers, login } from '../../src/auth.js';
+import { ensureSeedUsers, listUsers, login, normalizeUsername } from '../../src/auth.js';
 
-export async function signIn(username = 'gerente', password = DEMO_PASSWORD) {
+export async function signIn(username = 'gerente') {
   ensureSeedUsers();
-  return login(username, password);
+  const key = normalizeUsername(username);
+  const user = listUsers().find((candidate) => candidate.usernameKey === key);
+  if (!user) throw new Error('No se pudo iniciar sesión.');
+  return login(user.id);
 }
 
 export function seedAuth() {

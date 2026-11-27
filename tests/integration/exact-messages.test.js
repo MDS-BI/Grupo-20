@@ -18,8 +18,6 @@ const EXPECTED_MESSAGES = {
   noCampaignRecords: 'Sin registros para esta campaña.',
   permissionDenied: 'No tienes permiso para realizar esta acción',
   accessDenied: 'Acceso denegado',
-  passwordRequired: 'Ingresa una contraseña',
-  userNotFound: 'Usuario no encontrado',
 };
 
 let app = null;
@@ -81,9 +79,9 @@ afterEach(() => {
 });
 
 describe('Mensajes exactos', () => {
-  it('declara los once textos sin variantes', () => {
+  it('declara los diez textos sin variantes', () => {
     expect(MESSAGES).toMatchObject(EXPECTED_MESSAGES);
-    expect(Object.keys(EXPECTED_MESSAGES)).toHaveLength(12);
+    expect(Object.keys(EXPECTED_MESSAGES)).toHaveLength(10);
   });
 
   it(MESSAGES.noResults, () => {
@@ -237,31 +235,15 @@ describe('Mensajes exactos', () => {
     expect(document.querySelector('#route-notice').textContent).toBe('Acceso denegado');
   });
 
-  it(MESSAGES.passwordRequired, async () => {
+  it('no muestra mensajes de credenciales en el acceso por botones', async () => {
     logout();
     seedAuth();
     mount();
 
-    document.querySelector('#login-username').value = 'gerente';
-    document.querySelector('#login-password').value = '';
-    document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
-
-    await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe('Ingresa una contraseña')
-    );
-  });
-
-  it(MESSAGES.userNotFound, async () => {
-    logout();
-    seedAuth();
-    mount();
-
-    document.querySelector('#login-username').value = 'desconocido';
-    document.querySelector('#login-password').value = 'clave-cualquiera';
-    document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
-
-    await vi.waitFor(() =>
-      expect(document.querySelector('#login-message').textContent).toBe('Usuario no encontrado')
-    );
+    expect(document.querySelector('.login-view')).toBeTruthy();
+    expect(document.querySelector('[data-action="login-user"]')).toBeTruthy();
+    for (const text of ['Ingresa una contraseña', 'Usuario no encontrado']) {
+      expect(document.body.textContent, text).not.toContain(text);
+    }
   });
 });

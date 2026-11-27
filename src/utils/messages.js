@@ -9,8 +9,6 @@ export const MESSAGES = Object.freeze({
   noCampaignRecords: 'Sin registros para esta campaña.',
   permissionDenied: 'No tienes permiso para realizar esta acción',
   accessDenied: 'Acceso denegado',
-  passwordRequired: 'Ingresa una contraseña',
-  userNotFound: 'Usuario no encontrado',
 });
 
 export function exactFormatMessage(key) {

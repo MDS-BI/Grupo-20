@@ -1,5 +1,10 @@
 import { selectCampaignsForEvent } from './marketing-campaigns.js';
 
+function declaredActions(campaigns) {
+  const declared = Array.isArray(campaigns) ? campaigns.actions : campaigns?.actions;
+  return Array.isArray(declared) ? declared : null;
+}
+
 function automationKey(rule, context = {}) {
   return [
     rule.event,
@@ -37,6 +42,9 @@ function campaignDocument(campaign, entity, event, context) {
     executive: campaign.executive || '',
     targetStage: campaign.targetStage || '',
     startDate: context.now ? new Date(context.now).toISOString().slice(0, 10) : '',
+    createdBy: 'Sistema',
+    actor: 'Sistema',
+    ownerId: 'Sistema',
   };
 }
 
@@ -51,6 +59,9 @@ function skippedDocument(skipped, entity, event) {
     skipReason: skipped.skipReason,
     fecha: skipped.fecha,
     startDate: skipped.fecha ? skipped.fecha.slice(0, 10) : '',
+    createdBy: 'Sistema',
+    actor: 'Sistema',
+    ownerId: 'Sistema',
   };
 }
 
@@ -58,6 +69,8 @@ export function runAutomationRules(event, entity, config, documents = [], contex
   const marketing = config?.marketing;
   const rules = marketing?.automationRules;
   if (!marketing || !entity?.entity_id) return [];
+  const campaigns = context.campaigns || marketing.campaigns || [];
+  const actions = declaredActions(campaigns);
   const existingKeys = new Set(
     documents.map((document) => document.automation_key).filter(Boolean)
   );
@@ -65,6 +78,7 @@ export function runAutomationRules(event, entity, config, documents = [], contex
   if (Array.isArray(rules)) {
     for (const rule of rules) {
       if (!matchesRule(rule, event, context)) continue;
+      if (actions && !actions.includes(rule.action)) continue;
       const key = automationKey(rule, context);
       if (existingKeys.has(key)) continue;
       existingKeys.add(key);
@@ -73,11 +87,13 @@ export function runAutomationRules(event, entity, config, documents = [], contex
         notes: rule.label,
         status: 'automatico',
         automation_key: key,
+        createdBy: 'Sistema',
+        actor: 'Sistema',
+        ownerId: 'Sistema',
       });
     }
   }
 
-  const campaigns = context.campaigns || marketing.campaigns || [];
   const { selected, skipped } = selectCampaignsForEvent({
     event,
     entity,

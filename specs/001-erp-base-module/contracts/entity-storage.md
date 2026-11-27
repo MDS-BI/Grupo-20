@@ -50,7 +50,7 @@ Operaciones:
 - `addDocument(document)`: añade un nuevo documento.
 - `updateDocument(id, updates)`: actualiza un documento existente.
 - `deleteDocument(id)`: elimina un documento por id.
-- `deleteDocumentsForEntity(entityId)`: elimina todos los documentos vinculados a una entidad eliminada.
+- `deleteDocumentsForEntity(entityId)`: elimina todos los documentos vinculados cuando se invoca explícitamente; `deleteEntity()` no lo llama automáticamente.
 
 ### Operaciones de Postventa
 
@@ -87,7 +87,7 @@ Operaciones:
 - `prioridad` no tiene valor preseleccionado: su ausencia se rechaza con `Completa los campos obligatorios.` (FR-108).
 - `nota_resolucion` es obligatoria cuando `status = Resuelto` y se descarta cuando el estado final es otro; ambos casos usan `Completa los campos obligatorios.` si falta el texto requerido (FR-108).
 - Cualquier transición entre `Abierto`, `En revisión` y `Resuelto` es válida, incluida `Resuelto → Abierto`; no se aplica el `statusLifecycle` global a los tickets (FR-109).
-- Las operaciones de Postventa no crean una clave nueva de `localStorage`; los tickets se eliminan con `deleteDocumentsForEntity()` al borrar el cliente vinculado.
+- Las operaciones de Postventa no crean una clave nueva de `localStorage`; los tickets se conservan al archivar y bloquean la baja definitiva del cliente mientras existan. Solo una invocación explícita de `deleteDocumentsForEntity()` los eliminaría, sin formar parte del flujo normal de baja.
 - Con `documentRules.lostReason` activo, un documento cuya entidad vinculada tenga `estado_comercial = prospecto` y cuyo `status` sea `cerrado perdido` debe incluir `motivo_perdida` con una de las cuatro opciones declaradas; sin ese valor, `addDocument()` y `updateDocument()` deben rechazar la escritura con `Completa los campos obligatorios.` antes de modificar `erp_documents` (FR-113).
 - Un cliente convertido (`estado_comercial = ganado`) u otro estado comercial distinto de `prospecto` no debe exigir motivo en un documento cerrado como perdido.
 - `cerrado perdido` no debe contarse como documento pendiente, venta ganada ni importe del real mensual; solo debe aparecer en el embudo por estados de documento (FR-035, FR-078, FR-113, SC-043).

@@ -122,6 +122,13 @@ function optionValues(options) {
   return (options || []).map((option) => (typeof option === 'string' ? option : option?.value));
 }
 
+export function isResolutionNoteRequired(status, config = DEFAULT_POSTVENTA_CONFIG) {
+  const postventa = resolvePostventaConfig(config);
+  const noteStates =
+    postventa.resolutionNoteStates || DEFAULT_POSTVENTA_CONFIG.resolutionNoteStates;
+  return noteStates.includes(status);
+}
+
 export function validateTicketValues(values = {}, { entities = [], config = null } = {}) {
   const errors = {};
   const postventa = resolvePostventaConfig(config);
@@ -132,8 +139,6 @@ export function validateTicketValues(values = {}, { entities = [], config = null
   const priorities = optionValues(
     postventa.priorityOptions || DEFAULT_POSTVENTA_CONFIG.priorityOptions
   );
-  const noteStates =
-    postventa.resolutionNoteStates || DEFAULT_POSTVENTA_CONFIG.resolutionNoteStates;
   const entityId = values.entity_id || values.entityId;
   const status = values.status || states[0];
 
@@ -156,7 +161,7 @@ export function validateTicketValues(values = {}, { entities = [], config = null
     !String(values.categoria || '').trim(),
     !String(values.prioridad || '').trim(),
     !states.includes(status),
-    noteStates.includes(status) && !String(values.nota_resolucion || '').trim(),
+    isResolutionNoteRequired(status, postventa) && !String(values.nota_resolucion || '').trim(),
   ];
   if (missing.some(Boolean)) errors._form = MESSAGES.required;
   return errors;

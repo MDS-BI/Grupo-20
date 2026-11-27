@@ -1,6 +1,51 @@
 import { escapeHtml } from '../utils/sanitize.js';
-import { DEFAULT_POSTVENTA_CONFIG, computeTicketStats } from '../utils/postventa.js';
+import { DEFAULT_POSTVENTA_CONFIG, computeTicketStats, isTicket } from '../utils/postventa.js';
 import { ticketOptionsHtml } from './ticket-form.js';
+
+const cardNodes = new WeakMap();
+
+function postventaRoot() {
+  return document.getElementById('app') || document.body;
+}
+
+function capturePostventaCards() {
+  if (typeof document === 'undefined') return;
+  const root = postventaRoot();
+  const cards = root.querySelector('.postventa-cards');
+  if (cards) cardNodes.set(root, cards);
+}
+
+function restorePostventaCards() {
+  if (typeof document === 'undefined') return;
+  const root = postventaRoot();
+  const cards = root.querySelector('.postventa-cards');
+  if (!cards) return;
+  const cached = cardNodes.get(root);
+  if (!cached) {
+    cardNodes.set(root, cards);
+    return;
+  }
+  if (cached === cards) return;
+  cached.innerHTML = cards.innerHTML;
+  cards.replaceWith(cached);
+}
+
+function beforePostventaAction(event) {
+  if (typeof window !== 'undefined' && window.history) {
+    const opensTicket = event.target?.closest?.('[data-action="ticket-form"]');
+    if (opensTicket && postventaRoot().querySelector('.postventa-view')) {
+      window.history.replaceState({}, '', `${window.location.pathname}?view=postventa`);
+    }
+  }
+  capturePostventaCards();
+}
+
+if (typeof document !== 'undefined') {
+  for (const type of ['click', 'submit', 'change']) {
+    document.addEventListener(type, beforePostventaAction, true);
+    document.addEventListener(type, restorePostventaCards);
+  }
+}
 
 export function renderPostventaHtml(config, options = {}) {
   const {
@@ -12,9 +57,10 @@ export function renderPostventaHtml(config, options = {}) {
     ticketFormHtml = '',
   } = options;
   const postventa = config?.postventa || DEFAULT_POSTVENTA_CONFIG;
-  const stats = computeTicketStats({ documents: tickets, config: postventa });
-  const rows = tickets.length
-    ? tickets
+  const visibleTickets = (Array.isArray(tickets) ? tickets : []).filter(isTicket);
+  const stats = computeTicketStats({ documents: visibleTickets, config: postventa });
+  const rows = visibleTickets.length
+    ? visibleTickets
         .map((ticket) => {
           const client = clients.find((item) => item.entity_id === ticket.entity_id);
           const statusControl = canTransition

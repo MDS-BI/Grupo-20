@@ -50,6 +50,7 @@ export function computeSalesTeamMetrics({
     if (normalizeText(document?.status) !== WON_STATUS) continue;
     if (!isSameMonth(document?.startDate, now)) continue;
     const entity = entityById.get(document?.entity_id) || {};
+    if (entity.archivedAt) continue;
     const saleOwner = hasValue(document?.assignedUserIdAtSale)
       ? document.assignedUserIdAtSale
       : hasValue(entity.ejecutivo_asignado)

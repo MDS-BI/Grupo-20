@@ -1,5 +1,15 @@
 import { escapeHtml } from '../utils/sanitize.js';
 
+function userOptions(users, selectedId) {
+  return users
+    .filter((user) => user.active !== false && ['n2_sales', 'n4_manager'].includes(user.rank))
+    .map(
+      (user) =>
+        `<option value="${escapeHtml(user.id)}" ${user.id === selectedId ? 'selected' : ''}>${escapeHtml(user.name || user.username || user.usernameKey || user.id)}</option>`
+    )
+    .join('');
+}
+
 function teamOptions(teams, selectedId) {
   return teams
     .map(
@@ -16,6 +26,7 @@ export function renderMarketingTeamHtml({
   editingMemberId = null,
   teamFormValues = {},
   memberFormValues = {},
+  users = [],
 } = {}) {
   const metricsByTeam = new Map(metrics.teams.map((team) => [team.id, team]));
   const total = metrics.totals || { realMonthly: 0, monthlyGoal: 0 };
@@ -37,6 +48,13 @@ export function renderMarketingTeamHtml({
         <label>Equipo
           <select name="teamId" required><option value="">-- Selecciona --</option>${teamOptions(teams, memberFormValues.teamId)}</select>
         </label>
+        ${
+          users.length
+            ? `<label>Vinculado a usuario
+                <select name="userId" data-role="team-user-select"><option value="">-- Sin vincular --</option>${userOptions(users, memberFormValues.userId)}</select>
+              </label>`
+            : ''
+        }
         <label>Nombre del integrante
           <input name="memberName" value="${escapeHtml(memberFormValues.name || '')}" required />
         </label>

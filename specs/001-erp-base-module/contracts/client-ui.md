@@ -34,13 +34,13 @@ Definir el comportamiento observable de la consulta rápida del cliente, las acc
 
 ## Permisos y mensajes
 
-| Acción                              | N4  | N3  | N2                 | N1  | Visitante |
-| ----------------------------------- | --- | --- | ------------------ | --- | --------- |
-| Abrir consulta rápida               | Sí  | Sí  | Sí                 | Sí  | No        |
-| Ver ficha completa                  | Sí  | Sí  | Solo sus clientes  | Sí  | No        |
-| «Abrir Ticket»                      | Sí  | No  | No                 | Sí  | No        |
-| Alerta de ticket en tabla           | Sí  | No  | Solo sus clientes  | Sí  | No        |
-| Cambiar documento a perdido         | Sí  | No  | Solo sus documentos | No | No       |
+| Acción                      | N4  | N3  | N2                  | N1  | Visitante |
+| --------------------------- | --- | --- | ------------------- | --- | --------- |
+| Abrir consulta rápida       | Sí  | Sí  | Sí                  | Sí  | No        |
+| Ver ficha completa          | Sí  | Sí  | Solo sus clientes   | Sí  | No        |
+| «Abrir Ticket»              | Sí  | No  | No                  | Sí  | No        |
+| Alerta de ticket en tabla   | Sí  | No  | Solo sus clientes   | Sí  | No        |
+| Cambiar documento a perdido | Sí  | No  | Solo sus documentos | No  | No        |
 
 - La denegación exacta es `No tienes permiso para realizar esta acción` y también se aplica en la capa de datos, no solo ocultando controles.
 - Mensajes exactos: `Completa los campos obligatorios.`, `No se encontraron resultados.` y `No tienes permiso para realizar esta acción`.

@@ -219,6 +219,32 @@ describe('Campañas internas de Marketing (T110)', () => {
     }
   });
 
+  it('respeta las acciones internas declaradas por la configuración', () => {
+    const campaigns = [];
+    Object.defineProperty(campaigns, 'actions', {
+      value: ['create_document'],
+      enumerable: false,
+    });
+    const entity = { entity_id: 'ent_1', estado_comercial: 'prospecto' };
+
+    expect(() =>
+      createCampaign({ ...baseValues, action: 'assign_executive' }, campaigns)
+    ).toThrow();
+    const configured = [{ ...makeCampaign({ stage: 'prospecto', action: 'assign_executive' }) }];
+    Object.defineProperty(configured, 'actions', {
+      value: ['create_document'],
+      enumerable: false,
+    });
+    expect(
+      selectCampaignsForEvent({
+        event: 'entity_created',
+        entity,
+        campaigns: configured,
+        now,
+      })
+    ).toEqual({ selected: null, skipped: [] });
+  });
+
   it('no ejecuta acciones ni escribe en localStorage al seleccionar', () => {
     const setItem = vi.fn();
     vi.stubGlobal('localStorage', { setItem });

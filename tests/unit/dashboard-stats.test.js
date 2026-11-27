@@ -63,7 +63,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     expect(document.querySelector('.demo-note')).toBeNull();
     expect(
       [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
-    ).toEqual(['0', '0', '0', '0', '0', '0']);
+    ).toEqual(['0', '0', '0', '0', '0', '0', '0', '0']);
     app.destroy();
   });
 
@@ -88,7 +88,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     ]);
     expect(
       [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
-    ).toEqual(['0', '0', '1', '1', '0', '0']);
+    ).toEqual(['0', '0', '1', '1', '0', '0', '0', '0']);
 
     archiveEntity(client.id);
     app.navigate('dashboard');

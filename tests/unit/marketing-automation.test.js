@@ -48,6 +48,28 @@ describe('Automatización de Marketing (T096)', () => {
     expect(runAutomationRules('entity_created', entity, config, existing)).toHaveLength(0);
   });
 
+  it('registra la ejecución como Sistema', () => {
+    const [document] = runAutomationRules('entity_created', entity, config, []);
+    expect(document).toMatchObject({ createdBy: 'Sistema', actor: 'Sistema', ownerId: 'Sistema' });
+  });
+
+  it('omite reglas con acciones no declaradas', () => {
+    const campaigns = [];
+    Object.defineProperty(campaigns, 'actions', {
+      value: ['create_document'],
+      enumerable: false,
+    });
+    const declaredConfig = {
+      marketing: { ...config.marketing, campaigns },
+    };
+    expect(
+      runAutomationRules('stage_changed', entity, declaredConfig, [], {
+        from: 'prospecto',
+        to: 'en_proceso',
+      })
+    ).toEqual([]);
+  });
+
   it('no ejecuta nada sin configuración de Marketing', () => {
     expect(runAutomationRules('entity_created', entity, {}, [])).toEqual([]);
   });

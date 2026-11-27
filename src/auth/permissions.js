@@ -59,6 +59,7 @@ export const PERMISSION_MATRIX = Object.freeze({
     'marketing:view',
     'marketing:manage',
     'team:view_all',
+    'team:view_own',
     'chat:view',
     'chat:answer',
     'chat:create_query',

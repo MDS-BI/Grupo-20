@@ -4,7 +4,6 @@ const USERS_KEY = 'erp_users';
 const SESSION_KEY = 'erp_session';
 
 export const SESSION_HOURS = 8;
-export const DEMO_PASSWORD = 'demo1234';
 
 const DEMO_USERS = [
   ['gerente', 'n4_manager'],
@@ -12,6 +11,8 @@ const DEMO_USERS = [
   ['ventas', 'n2_sales'],
   ['atencion', 'n1_support'],
 ];
+
+const DEMO_USER_IDS = DEMO_USERS.map(([username]) => `user-${normalizeUsername(username)}`);
 
 function storage() {
   return typeof localStorage !== 'undefined' ? localStorage : null;
@@ -69,7 +70,22 @@ export function ensureSeedUsers() {
 
 export function listUsers() {
   const users = readJson(USERS_KEY, []);
-  return Array.isArray(users) ? users : [];
+  if (!Array.isArray(users)) return [];
+  return users
+    .map((user, index) => ({ user, index }))
+    .sort((a, b) => {
+      const seedA = DEMO_USER_IDS.indexOf(a.user?.id);
+      const seedB = DEMO_USER_IDS.indexOf(b.user?.id);
+      const rankA = seedA === -1 ? DEMO_USER_IDS.length : seedA;
+      const rankB = seedB === -1 ? DEMO_USER_IDS.length : seedB;
+      if (rankA !== rankB) return rankA - rankB;
+      if (rankA !== DEMO_USER_IDS.length) return a.index - b.index;
+      const createdA = String(a.user?.createdAt || '');
+      const createdB = String(b.user?.createdAt || '');
+      if (createdA !== createdB) return createdA < createdB ? -1 : 1;
+      return a.index - b.index;
+    })
+    .map((entry) => entry.user);
 }
 
 function saveUsers(users) {
@@ -99,14 +115,12 @@ export function getCurrentUser() {
   );
 }
 
-export async function login(username, password) {
+export async function login(userId) {
   ensureSeedUsers();
-  if (!String(password || '').trim()) throw new Error(MESSAGES.passwordRequired);
-  const key = normalizeUsername(username);
-  const demoKey = DEMO_USERS.find(([name]) => normalizeUsername(name) === key)?.[0];
-  if (!demoKey) throw new Error(MESSAGES.userNotFound);
-  const user = listUsers().find((candidate) => candidate.id === `user-${demoKey}`);
-  if (!user || user.active === false) throw new Error(MESSAGES.userNotFound);
+  const user = listUsers().find(
+    (candidate) => candidate.id === userId && candidate.active === true
+  );
+  if (!user) throw new Error('No se pudo iniciar sesión.');
   const now = Date.now();
   writeJson(SESSION_KEY, {
     userId: user.id,
@@ -133,8 +147,10 @@ export function touchSession() {
 }
 
 export function createUser(values = {}) {
-  if (!String(values.password || '').trim()) throw new Error(MESSAGES.passwordRequired);
-  const user = buildUser(values.username, values.rank);
+  const username = String(values.username || '').trim();
+  const rank = String(values.rank || '').trim();
+  if (!username || !rank) throw new Error(MESSAGES.required);
+  const user = buildUser(username, rank);
   const users = listUsers();
   if (users.some((candidate) => candidate.usernameKey === user.usernameKey)) {
     throw new Error(MESSAGES.required);
@@ -158,7 +174,9 @@ export function updateUser(id, updates = {}) {
   }
   if (updates.rank !== undefined) user.rank = updates.rank;
   if (updates.active !== undefined) user.active = Boolean(updates.active);
-  user.updatedAt = new Date().toISOString();
+  const previousTime = Date.parse(user.updatedAt ?? user.createdAt);
+  const nextTime = Math.max(Date.now(), Number.isNaN(previousTime) ? 0 : previousTime + 1);
+  user.updatedAt = new Date(nextTime).toISOString();
   saveUsers(users);
   if (!user.active) {
     const session = readJson(SESSION_KEY, null);

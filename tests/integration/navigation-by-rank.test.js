@@ -77,12 +77,12 @@ describe('Navegación filtrada por rango (T231)', () => {
     expect(actionKeys()).toEqual(['quick-search']);
   });
 
-  it('N2 ve las tres acciones rápidas pero no Resumen ni Marketing', async () => {
+  it('N2 ve su Resumen, las tres acciones rápidas pero no Marketing', async () => {
     await mountAs('ventas');
 
     expect(navViews()).toContain('dashboard');
     expect(navViews()).toContain('search');
-    expect(navViews()).not.toContain('summary');
+    expect(navViews()).toContain('summary');
     expect(navViews()).not.toContain('marketing');
     expect(navViews()).toContain('postventa');
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();

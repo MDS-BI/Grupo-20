@@ -52,6 +52,19 @@ describe('Atribución por campaña del rendimiento de Marketing (T117/T119)', ()
     expect(result.wonAmount).toBe(100);
   });
 
+  it('atribuye por nombre normalizado de campaña', () => {
+    const values = args();
+    values.entities = [
+      { entity_id: 'e6', estado_comercial: 'prospecto', campaña: 'reactivacion a' },
+    ];
+    values.documents = [{ id: 'd6', campaignId: 'camp-a', status: 'cerrado ganado', importe: 10 }];
+
+    const result = computeMarketingPerformance({ ...values, campaignId: 'Reactivación A' });
+    expect(result.totalProspects).toBe(1);
+    expect(result.interactions).toBe(1);
+    expect(result.wonAmount).toBe(10);
+  });
+
   it('agrupa los registros sin campaña asignada', () => {
     const result = computeMarketingPerformance({ ...args(), campaignId: 'none' });
 

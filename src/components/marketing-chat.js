@@ -22,6 +22,7 @@ export function renderMarketingChatHtml({
     can(role, 'chat:view') ||
     can(role, 'chat:answer') ||
     can(role, 'chat:create_query');
+  const canAnswer = !publicView && (!authEnabled || can(role, 'chat:answer'));
   if (!hasChatAccess) {
     return `<section class="marketing-chat marketing-panel" data-role="marketing-chat" role="alert"><p class="empty-state">${MESSAGES.accessDenied}</p></section>`;
   }
@@ -49,12 +50,18 @@ export function renderMarketingChatHtml({
         ${
           messages.length
             ? messages
-                .map(
-                  (doc) => `
+                .map((doc) => {
+                  const answered =
+                    doc.respondida === true || (doc.respuesta && String(doc.respuesta).trim());
+                  return `
               <p class="chat-message"><strong>${escapeHtml(doc.mensaje || doc.notes || '')}</strong>${
                 doc.respuesta ? `<span>${escapeHtml(doc.respuesta)}</span>` : ''
-              }</p>`
-                )
+              }${
+                canAnswer && !answered
+                  ? `<button type="button" data-action="answer-chat" data-id="${escapeHtml(doc.id || '')}">Responder</button>`
+                  : ''
+              }</p>`;
+                })
                 .join('')
             : '<p class="empty-state">Aún no hay mensajes en esta conversación.</p>'
         }

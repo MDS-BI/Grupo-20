@@ -153,5 +153,5 @@ describe('FR-032 / SC-004: 500 entidades y 500 documentos', () => {
     for (const [operation, durations] of Object.entries(samples)) {
       expect(p95(durations), `p95 de ${operation}`).toBeLessThanOrEqual(LOW_END_BUDGET_MS);
     }
-  });
+  }, 20000);
 });

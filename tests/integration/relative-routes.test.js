@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
-import { DEMO_PASSWORD } from '../../src/auth.js';
+import { listUsers } from '../../src/auth.js';
 import { seedAuth, signIn } from '../helpers/auth-session.js';
 
 let app = null;
@@ -52,9 +52,8 @@ describe('Navegación por rutas relativas (T168)', () => {
     expect(app.getState().pendingRoute).toMatchObject({ view: 'summary' });
     expect(window.location.search).toBe('?view=summary');
 
-    document.querySelector('#login-username').value = 'gerente';
-    document.querySelector('#login-password').value = DEMO_PASSWORD;
-    document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
+    const gerente = listUsers().find((user) => user.usernameKey === 'gerente');
+    document.querySelector(`[data-action="login-user"][data-user-id="${gerente.id}"]`).click();
 
     await vi.waitFor(() => expect(app.getState().view).toBe('summary'));
     expect(window.location.search).toBe('?view=summary');

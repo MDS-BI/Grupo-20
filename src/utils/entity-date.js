@@ -1,3 +1,5 @@
+import { MESSAGES } from './messages.js';
+
 export const LOCAL_TODAY = 'localToday';
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -28,6 +30,39 @@ export function resolveEntityDateRule(config, now = new Date()) {
     max: rule.max === LOCAL_TODAY ? localTodayISO(now) : rule.max || '',
     required: rule.required === true,
   };
+}
+
+export function validateEntityDateRange(values = {}, config = {}, now = new Date()) {
+  const errors = {};
+  const safeValues = values && typeof values === 'object' ? values : {};
+  const rule = resolveEntityDateRule(config, now);
+  const label = rule?.label || 'Fecha objetivo';
+  const targetDate = safeValues.targetDate;
+
+  if (rule?.required && !targetDate) errors.targetDate = MESSAGES.required;
+  if (targetDate) {
+    if (!isValidISODate(targetDate)) {
+      errors.targetDate = `${label} debe ser una fecha ISO válida.`;
+    } else if (rule?.min && targetDate < rule.min) {
+      errors.targetDate = `${label} no puede ser anterior a ${rule.min}.`;
+    } else if (rule?.max && targetDate > rule.max) {
+      errors.targetDate = `${label} no puede ser posterior a ${rule.max}.`;
+    }
+  }
+
+  const startDate = safeValues.startDate;
+  const endDate = safeValues.endDate;
+  if (startDate && !isValidISODate(startDate)) {
+    errors.startDate = 'La fecha de inicio debe ser una fecha ISO válida.';
+  }
+  if (endDate && !isValidISODate(endDate)) {
+    errors.endDate = 'La fecha de fin debe ser una fecha ISO válida.';
+  }
+  if (isValidISODate(startDate) && isValidISODate(endDate) && endDate < startDate) {
+    errors.endDate = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+  }
+
+  return errors;
 }
 
 export function watchLocalDayChange(onChange, options = {}) {

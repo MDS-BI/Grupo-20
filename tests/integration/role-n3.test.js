@@ -52,6 +52,9 @@ function entityData(name, index) {
     rut: formatRut(12000000 + index),
     canal_contacto: 'llamada',
     contacto_telefono: '+56 9 1234 5678',
+    consentimiento: true,
+    consentimiento_fecha: '2026-11-20T12:00:00.000Z',
+    consentimiento_version: '2026-11-23',
   };
 }
 

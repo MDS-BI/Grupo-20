@@ -51,7 +51,7 @@ npm run lint
 
 ## Usuarios de demostración
 
-El inicio de sesión funciona en modo demostración: el usuario no distingue mayúsculas ni espacios y cualquier contraseña no vacía permite entrar. No se verifica hash, no hay contraseñas incorrectas ni bloqueo por intentos fallidos; la sesión persiste, expira tras 8 horas de inactividad y se revoca al desactivar al usuario.
+El inicio de sesión funciona en modo demostración: la pantalla ofrece un botón por usuario activo, sin campos de usuario ni contraseña. Al pulsarlo se inicia sesión directamente con ese usuario y su rango vigente; no hay hash, contraseñas incorrectas ni bloqueo por intentos fallidos. La sesión persiste, expira tras 8 horas de inactividad y se revoca al desactivar al usuario.
 
 | Usuario     | Rango                            | Capacidades principales                                                                                                |
 | ----------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -60,7 +60,7 @@ El inicio de sesión funciona en modo demostración: el usuario no distingue may
 | `ventas`    | Nivel 2 - Ejecutivo de Ventas    | Crea y edita sus clientes y documentos, ve su propio resumen y su real/objetivo; no elimina ni ve el resumen completo. |
 | `atencion`  | Nivel 1 - Atencion al Cliente    | Busca fichas e historiales, registra «Llamada» o «Correo» y da seguimiento al chat; sin resumen, Marketing ni equipo.  |
 
-La contraseña vacía muestra exactamente `Ingresa una contraseña`; un usuario distinto de los cuatro muestra exactamente `Usuario no encontrado`. Los cuatro usuarios conservan los permisos de la matriz única por rango definida en `specs/001-erp-base-module/spec.md`.
+Los cuatro botones iniciales se etiquetan «Gerente», «Marketing», «Ventas» y «Atención al Cliente»; los usuarios creados por Gerencia aparecen detrás, en orden de registro, y los desactivados dejan de ofrecerse. Los rangos conservan la matriz única de permisos definida en `specs/001-erp-base-module/spec.md`.
 
 **Limitación de `?view=capture`**: no hay backend, por lo que la captura pública y el chat embebido requieren el **mismo origen** (host y puerto) que la aplicación; no se pueden incrustar en otro dominio ni resolverse añadiendo dependencias. Los registros quedan en el `localStorage` de esa aplicación, como describe `specs/001-erp-base-module/contracts/marketing.md`.
 

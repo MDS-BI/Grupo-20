@@ -15,6 +15,7 @@ import { transitionStage } from './utils/marketing-stage.js';
 import { runAutomationRules } from './utils/marketing-automation.js';
 import { normalizeMarketingConfig } from './utils/marketing-config.js';
 import { DEFAULT_POSTVENTA_CONFIG, isTicket, validateTicketValues } from './utils/postventa.js';
+import { lostReasonKey, validateLostReason } from './utils/lost-reason.js';
 import { getCurrentUser, listUsers, resolveExecutive } from './auth.js';
 import { assertPermission, can } from './auth/permissions.js';
 
@@ -614,11 +615,14 @@ export function validateDocumentData(
     editingId = null,
     customFieldDefs = null,
     statusLifecycle = null,
+    documentRules = null,
+    entity = null,
   } = {}
 ) {
   const errors = {};
   const customFieldDefinitions = resolveCustomFieldDefs('document', customFieldDefs);
   const entityId = documentEntityId(data);
+  const linkedEntity = entity || entities.find((e) => e.entity_id === entityId) || null;
   if (!entityId) {
     errors.entity_id = 'El documento debe estar asociado a una entidad.';
   } else if (!entities.some((e) => e.entity_id === entityId)) {
@@ -654,6 +658,14 @@ export function validateDocumentData(
     errors.discount = 'El descuento no puede superar el subtotal.';
   }
   validateCustomFields(customFieldDefinitions, data, errors);
+  const rules = documentRules === null ? getConfig()?.documentRules : documentRules;
+  if (rules?.lostReason) {
+    try {
+      validateLostReason(data, linkedEntity, { documentRules: rules });
+    } catch {
+      errors[lostReasonKey({ documentRules: rules })] = MESSAGES.required;
+    }
+  }
   return errors;
 }
 
@@ -683,7 +695,7 @@ function defaultDocumentStatus() {
 
 export function addDocument(
   data,
-  { customFieldDefs = null, statusLifecycle = null, actor = '' } = {}
+  { customFieldDefs = null, statusLifecycle = null, documentRules = null, actor = '' } = {}
 ) {
   const entities = loadEntities();
   const linkedEntity = entities.find((e) => e.entity_id === documentEntityId(data));
@@ -700,6 +712,8 @@ export function addDocument(
     documents,
     customFieldDefs: customFieldDefinitions,
     statusLifecycle,
+    documentRules,
+    entity: linkedEntity,
   });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();
@@ -727,7 +741,7 @@ export function addDocument(
 export function updateDocument(
   id,
   updates,
-  { customFieldDefs = null, statusLifecycle = null, actor = '' } = {}
+  { customFieldDefs = null, statusLifecycle = null, documentRules = null, actor = '' } = {}
 ) {
   const entities = loadEntities();
   const documents = loadDocuments();
@@ -745,6 +759,8 @@ export function updateDocument(
     editingId: id,
     customFieldDefs: customFieldDefinitions,
     statusLifecycle,
+    documentRules,
+    entity: entities.find((e) => e.entity_id === existing?.entity_id) || null,
   });
   if (Object.keys(errors).length) throw new ValidationError(errors);
   const now = new Date().toISOString();

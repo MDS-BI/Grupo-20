@@ -16,7 +16,7 @@
 - La interfaz inicial será una experiencia de página única con un panel, campo de búsqueda y lista de entidades.
 - La aplicación favorecerá la mejora progresiva y los controles de formulario nativos accesibles sobre widgets personalizados complejos.
 - El modelo de datos separa los datos maestros (Entidad) de los registros transaccionales (Documento), vinculados por un identificador público autogenerado (`entity_id`), de modo que los módulos personalizados puedan adjuntar cualquier significado de dominio a ambos lados sin cambios estructurales.
-- Las preocupaciones base (generación de identidad, marcas de tiempo, integridad referencial, eliminación en cascada) residen en la capa de almacenamiento, manteniendo los módulos personalizados limitados a campos, etiquetas y reglas de validación.
+- Las preocupaciones base (generación de identidad, marcas de tiempo, integridad referencial, bloqueo de baja con registros vinculados) residen en la capa de almacenamiento, manteniendo los módulos personalizados limitados a campos, etiquetas y reglas de validación.
 
 ## Decisiones de aclaración (sesión 2026-11-01)
 
@@ -46,7 +46,7 @@
 
 ### Decisión: Confirmación con recuento antes de eliminar una entidad
 
-**Justificación**: La eliminación en cascada es irreversible; indicar cuántos documentos se eliminarán hace explícito el impacto y reduce pérdidas accidentales.
+**Justificación**: La eliminación definitiva es irreversible; indicar cuántos documentos se conservarán y por qué se rechaza la baja hace explícito el impacto y reduce pérdidas accidentales.
 
 **Alternativas consideradas**: Confirmación simple sin recuento (menos informativa); eliminación inmediata (riesgo alto de pérdida de datos).
 
@@ -310,15 +310,15 @@
 
 ### Decisión: Autenticación local simulada con limitación explícita
 
-- **Decisión**: Los usuarios semilla se inicializan solo si `erp_users` no existe y representan los cuatro rangos de la demostración. El aviso de configuración inválida y la nota de suposiciones siguen indicando que una implementación productiva requiere autenticación en servidor; el bloqueo y la expiración locales son medidas de demostración.
-- **Justificación**: La especificación ya declara autenticación local y simulada, sin backend. Documentar el límite evita que el hash local se interprete como una garantía de seguridad de producción.
+- **Decisión**: Los usuarios semilla se inicializan solo si `erp_users` no existe y representan los cuatro rangos de la demostración. El aviso de configuración inválida y la nota de suposiciones siguen indicando que una implementación productiva requiere autenticación en servidor; la expiración local es una medida de demostración y no existe bloqueo por credenciales.
+- **Justificación**: La especificación ya declara autenticación local y simulada, sin backend. Documentar el límite evita que el acceso por botones se interprete como una garantía de seguridad de producción.
 - **Alternativas consideradas**: Introducir backend y base de datos (cambia la arquitectura aprobada); omitir usuarios semilla (impide probar rangos sin configuración manual); ocultar la limitación (riesgo de malinterpretar la demo).
 
 ### Decisión: Seis rutas relativas en un único documento HTML
 
 - **Decisión**: La vista se resuelve desde `location.search` en carga, recarga y Back/Forward con `?view=summary`, `?view=capture`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`; sin parámetro `view` se abre el Panel y no existe `?view=panel`. La construcción de URLs usa solo `window.location.pathname`, sin host ni ruta de servidor, y cada resolución aplica la matriz de permisos.
 - **Justificación**: I1 exige rutas relativas verificables en un despliegue estático; una resolución única evita que el estado de la vista y la barra de direcciones divergan al recargar o usar el historial.
-- **Alternativas consideradas**: Rutas absolutas con prefijo de servidor (rompen el despliegue estático); estado solo en memoria (se pierde al recargar); hash propio (duplica el mecanismo de `location.search` ya usado por `?view=capture`).
+- **Alternativas consideradas**: Rutas absolutas con prefijo de servidor (rompen el despliegue estático); estado solo en memoria (se pierde al recargar); fragmento propio (duplica el mecanismo de `location.search` ya usado por `?view=capture`).
 
 ## Decisiones de aclaración (sesión 2026-11-24: atajos y terminología de Marketing)
 
@@ -422,7 +422,7 @@
 
 - **Decisión**: `src/components/login.js` sustituye `#login-form`, `#login-username` y `#login-password` por botones `data-action="login-user"` con `data-user-id`. Los cuatro usuarios semilla conservan las etiquetas exactas «Gerente», «Marketing», «Ventas» y «Atención al Cliente»; los demás usuarios activos aparecen detrás con su `username`, ordenados por `createdAt` y con los semilla primero. `src/auth.js` expone `login(userId)` y ya no exige contraseña ni produce «Ingresa una contraseña» o «Usuario no encontrado».
 - **Justificación**: La clarificación FR-110 elimina los campos y sus mensajes, pero conserva la sesión persistente, la expiración, la desactivación y la unicidad de usuario. Derivar los botones de `erp_users` evita una lista paralela: los usuarios creados por Gerencia aparecen sin intervención adicional y los desactivados dejan de ofrecerse (FR-098, FR-102).
-- **Alternativas consideradas**: Mantener el formulario y precargar usuarios (contradice la eliminación de campos); conservar contraseña oculta (deja mensajes y reglas sin sentido);codificar rígidamente cuatro botones (no cubre usuarios nuevos ni desactivaciones).
+- **Alternativas consideradas**: Mantener el formulario y precargar usuarios (contradice la eliminación de campos); conservar contraseña oculta (deja mensajes y reglas sin sentido); codificar rígidamente cuatro botones (no cubre usuarios nuevos ni desactivaciones).
 
 ### Decisión: La consulta rápida es un componente de solo lectura con estado local
 

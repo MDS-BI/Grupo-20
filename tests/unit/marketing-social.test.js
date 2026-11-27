@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addEntity, loadDocuments, ValidationError } from '../../src/storage.js';
 import { setActiveConfig, DEFAULT_CONFIG } from '../../src/module-config.js';
 import { localTodayISO } from '../../src/utils/entity-date.js';
@@ -18,14 +18,36 @@ const statusLifecycle = {
   transitions: {},
 };
 
-const config = { customFields: { document: documentFields }, statusLifecycle };
+const consentFields = [
+  { key: 'consentimiento', type: 'boolean', label: 'Consentimiento' },
+  { key: 'consentimiento_fecha', type: 'text', label: 'Fecha de consentimiento' },
+  { key: 'consentimiento_version', type: 'text', label: 'Versión del consentimiento' },
+];
+
+const config = {
+  customFields: {
+    entity: consentFields,
+    document: [...documentFields, ...consentFields],
+  },
+  statusLifecycle,
+};
 
 let sequence = 0;
 
 function createEntity() {
   sequence += 1;
-  return addEntity({ name: `Cliente ${sequence}`, code: `SOC-${sequence}` });
+  return addEntity({
+    name: `Cliente ${sequence}`,
+    code: `SOC-${sequence}`,
+    consentimiento: true,
+    consentimiento_fecha: '2026-11-20T12:00:00.000Z',
+    consentimiento_version: 'v1',
+  });
 }
+
+beforeEach(() => {
+  setActiveConfig(config);
+});
 
 afterEach(() => {
   setActiveConfig(DEFAULT_CONFIG);
@@ -92,6 +114,28 @@ describe('Registro de interacciones en redes (T099/T101)', () => {
     );
 
     expect(documento.startDate).toBe(localTodayISO());
+  });
+
+  it('rechaza el registro sin consentimiento previo de la entidad', () => {
+    const entity = { entity_id: 'ent-sin-consentimiento', name: 'Sin consentimiento' };
+    expect(() => registerSocialInteraction({ plataforma: 'Instagram' }, entity, config)).toThrow(
+      ValidationError
+    );
+    expect(loadDocuments()).toHaveLength(0);
+  });
+
+  it('reutiliza la fecha y versión del consentimiento de la entidad', () => {
+    const entity = createEntity();
+    const documento = registerSocialInteraction(
+      { plataforma: 'Instagram', tipo_interaccion: 'comentario' },
+      entity,
+      config
+    );
+    expect(documento).toMatchObject({
+      consentimiento: true,
+      consentimiento_fecha: entity.consentimiento_fecha,
+      consentimiento_version: entity.consentimiento_version,
+    });
   });
 
   it('rechaza el registro sin una entidad asociada', () => {

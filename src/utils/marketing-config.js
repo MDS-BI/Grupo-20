@@ -28,11 +28,33 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function campaignActions(raw) {
+  const campaigns = raw?.campaigns;
+  const declared = Array.isArray(campaigns) ? campaigns.actions : campaigns?.actions;
+  return Array.isArray(declared) ? declared : null;
+}
+
+function campaignItems(raw) {
+  const campaigns = raw?.campaigns;
+  if (Array.isArray(campaigns)) return campaigns;
+  if (!isPlainObject(campaigns)) return [];
+  return safeArray(campaigns.items || campaigns.campaigns || campaigns.list);
+}
+
 export function validateMarketingConfig(raw, errors = []) {
   if (raw === undefined || raw === null) return errors;
   if (!isPlainObject(raw)) {
     errors.push('marketing debe ser un objeto.');
     return errors;
+  }
+  const declaredActions = campaignActions(raw);
+  const allowedAutomationActions = declaredActions || AUTOMATION_ACTIONS;
+  if (declaredActions) {
+    for (const action of declaredActions) {
+      if (!CAMPAIGN_ACTIONS.includes(action)) {
+        errors.push('marketing.campaigns.actions solo admite acciones internas válidas.');
+      }
+    }
   }
   if (raw.privacyNoticeVersion !== undefined && !nonEmptyText(raw.privacyNoticeVersion)) {
     errors.push('marketing.privacyNoticeVersion debe ser una cadena no vacía.');
@@ -56,8 +78,8 @@ export function validateMarketingConfig(raw, errors = []) {
     if (!AUTOMATION_EVENTS.includes(rule.event)) {
       errors.push(`${path}.event debe ser ${AUTOMATION_EVENTS.join(', ')}.`);
     }
-    if (!AUTOMATION_ACTIONS.includes(rule.action)) {
-      errors.push(`${path}.action debe ser ${AUTOMATION_ACTIONS.join(', ')}.`);
+    if (!allowedAutomationActions.includes(rule.action)) {
+      errors.push(`${path}.action debe ser ${allowedAutomationActions.join(', ')}.`);
     }
     if (!nonEmptyText(rule.label)) {
       errors.push(`${path}.label debe ser una cadena no vacía.`);
@@ -113,10 +135,22 @@ export function validateMarketingConfig(raw, errors = []) {
         errors.push(`${path}.respuesta debe ser una cadena no vacía.`);
     }
   }
-  if (raw.campaigns !== undefined && !Array.isArray(raw.campaigns)) {
-    errors.push('marketing.campaigns debe ser una lista.');
+  if (
+    raw.campaigns !== undefined &&
+    !Array.isArray(raw.campaigns) &&
+    !isPlainObject(raw.campaigns)
+  ) {
+    errors.push('marketing.campaigns debe ser una lista o un objeto con acciones.');
+  } else if (
+    isPlainObject(raw.campaigns) &&
+    raw.campaigns.actions !== undefined &&
+    !Array.isArray(raw.campaigns.actions)
+  ) {
+    errors.push('marketing.campaigns.actions debe ser una lista.');
   } else {
-    for (const [index, campaign] of safeArray(raw.campaigns).entries()) {
+    const items = campaignItems(raw);
+    const allowedCampaignActions = declaredActions || CAMPAIGN_ACTIONS;
+    for (const [index, campaign] of items.entries()) {
       const path = `marketing.campaigns[${index}]`;
       if (!isPlainObject(campaign)) {
         errors.push(`${path} debe ser un objeto.`);
@@ -132,7 +166,12 @@ export function validateMarketingConfig(raw, errors = []) {
       if (campaign.startDate && campaign.endDate && campaign.endDate < campaign.startDate) {
         errors.push(`${path}.endDate no puede ser anterior a startDate.`);
       }
-      if (campaign.action !== undefined && !CAMPAIGN_ACTIONS.includes(campaign.action)) {
+      if (
+        campaign.action !== undefined &&
+        !allowedCampaignActions
+          .filter((action) => CAMPAIGN_ACTIONS.includes(action))
+          .includes(campaign.action)
+      ) {
         errors.push(`${path}.action no es una acción interna válida.`);
       }
     }
@@ -162,7 +201,8 @@ function normalizeFaq(raw) {
 }
 
 function normalizeCampaigns(raw) {
-  return safeArray(raw).map((campaign) => ({
+  const declaredActions = campaignActions({ campaigns: raw });
+  const normalized = safeArray(campaignItems({ campaigns: raw })).map((campaign) => ({
     id: campaign.id,
     name: campaign.name.trim(),
     stage: campaign.stage,
@@ -175,6 +215,14 @@ function normalizeCampaigns(raw) {
     targetStage: campaign.targetStage || '',
     notes: campaign.notes || '',
   }));
+  if (declaredActions) {
+    Object.defineProperty(normalized, 'actions', {
+      configurable: true,
+      enumerable: false,
+      value: declaredActions.filter((action) => CAMPAIGN_ACTIONS.includes(action)),
+    });
+  }
+  return normalized;
 }
 
 export function normalizeMarketingConfig(raw) {

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canonicalSearchKeys,
   getReadinessErrors,
   isConditionActive,
   isFieldPotentiallySearchable,
+  isFieldRequired,
   isFieldSearchable,
   isFieldVisible,
   resolveFieldRules,
@@ -75,6 +77,18 @@ describe('Reglas declarativas de campo (T028)', () => {
     expect(isFieldPotentiallySearchable(rules, 'contacto_telefono')).toBe(true);
     expect(isFieldPotentiallySearchable(rules, 'contacto_correo')).toBe(true);
     expect(isFieldPotentiallySearchable(rules, 'code')).toBe(false);
+  });
+
+  it('permite resolver claves buscables y obligatoriedad desde una configuración explícita', () => {
+    const keys = canonicalSearchKeys('entity', ['rut', 'code'], CLIENT_CONFIG);
+    expect(keys).toContain('name');
+    expect(keys).toContain('rut');
+    expect(keys).not.toContain('code');
+
+    const rules = resolveFieldRules(CLIENT_CONFIG, 'entity');
+    expect(isFieldRequired(rules, 'rut', {})).toBe(true);
+    expect(isFieldRequired(rules, 'contacto_telefono', { canal_contacto: 'correo' })).toBe(false);
+    expect(isFieldRequired(rules, 'contacto_correo', { canal_contacto: 'correo' })).toBe(true);
   });
 
   it('detecta campos pendientes de clientes heredados sin bloquear fechas históricas', () => {

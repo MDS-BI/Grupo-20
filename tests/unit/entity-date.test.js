@@ -3,6 +3,7 @@ import {
   localTodayISO,
   resolveEntityDateRule,
   isValidISODate,
+  validateEntityDateRange,
   watchLocalDayChange,
 } from '../../src/utils/entity-date.js';
 
@@ -71,6 +72,30 @@ describe('Utilidad de fecha de entidad (FR-047 a FR-049)', () => {
     expect(isValidISODate('2026-02-30')).toBe(false);
     expect(isValidISODate('2026-13-01')).toBe(false);
     expect(isValidISODate('')).toBe(true);
+  });
+
+  it('valida el rango de la fecha de entidad y el orden de fechas de documento', () => {
+    const config = {
+      entityDate: {
+        label: 'Fecha de nacimiento',
+        min: '1910-01-01',
+        max: 'localToday',
+        required: true,
+      },
+    };
+    const now = new Date(2026, 10, 23);
+
+    expect(validateEntityDateRange({}, config, now).targetDate).toBeTruthy();
+    expect(validateEntityDateRange({ targetDate: '1909-12-31' }, config, now).targetDate).toContain(
+      'Fecha de nacimiento'
+    );
+    expect(validateEntityDateRange({ targetDate: '2026-11-24' }, config, now).targetDate).toContain(
+      'Fecha de nacimiento'
+    );
+    expect(validateEntityDateRange({ targetDate: '2026-11-23' }, config, now)).toEqual({});
+    expect(
+      validateEntityDateRange({ endDate: '2026-01-01', startDate: '2026-01-02' }, {}, now)
+    ).toMatchObject({ endDate: 'La fecha de fin no puede ser anterior a la fecha de inicio.' });
   });
 
   it('notifica el cambio de día local, se reprograma y permite cancelar la vigilancia', () => {

@@ -125,4 +125,31 @@ describe('User Story 3 - consult entity history', () => {
     expect(qs('entity-history').textContent).toContain('Historial visible');
     expect(loadEntities().find((item) => item.id === entity.id).code).toBe('LEG-1');
   });
+
+  it('muestra el motivo de pérdida en el historial sin exponer campos internos', () => {
+    setActiveConfig(MODULE_CONFIG);
+    const entity = addEntity({
+      name: 'Con Motivo',
+      code: 'MOT-1',
+      rut: '11.111.111-1',
+      canal_contacto: 'llamada',
+      contacto_telefono: '+56912345678',
+      targetDate: '1970-01-01',
+      estado_comercial: 'prospecto',
+    });
+    addDocument({
+      entity_id: entity.entity_id,
+      status: 'cerrado perdido',
+      motivo_perdida: 'Eligió competencia',
+      automation_key: 'clave-interna',
+    });
+
+    document.body.innerHTML = '<div id="app"></div>';
+    app = initApp(document.getElementById('app'));
+    searchAndOpen('con motivo');
+
+    const history = qs('entity-history').textContent;
+    expect(history).toContain('Eligió competencia');
+    expect(history).not.toContain('clave-interna');
+  });
 });

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEMO_PASSWORD,
   SESSION_HOURS,
   createUser,
   deactivateUser,
@@ -15,29 +14,166 @@ import {
   updateUser,
 } from '../../src/auth.js';
 import { seedAuth, signIn } from '../helpers/auth-session.js';
+import { MESSAGES } from '../../src/utils/messages.js';
+
+const FORBIDDEN_MESSAGES = ['Ingresa una contraseña', 'Usuario no encontrado'];
+
+function expectGenericError(error) {
+  expect(error).toBeInstanceOf(Error);
+  for (const text of FORBIDDEN_MESSAGES) expect(error.message).not.toContain(text);
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
   logout();
 });
 
-describe('Política de autenticación demostrativa', () => {
-  it('expone la duración de sesión y una contraseña de prueba cualquiera', () => {
+describe('Política de acceso demostrativo', () => {
+  it('expone la duración de sesión y normaliza nombres sin contraseña', () => {
     expect(SESSION_HOURS).toBe(8);
-    expect(DEMO_PASSWORD).toBeTruthy();
-  });
-
-  it('normaliza nombres de usuario recortando y pasando a minúsculas', () => {
     expect(normalizeUsername('  Ventas  ')).toBe('ventas');
     expect(normalizeUsername('GERENTE')).toBe('gerente');
     expect(normalizeUsername('')).toBe('');
     expect(normalizeUsername(null)).toBe('');
     expect(normalizeUsername(undefined)).toBe('');
   });
+
+  it.each([
+    ['gerente', 'n4_manager'],
+    ['marketing', 'n3_marketing'],
+    ['ventas', 'n2_sales'],
+    ['atencion', 'n1_support'],
+  ])('%s inicia sesión por id con su rango vigente', async (usernameKey, rank) => {
+    seedAuth();
+    const user = listUsers().find((candidate) => candidate.usernameKey === usernameKey);
+    expect(user).toBeTruthy();
+
+    const signedIn = await login(user.id);
+    const session = getCurrentSession();
+
+    expect(signedIn).toMatchObject({ id: user.id, usernameKey, rank, active: true });
+    expect(session).toMatchObject({ userId: user.id });
+    expect(Number.isNaN(Date.parse(session.issuedAt))).toBe(false);
+    expect(Number.isNaN(Date.parse(session.lastActivityAt))).toBe(false);
+    expect(Date.parse(session.expiresAt) - Date.parse(session.issuedAt)).toBe(
+      SESSION_HOURS * 60 * 60 * 1000
+    );
+    expect(session).not.toHaveProperty('rank');
+    expect(session).not.toHaveProperty('password');
+    expect(getCurrentUser()).toMatchObject({ id: user.id, rank });
+  });
+
+  it('resuelve login solo por id y nunca con un nombre de usuario', async () => {
+    seedAuth();
+    let error;
+    try {
+      await login('gerente');
+    } catch (caught) {
+      error = caught;
+    }
+
+    expectGenericError(error);
+    expect(getCurrentSession()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+    await expect(login('user-gerente')).resolves.toMatchObject({ usernameKey: 'gerente' });
+  });
+
+  it('rechaza usuarios inexistentes con un error genérico', async () => {
+    seedAuth();
+    let error;
+    try {
+      await login('user-inexistente');
+    } catch (caught) {
+      error = caught;
+    }
+
+    expectGenericError(error);
+    expect(getCurrentSession()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('exige active === true incluso si el valor almacenado solo parece verdadero', async () => {
+    seedAuth();
+    const user = listUsers().find((candidate) => candidate.usernameKey === 'ventas');
+    const users = listUsers().map((candidate) =>
+      candidate.id === user.id ? { ...candidate, active: 'true' } : candidate
+    );
+    localStorage.setItem('erp_users', JSON.stringify(users));
+
+    let error;
+    try {
+      await login(user.id);
+    } catch (caught) {
+      error = caught;
+    }
+
+    expectGenericError(error);
+    expect(getCurrentSession()).toBeNull();
+  });
+
+  it('rechaza usuarios desactivados sin mensajes de credenciales', async () => {
+    seedAuth();
+    const user = listUsers().find((candidate) => candidate.usernameKey === 'ventas');
+    deactivateUser(user.id);
+
+    let error;
+    try {
+      await login(user.id);
+    } catch (caught) {
+      error = caught;
+    }
+
+    expectGenericError(error);
+    expect(getCurrentSession()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('renueva lastActivityAt y expiresAt con touchSession mientras la sesión esté vigente', async () => {
+    await signIn('gerente');
+    const before = getCurrentSession();
+    const later = Date.now() + 60_000;
+    vi.spyOn(Date, 'now').mockReturnValue(later);
+
+    touchSession();
+    const after = getCurrentSession();
+
+    expect(after.lastActivityAt).not.toBe(before.lastActivityAt);
+    expect(after.expiresAt).not.toBe(before.expiresAt);
+    expect(Date.parse(after.expiresAt) - later).toBe(SESSION_HOURS * 60 * 60 * 1000);
+    expect(after.issuedAt).toBe(before.issuedAt);
+
+    logout();
+    touchSession();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('descarta una sesión expirada y elimina la clave', async () => {
+    await signIn('ventas');
+    const session = getCurrentSession();
+    localStorage.setItem(
+      'erp_session',
+      JSON.stringify({ ...session, expiresAt: new Date(Date.now() - 1000).toISOString() })
+    );
+
+    expect(getCurrentSession()).toBeNull();
+    expect(getCurrentUser()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
+
+  it('revoca de inmediato la sesión de un usuario desactivado', async () => {
+    const user = await signIn('ventas');
+    expect(getCurrentUser()).not.toBeNull();
+
+    deactivateUser(user.id);
+
+    expect(getCurrentSession()).toBeNull();
+    expect(getCurrentUser()).toBeNull();
+    expect(localStorage.getItem('erp_session')).toBeNull();
+  });
 });
 
-describe('Usuarios de demostración', () => {
-  it('siembra exactamente los cuatro usuarios con sus rangos y sin contraseñas', () => {
+describe('Usuarios semilla y orden estable', () => {
+  it('siembra exactamente cuatro usuarios activos sin credenciales', () => {
     ensureSeedUsers();
     const users = listUsers();
 
@@ -55,11 +191,12 @@ describe('Usuarios de demostración', () => {
     });
     for (const user of users) {
       expect(user.id).toBeTruthy();
+      expect(user.active).toBe(true);
+      expect(user).not.toHaveProperty('password');
       expect(user).not.toHaveProperty('passwordHash');
       expect(user).not.toHaveProperty('salt');
       expect(user).not.toHaveProperty('failedAttempts');
       expect(user).not.toHaveProperty('lockedUntil');
-      expect(user.active).toBe(true);
       expect(Number.isNaN(Date.parse(user.createdAt))).toBe(false);
     }
 
@@ -67,134 +204,76 @@ describe('Usuarios de demostración', () => {
     ensureSeedUsers();
     expect(localStorage.getItem('erp_users')).toBe(stored);
   });
-});
 
-describe('Inicio de sesión demostrativo', () => {
-  it.each([
-    ['gerente', 'n4_manager'],
-    ['marketing', 'n3_marketing'],
-    ['ventas', 'n2_sales'],
-    ['atencion', 'n1_support'],
-  ])('%s inicia sesión con cualquier contraseña', async (username, rank) => {
-    const user = await login(`  ${username.toUpperCase()}  `, `clave-${username}-cualquiera`);
-    const session = getCurrentSession();
-
-    expect(user.rank).toBe(rank);
-    expect(session).toMatchObject({ userId: user.id });
-    expect(Number.isNaN(Date.parse(session.issuedAt))).toBe(false);
-    expect(Number.isNaN(Date.parse(session.lastActivityAt))).toBe(false);
-    expect(Date.parse(session.expiresAt) - Date.parse(session.issuedAt)).toBe(
-      SESSION_HOURS * 60 * 60 * 1000
-    );
-    expect(session).not.toHaveProperty('rank');
-    expect(getCurrentUser()).toMatchObject({ id: user.id, rank });
-  });
-
-  it('rechaza la contraseña vacía con el mensaje exacto', async () => {
+  it('coloca semilla primero y después los creados por createdAt sin reordenar al recargar', async () => {
     seedAuth();
+    const ana = createUser({ username: 'ana.munoz', rank: 'n2_sales' });
+    const bruno = createUser({ username: 'bruno', rank: 'n1_support' });
+    const users = listUsers().map((user) => {
+      if (user.id === ana.id) return { ...user, createdAt: '2026-11-27T12:00:00.000Z' };
+      if (user.id === bruno.id) return { ...user, createdAt: '2026-11-27T08:00:00.000Z' };
+      return user;
+    });
+    localStorage.setItem('erp_users', JSON.stringify(users));
 
-    await expect(login('gerente', '')).rejects.toThrow('Ingresa una contraseña');
-    await expect(login('gerente', '   ')).rejects.toThrow('Ingresa una contraseña');
-    expect(getCurrentSession()).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeNull();
-  });
-
-  it('rechaza un usuario inexistente con el mensaje exacto', async () => {
-    seedAuth();
-
-    await expect(login('desconocido', DEMO_PASSWORD)).rejects.toThrow('Usuario no encontrado');
-    expect(getCurrentSession()).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeNull();
-  });
-
-  it('no bloquea al usuario tras intentos fallidos', async () => {
-    seedAuth();
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      await expect(login('ventas', '')).rejects.toThrow('Ingresa una contraseña');
-    }
-
-    await expect(login('ventas', 'otra-clave')).resolves.toMatchObject({ usernameKey: 'ventas' });
-    expect(getCurrentSession()).not.toBeNull();
-    expect(listUsers().find((user) => user.usernameKey === 'ventas')).not.toHaveProperty(
-      'failedAttempts'
-    );
-  });
-
-  it('renueva lastActivityAt y expiresAt con touchSession mientras la sesión esté vigente', async () => {
-    await signIn('gerente');
-    const before = getCurrentSession();
-    const later = Date.now() + 60_000;
-    vi.spyOn(Date, 'now').mockReturnValue(later);
-
-    touchSession();
-    const after = getCurrentSession();
-
-    expect(after.lastActivityAt).not.toBe(before.lastActivityAt);
-    expect(after.expiresAt).not.toBe(before.expiresAt);
-    expect(Date.parse(after.expiresAt) - later).toBe(SESSION_HOURS * 60 * 60 * 1000);
-
-    logout();
-    touchSession();
-    expect(localStorage.getItem('erp_session')).toBeNull();
-  });
-
-  it('descarta una sesión expirada y elimina la clave', async () => {
-    const user = await signIn('ventas');
-    const session = getCurrentSession();
-    localStorage.setItem(
-      'erp_session',
-      JSON.stringify({ ...session, expiresAt: new Date(Date.now() - 1000).toISOString() })
-    );
-
-    expect(getCurrentSession()).toBeNull();
-    expect(getCurrentUser()).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeNull();
-    expect(user.id).toBeTruthy();
-  });
-
-  it('revoca de inmediato la sesión de un usuario desactivado', async () => {
-    const user = await signIn('ventas');
-    expect(getCurrentUser()).not.toBeNull();
-
-    deactivateUser(user.id);
-
-    expect(getCurrentSession()).toBeNull();
-    expect(getCurrentUser()).toBeNull();
-    expect(localStorage.getItem('erp_session')).toBeNull();
+    const expected = ['gerente', 'marketing', 'ventas', 'atencion', 'bruno', 'ana.munoz'];
+    expect(listUsers().map((user) => user.usernameKey)).toEqual(expected);
+    await expect(signIn('bruno')).resolves.toMatchObject({ usernameKey: 'bruno' });
+    expect(listUsers().map((user) => user.usernameKey)).toEqual(expected);
   });
 });
 
-describe('Administración de usuarios', () => {
-  it('createUser rechaza duplicados normalizados', async () => {
+describe('Administración de usuarios sin contraseña', () => {
+  it('createUser valida username y rank no vacíos sin exigir ni propagar password', () => {
     seedAuth();
+
+    expect(() => createUser({ username: '  ', rank: 'n2_sales', password: 'x' })).toThrow(
+      MESSAGES.required
+    );
+    expect(() => createUser({ username: 'ana', rank: '   ', password: 'x' })).toThrow(
+      MESSAGES.required
+    );
+
     const created = createUser({
       username: ' Ana.Muñoz ',
-      password: DEMO_PASSWORD,
       rank: 'n2_sales',
+      password: 'no-debe-guardarse',
     });
-
+    expect(created.username).toBe('Ana.Muñoz');
     expect(created.usernameKey).toBe('ana.muñoz');
-    expect(created).not.toHaveProperty('passwordHash');
+    expect(created.rank).toBe('n2_sales');
     expect(created.active).toBe(true);
+    expect(created.updatedAt).toBeTruthy();
+    expect(created).not.toHaveProperty('password');
+    expect(created).not.toHaveProperty('passwordHash');
+    expect(listUsers().find((user) => user.id === created.id)).not.toHaveProperty('password');
+  });
 
+  it('createUser rechaza duplicados normalizados', () => {
+    seedAuth();
+    const created = createUser({ username: ' Ana.Muñoz ', rank: 'n2_sales' });
     const count = listUsers().length;
-    expect(() =>
-      createUser({ username: 'ANA.MUÑOZ', password: DEMO_PASSWORD, rank: 'n4_manager' })
-    ).toThrow();
-    expect(() =>
-      createUser({ username: '  ana.muñoz  ', password: DEMO_PASSWORD, rank: 'n2_sales' })
-    ).toThrow();
+
+    expect(() => createUser({ username: 'ANA.MUÑOZ', rank: 'n4_manager' })).toThrow(
+      MESSAGES.required
+    );
+    expect(() => createUser({ username: '  ana.muñoz  ', rank: 'n2_sales' })).toThrow(
+      MESSAGES.required
+    );
     expect(listUsers()).toHaveLength(count);
+    expect(listUsers().filter((user) => user.id === created.id)).toHaveLength(1);
   });
 
   it('updateUser sincroniza usernameKey, aplica rangos y rechaza duplicados', () => {
     seedAuth();
     const ventas = listUsers().find((user) => user.usernameKey === 'ventas');
+    const before = listUsers().find((user) => user.id === ventas.id);
 
     const renamed = updateUser(ventas.id, { username: ' VENTAS ', rank: 'n4_manager' });
     expect(renamed.usernameKey).toBe('ventas');
     expect(renamed.rank).toBe('n4_manager');
-    expect(() => updateUser(ventas.id, { username: ' GERENTE ' })).toThrow();
+    expect(renamed.updatedAt).not.toBe(before.updatedAt);
+    expect(() => updateUser(ventas.id, { username: ' GERENTE ' })).toThrow(MESSAGES.required);
     expect(listUsers().find((user) => user.id === ventas.id).rank).toBe('n4_manager');
   });
 });

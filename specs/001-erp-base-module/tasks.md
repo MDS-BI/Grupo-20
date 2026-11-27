@@ -6,1248 +6,667 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Entrada**: Documentos de diseño de `/specs/001-erp-base-module/`
 
-**Prerrequisitos**: `plan.md` (obligatorio), `spec.md` (obligatorio), `research.md`, `data-model.md`, `contracts/entity-storage.md`, `contracts/marketing.md`, `contracts/auth.md`, `contracts/postventa.md`, `quickstart.md`
+**Prerrequisitos**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/auth.md`, `contracts/client-ui.md`, `contracts/entity-storage.md`, `contracts/marketing.md`, `contracts/postventa.md`, `quickstart.md`, `.specify/memory/constitution.md`
 
-**Pruebas**: Se incluyen pruebas automatizadas por `plan.md` y `quickstart.md` con Vitest/jsdom (`npm test`, `npm run lint`, `npm run format:check`); cada suite de prueba se escribe antes de la implementación correspondiente y debe fallar primero.
+**Pruebas**: Se incluyen suites de prueba porque `spec.md` declara escenarios obligatorios y `quickstart.md` define validaciones ejecutables. Cada suite se escribe antes de la implementación correspondiente y debe fallar primero; se ejecuta con `npm test`.
 
-**Organización**: Las tareas se agrupan por historia de usuario en el orden de prioridad de `spec.md`: P1 (US1, US3, US4, US5, US7, US8, US14, US15, US22, US23) y P2 (US2, US6, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21, US25). Dentro de cada fase, las pruebas preceden a la implementación cuando es razonable. US24 permanece documentada en `spec.md` pero sin fase en este incremento por no contar con artefactos de diseño propios.
+**Organización**: Las tareas se agrupan por historia de usuario en orden de prioridad: P1 (US1, US3, US4, US5, US7, US8, US14, US15, US22, US23, US24) y P2 (US2, US6, US9, US10, US11, US12, US13, US16, US17, US18, US19, US20, US21, US25). Las subhistorias (`US2a`–`US2d`, `US3a`–`US3b`, `US4a`–`US4c`, etc.) se etiquetan con su ID exacto cuando la tarea cubre una responsabilidad concreta.
 
-**Incremento anterior**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; T195-T210 (Postventa) cubren `FR-104`–`FR-109` y `SC-039`–`SC-040`; T211-T222 (ajustes de Postventa) cubren la pestaña nueva, la sincronización entre pestañas y el tamaño de las tarjetas, y quedan superados por el incremento actual sin renumerar ni cambiar marcadores.
-
-**Incremento anterior**: T223-T250 (panel de Postventa en línea y panel simplificado) cubren `FR-022`, `FR-033`, `FR-034`, `FR-064`, `FR-091`, `FR-094`, `FR-104`–`FR-109`, `SC-015`, `SC-027`, `SC-039` y `SC-040`; «Nuevo Ticket» abre un panel en línea dentro de `?view=postventa`, sin pestaña nueva ni sincronización, y el panel principal queda con tres acciones rápidas; conservan T001-T222 como historial completado sin renumerar ni cambiar marcadores.
-
-**Incremento actual**: T251-T263 cubren únicamente las mejoras visuales de `FR-038`, `US14b` y `US15a` (iconos SVG monocromáticos en la barra lateral, fondo `#F8FAFC` con tarjetas `#FFFFFF` y jerarquía de los tres botones del panel) y la verificación de `FR-003`/`FR-009` sobre el código actual (baja sin cascada, bloqueo `EntityHasRecordsError` y oferta de archivado); T001-T250 se conservan sin renumerar ni desmarcar.
-
-**Convención de historias desglosadas**: `spec.md` conserva `US1`–`US23` como epígrafes de trazabilidad y detalla las responsabilidades en subhistorias `US2a`–`US2d`, `US3a`–`US3b`, `US4a`–`US4c`, `US6a`–`US6b`, `US8a`–`US8b`, `US10a`–`US10c`, `US11a`–`US11b`, `US13a`–`US13b`, `US14a`–`US14b`, `US15a`–`US15b`, `US16a`–`US16d`, `US17a`–`US17b`, `US18a`–`US18b`, `US19a`–`US19b`, `US20a`–`US20c`, `US21a`–`US21b`, `US22a`–`US22c` y `US23a`–`US23c`. Las etiquetas de tarea siguen siendo `[USn]`; cuando una tarea cubre una responsabilidad concreta, la descripción indica la subhistoria sin renumerar IDs.
+**Reglas vigentes 2026-11-27**: acceso por botones sin usuario/contraseña/hash/bloqueo (FR-110); ficha rápida de solo lectura desde «Buscar» y «Clientes» (FR-111); «Abrir Ticket» y alertas naranja/azul en la tabla de clientes (FR-112); motivo obligatorio para `Cerrado perdido` solo en prospectos (FR-113); baja definitiva sin cascada con `EntityHasRecordsError` (FR-003, FR-009, FR-103); panel en línea de ticket sin `?view=ticket-form`, `window.open` ni listener `storage` (FR-104).
 
 ## Formato: `[ID] [P?] [Historia] Descripción`
 
 - El checkbox es siempre `- [ ]`; los ID son secuenciales T001, T002, ...
 - **[P]**: la tarea toca archivos distintos y no depende de tareas incompletas.
-- **[Historia]**: obligatorio solo en las fases de historia de usuario (`[US1]` ... `[US23]`, `[US25]`); ausente en Setup, Foundational y Polish.
+- **[Historia]**: obligatorio solo en fases de historia de usuario; ausente en Setup, Foundational y Polish.
 - La descripción nombra siempre la ruta de archivo concreta y el resultado esperado.
 
 ## Convenciones de rutas
 
-- Proyecto único: `index.html`, `package.json`, `vitest.config.mjs`, `src/` y `tests/` en la raíz del repositorio.
-- Utilidades puras en `src/utils/`; componentes de interfaz en `src/components/`; pruebas unitarias en `tests/unit/` y de integración en `tests/integration/`.
-- Sin backend y sin dependencias nuevas: persistencia en `localStorage` bajo `erp_entities`, `erp_documents` y `erp_marketing_config` para las definiciones editables de Marketing; los indicadores derivados no se persisten.
+- Proyecto único: `src/` y `tests/` en la raíz del repositorio.
+- Documentos: `specs/001-erp-base-module/`.
+- Comandos: `npm test`, `npm run lint`, `npm run format:check`, `npm run build` desde la raíz.
 
 ---
 
-## Phase 1: Setup (infraestructura compartida)
+## Phase 1: Setup (Infraestructura compartida)
 
-**Propósito**: Confirmar el entorno Vite + JavaScript vanilla existente; no se añaden librerías.
+**Purpose**: Confirmar la estructura Vite/JavaScript vanilla, dependencias y convenciones de prueba.
 
-- [x] T001 [P] Verificar en `package.json` que `npm test` ejecuta `vitest run`, `npm run lint` ejecuta `eslint .` y no aparecen dependencias nuevas.
-- [x] T002 [P] Verificar en `vitest.config.mjs` que `environment: 'jsdom'`, `setupFiles` y `fileParallelism: false` soportan las suites de DOM planeadas.
-- [x] T003 [P] Verificar en `index.html` que el único punto de entrada monta `#app` y carga `src/main.js`, sin backend ni scripts externos.
-- [x] T004 [P] Verificar en `tests/setup/test-setup.js` que `localStorage` y el DOM se reinician entre pruebas y que `window.confirm` puede simularse.
-
-**Punto de control**: Entorno listo para escribir pruebas que fallan antes de la implementación.
-
----
-
-## Phase 2: Foundational (prerrequisitos bloqueantes)
-
-**Propósito**: Contratos compartidos de almacenamiento, configuración, formatos, reglas de campo y sanitización. **CRÍTICO**: ninguna historia de usuario puede comenzar hasta completar esta fase.
-
-- [x] T005 [P] Ampliar `tests/unit/storage.test.js` con casos de `loadEntities()`, `saveEntities()`, `addEntity()`, `updateEntity()`, `deleteEntity()`, `loadDocuments()` y `addDocument()` que exijan persistencia en `erp_entities`/`erp_documents` y marcas de tiempo ISO.
-- [x] T006 Implementar en `src/storage.js` las operaciones base de lectura/escritura, `ValidationError`, `generateEntityId()` y la conservación del orden de listas y de las marcas `createdAt`/`updatedAt`.
-- [x] T007 [P] Ampliar `tests/unit/module-config.test.js` para exigir que `validateConfig()`, `loadModuleConfig()` y `normalizeConfig()` acepten un perfil válido y devuelvan `DEFAULT_CONFIG` con una lista de errores ante configuración inválida o conflictiva.
-- [x] T008 Implementar en `src/module-config.js` `DEFAULT_CONFIG`, `validateConfig()`, `loadModuleConfig()`, `normalizeConfig()`, `getLabel()`, `setActiveConfig()`, `getConfig()` y `sanitizeAccentColor()`, sin tocar los componentes.
-- [x] T009 [P] Ampliar `tests/unit/field-formats.test.js` con casos de `cl-rut` (`12345678-9` y `12.345.678-9`), `phone`, `email`, `nonEmpty` y `normalizeClRut()` eliminando puntos, guion y espacios.
-- [x] T010 Implementar en `src/utils/field-formats.js` `FORMAT_NAMES`, `hasFormat()`, `rutDigit()`, `normalizeClRut()`, `formatRut()`, `isValidRut()`, `isValidPhone()`, `isValidEmail()`, `isNonEmpty()` y `isValidFormat()` sin dependencias nuevas.
-- [x] T011 [P] Ampliar `tests/unit/field-rules.test.js` con casos de `hidden`, `searchable`, `required`, `format`, `normalize`, `when`, `group`, `order`, `placeholder` y opciones `{ value, label }` sobre campos base y personalizados.
-- [x] T012 Implementar en `src/utils/field-rules.js` `resolveFieldRules()`, `isConditionActive()`, `isFieldSearchable()`, `isFieldPotentiallySearchable()` y `pruneInactiveGroupValues()` con comportamiento base intacto cuando no hay reglas.
-- [x] T013 [P] Ampliar `tests/unit/sanitize.test.js` con entradas que contengan `<script>`, comillas en atributos y enlaces `javascript:` para exigir escape en texto y atributos.
-- [x] T014 Implementar en `src/utils/sanitize.js` `escapeHtml()` y `sanitizeText()` para todo contenido persistido que se renderice en el DOM.
-
-**Punto de control**: Base compartida lista; las historias pueden implementarse de forma independiente.
+- [X] T001 Verificar la estructura raíz en `package.json`, `index.html`, `src/main.js` y `vite.config.js` según `specs/001-erp-base-module/plan.md`.
+- [X] T002 Confirmar en `package.json` las dependencias de desarrollo `vite`, `vitest`, `jsdom`, `eslint` y `prettier`, sin añadir dependencias nuevas.
+- [X] T003 [P] Configurar el entorno jsdom y la limpieza de `localStorage` en `tests/setup/setup.js`.
+- [X] T004 [P] Configurar `vitest.config.mjs` para incluir `tests/unit/` y `tests/integration/`.
+- [X] T005 [P] Verificar reglas de `eslint` y `prettier` en `.eslintrc` y `.prettierrc` sin cambiar el estilo existente.
+- [X] T006 Verificar que `specs/001-erp-base-module/quickstart.md` enumera los comandos `npm test`, `npm run lint` y `npm run format:check`.
 
 ---
 
-## Phase 3: US1 - Definir datos compatibles con el ERP (Prioridad: P1)
+## Phase 2: Foundational (Prerrequisitos bloqueantes)
 
-**Objetivo**: Modelo de `Entidad` y `Documento` con identificadores, código interno único y vínculo referencial verificable.
+**Purpose**: Núcleo compartido que debe estar completo antes de cualquier historia de usuario.
 
-**Prueba independiente**: Registrar un cliente de prueba y una interacción asociada; el sistema guarda la relación, asigna un código interno único sin solicitarlo y rechaza una interacción con `entity_id` inexistente.
+**⚠️ CRITICAL**: No iniciar trabajos de historias de usuario hasta terminar esta fase.
 
-### Pruebas de US1
+- [X] T007 Implementar la configuración base y el perfil CRM con fallback seguro en `src/module-config.js`, sin `pedidos` y con `customFields.entity` y `customFields.document`.
+- [X] T008 [P] Implementar la matriz rango → acción, `can()` y `assertPermission()` en `src/auth/permissions.js`, con `postventa:*` y sin `permissions:edit` editable.
+- [X] T009 [P] Implementar `SESSION_HOURS`, `getCurrentSession()`, `touchSession()` y `login(userId)` sin contraseña en `src/auth.js`.
+- [X] T010 [P] Implementar normalización y validación de formatos (`cl-rut`, `phone`, `email`, `nonEmpty`) en `src/utils/field-formats.js`.
+- [X] T011 [P] Implementar `escapeHtml()` y sanitización de atributos en `src/utils/sanitize.js`.
+- [X] T012 Implementar carga, guardado e integridad referencial en `src/storage.js`, con `EntityHasRecordsError` y sin borrado en cascada.
+- [X] T013 Implementar resolución de rutas relativas, render y manejo de acciones en `src/app.js`, sin `?view=ticket-form` ni listener `storage`.
+- [X] T014 [P] Implementar reglas declarativas de visibilidad, obligatoriedad y grupos en `src/utils/field-rules.js`.
+- [X] T015 [P] Implementar búsqueda sobre campos visibles en `src/utils/search.js`, excluyendo `code`, `category` y `description` del perfil cliente.
+- [X] T016 [P] Implementar reglas de fecha local y límite dinámico en `src/utils/entity-date.js`.
+- [X] T017 Crear pruebas unitarias fundacionales en `tests/unit/storage.test.js` para integridad, baja bloqueada y ausencia de cascada.
+- [X] T018 Crear pruebas unitarias fundacionales en `tests/unit/permissions.test.js` para `can()`, `assertPermission()` y denegación por defecto.
 
-- [x] T015 [P] [US1] Ampliar `tests/unit/storage.test.js` con `addEntity()` y `fieldRules.entity.code.generated` activo: genera `CLI-001`, rechaza códigos repetidos aunque difieran en mayúsculas o espacios, y asigna `id` y `entity_id` únicos.
-- [x] T016 [P] [US1] Crear `tests/integration/entity-relations.test.js` para registrar un cliente y una interacción, recargar `erp_entities`/`erp_documents` y comprobar que el documento conserva el `entity_id` correcto.
-
-### Implementación de US1
-
-- [x] T017 [US1] Implementar en `src/storage.js` `generateBusinessCode()` y la comprobación de unicidad de `code` en `validateEntityData()` usando recorte, minúsculas y eliminación de espacios.
-- [x] T018 [US1] Implementar en `src/storage.js` la validación de `entity_id` en `validateDocumentData()` con `errors.entity_id` claro y `countDocumentsForEntity()` para devolver el número de documentos vinculados.
-
-**Punto de control**: La relación entidad-documento y la identidad única son verificables de forma independiente.
-
----
-
-## Phase 4: US3 - Consultar antecedentes del cliente (Prioridad: P1)
-
-**Objetivo**: Buscar una entidad, abrir su ficha y revisar un historial cronológico consistente con los registros y sus ediciones.
-
-**Prueba independiente**: Buscar un cliente, abrir su ficha desde los resultados y comprobar que muestra sus datos y documentos ordenados por fecha, reflejando las ediciones hechas en gestión.
-
-### Pruebas de US3
-
-- [x] T019 [P] [US3] Ampliar `tests/integration/entity-detail.test.js` para buscar por nombre, abrir la ficha desde `src/components/entity-list.js` y verificar historial ordenado por fecha y estado vacío sin coincidencias.
-- [x] T020 [P] [US3] Ampliar `tests/integration/client-history.test.js` para editar una interacción en gestión y confirmar que la ficha del cliente muestra el cambio sin recarga.
-
-### Implementación de US3
-
-- [x] T021 [US3] Implementar `getEntityDocuments()` en `src/storage.js` filtrando por `entity_id` y ordenando por `startDate || createdAt` de forma estable.
-- [x] T022 [US3] Implementar `renderEntityDetailHtml()` en `src/components/entity-detail.js` con datos de la entidad, historial ordenado, estado vacío y acción «Editar».
-- [x] T023 [US3] Añadir en `src/components/entity-list.js` el botón «Ver ficha» con `data-action="view-entity"` y `data-entity-id`, conectado en `src/app.js` a `state.detailEntityId`.
-
-**Punto de control**: La ficha consulta los mismos registros de gestión y presenta el historial cronológicamente.
+**Checkpoint**: La base está lista; cualquier historia de usuario puede iniciarse.
 
 ---
 
-## Phase 5: US4 - Gestionar entidades y documentos en una pantalla dedicada (Prioridad: P1)
+## Phase 3: User Story 1 - Definir datos compatibles con el ERP (Priority: P1) 🎯 MVP
 
-**Objetivo**: Una única pantalla de gestión, alcanzable solo desde el panel, con pestañas de entidades y documentos y CRUD completo sin mostrar la lista de entidades.
+**Goal**: Garantizar la relación `Entidad`–`Documento`, identidad automática e integridad referencial.
 
-**Prueba independiente**: Entrar por una acción rápida del panel, alternar pestañas, crear/editar/eliminar una entidad y un documento, confirmar la cascada con recuento y volver al panel.
+**Independent Test**: Crear una entidad, un documento vinculado y comprobar en `tests/integration/entity-document.test.js` que el borrado de la entidad con registros se rechaza sin mutar datos.
 
-### Pruebas de US4
+- [X] T019 [P] [US1] Crear `tests/unit/entity-model.test.js` para los campos base de `Entidad` y la unicidad de `entity_id`.
+- [X] T020 [P] [US1] Crear `tests/unit/document-model.test.js` para `entity_id` obligatorio y correspondiente a una entidad existente.
+- [X] T021 [US1] Implementar en `src/storage.js` la generación de `id`, `entity_id`, `createdAt` y `updatedAt`.
+- [X] T022 [US1] Implementar en `src/storage.js` la validación de `entity_id` contra `erp_entities` antes de escribir un documento.
+- [X] T023 [US1] Implementar en `src/storage.js` `countDocumentsForEntity()` para el mensaje de confirmación sin eliminar registros.
+- [X] T024 [US1] Crear `tests/integration/entity-document.test.js` para vincular, listar y bloquear la baja con documentos asociados.
 
-- [x] T024 [P] [US4] Ampliar `tests/integration/manage-screen.test.js` para comprobar que las acciones rápidas abren la gestión, que la lista de entidades no aparece en `#view-root` y que la barra lateral no ofrece esos apartados.
-- [x] T025 [P] [US4] Ampliar `tests/integration/manage-document.test.js` para crear, editar y eliminar un documento vinculado a una entidad desde la pestaña de documentos.
-- [x] T026 [P] [US4] Ampliar `tests/integration/edit-delete-entity.test.js` para confirmar que eliminar una entidad pide confirmación, indica cuántos documentos se borrarán y elimina ambos registros.
-
-### Implementación de US4
-
-- [x] T027 [US4] Implementar `renderManageView()`, `activeNavKey()` y los casos `manage-tab`, `quick-manage` y `quick-new-*` en `src/app.js`, soportando enlaces profundos `?view=manage-entity` y `?view=manage-document`.
-- [x] T028 [US4] Implementar `renderDocumentFormHtml()`, `collectDocumentFormData()`, `buildDocumentFormBaseline()` e `isDocumentFormDirty()` en `src/components/document-form.js` con selector de entidad y campos base/personalizados.
-- [x] T029 [US4] Implementar `onDeleteEntity()` en `src/app.js` usando `countDocumentsForEntity()` de `src/storage.js` para el mensaje de confirmación con recuento y la eliminación en cascada.
-
-**Punto de control**: Gestión y navegación de vuelta al panel funcionan sin pérdida de registros.
+**Checkpoint**: US1 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 6: US5 - Definir un perfil de configuración del módulo (Prioridad: P1)
+## Phase 4: User Story 3 - Consultar antecedentes del cliente (Priority: P1)
 
-**Objetivo**: Adaptar identidad, terminología, campos, ciclo de vida y tema desde un único archivo sin modificar el código central.
+**Goal**: Buscar clientes por campos visibles, abrir la ficha rápida y revisar el historial con permisos.
 
-**Prueba independiente**: Cargar un perfil de Ventas y ver el nombre y términos configurados en panel y marco; al quitar la configuración, volver a Entidad/Documento sin errores.
+**Independent Test**: Buscar un cliente, abrir la ficha rápida desde «Buscar» y desde «Clientes», y verificar compras USD, fechas de inicio, historial y tickets permitidos en `tests/integration/client-quick-view.test.js`.
 
-### Pruebas de US5
+- [X] T025 [P] [US3a] Crear `tests/integration/client-quick-view.test.js` para apertura desde `Buscar` y `Clientes`, solo lectura y botones «Cerrar»/«Ver ficha completa».
+- [X] T026 [P] [US3b] Crear `tests/integration/client-history.test.js` para historial cronológico y actualización tras mutaciones.
+- [X] T027 [US3a] Crear `src/components/client-quick-view.js` con `data-action="close-quick-view"` y `data-action="view-entity-full"`, sin formularios.
+- [X] T028 [US3a] Mostrar datos de contacto, total de compras «Cerrado ganado» en USD y `startDate` en `src/components/client-quick-view.js`.
+- [X] T029 [US3a] Filtrar documentos y tickets de la vista rápida con `can()` en `src/components/client-quick-view.js`.
+- [X] T030 [US3a] Cambiar el nombre del cliente en `src/components/entity-list.js` a `data-action="open-client-quick-view"` con `data-entity-id`.
+- [X] T031 [US3b] Conservar `data-action="view-entity"` para la ficha completa en `src/components/entity-list.js` y abrirla desde «Ver ficha completa».
+- [X] T032 [US3a] Gestionar `state.quickViewEntityId` y las acciones de apertura/cierre en `src/app.js`.
+- [X] T033 [US3b] Renderizar estados vacíos y texto sanitizado en `src/components/client-quick-view.js` y `src/components/entity-detail.js`.
+- [X] T034 [US3a] Añadir estilos de la vista superpuesta en `src/styles.css` sin persistir datos derivados.
 
-- [x] T030 [P] [US5] Ampliar `tests/unit/module-config.test.js` con un perfil que declare `moduleName`, `labels`, `customFields`, `statusLifecycle` y `theme.accentColor`, y con los casos de ausencia y de configuración conflictiva.
-- [x] T031 [P] [US5] Ampliar `tests/integration/config-warning.test.js` para exigir el banner visible `#config-warning` y que el panel, la búsqueda y la gestión sigan utilizables con `DEFAULT_CONFIG`.
-
-### Implementación de US5
-
-- [x] T032 [US5] Completar en `src/module-config.js` la declaración de `MODULE_CONFIG`, `RESERVED_ENTITY_KEYS`, `RESERVED_DOCUMENT_KEYS` y la validación de choques de claves y tipos de campo desconocidos.
-- [x] T033 [US5] Conectar `loadModuleConfig()`, `setActiveConfig()`, `document.title` y el banner de advertencia en `initApp()` de `src/app.js`.
-
-**Punto de control**: El perfil se carga, retrocede con aviso y no bloquea la aplicación.
-
----
-
-## Phase 7: US7 - Reetiquetar pantallas desde la configuración (Prioridad: P1)
-
-**Objetivo**: Toda etiqueta visible derive de `labels` y de la regla de fecha activa, sin filtrar términos genéricos.
-
-**Prueba independiente**: Mapear Entidad→Cliente y Documento→Pedido de Venta; verificar pestañas, botones, encabezados, mensajes de vacío y «Fecha de nacimiento» en todas las pantallas.
-
-### Pruebas de US7
-
-- [x] T034 [P] [US7] Ampliar `tests/integration/relabeling.test.js` para comparar términos configurados frente a `DEFAULT_CONFIG` en `src/components/shell.js`, `src/components/dashboard.js`, `src/components/entity-form.js`, `src/components/document-form.js`, `src/components/entity-list.js`, `src/components/document-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js`.
-
-### Implementación de US7
-
-- [x] T035 [US7] Sustituir texto fijo por `getLabel(config, clave)` en `src/components/shell.js`, `src/components/dashboard.js`, `src/components/entity-form.js`, `src/components/document-form.js`, `src/components/entity-list.js`, `src/components/document-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js`.
-- [x] T036 [US7] Usar `resolveEntityDateRule(getConfig()).label` en `src/components/entity-form.js`, `src/components/entity-list.js`, `src/components/entity-detail.js` y `src/components/search-bar.js` para mostrar «Fecha de nacimiento» en el perfil de clientes.
-
-**Punto de control**: La terminología es consistente y la navegación no cambia al reetiquetar.
+**Checkpoint**: US3 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 8: US8 - Declarar campos personalizados para los registros (Prioridad: P1)
+## Phase 5: User Story 4 - Gestionar entidades y documentos en pantalla dedicada (Priority: P1)
 
-**Objetivo**: Que los campos declarados aparezcan en formularios, listas, ficha y búsqueda con validación, y que los valores huérfanos se conserven ocultos.
+**Goal**: Separar gestión de búsqueda, operar clientes/interacciones y ofrecer ticket rápido con alertas.
 
-**Prueba independiente**: Declarar un campo numérico obligatorio; ver entrada numérica, bloqueo al dejarlo vacío, valor visible en lista/ficha y coincidencia en búsqueda.
+**Independent Test**: En `tests/integration/manage-view.test.js`, crear, editar, archivar y eliminar clientes; verificar bloqueo con registros, ficha rápida, «Abrir Ticket» y alertas por estado.
 
-### Pruebas de US8
+- [X] T035 [P] [US4a] Crear `tests/integration/manage-view.test.js` para acceso desde las tres acciones rápidas y enlaces profundos.
+- [X] T036 [P] [US4c] Crear `tests/integration/document-management.test.js` para alta, edición, baja y permisos de documentos.
+- [X] T037 [US4a] Implementar pestañas de clientes e interacciones en `src/components/manage-view.js` o el componente equivalente existente.
+- [X] T038 [US4b] Adaptar `src/components/entity-list.js` para mostrar «Abrir Ticket» con `data-action="open-ticket"` solo con `postventa:create`.
+- [X] T039 [US4b] Derivar alertas «Ticket abierto» y «Ticket en revisión» en `src/components/entity-list.js`, con clases `.ticket-alert--open` y `.ticket-alert--review`.
+- [X] T040 [US4b] Mostrar ambas alertas cuando coexistan, en ese orden, en `src/components/entity-list.js`.
+- [X] T041 [US4b] Ocultar alertas a N3 y visitante y limitar N2 a clientes con `ejecutivo_asignado = user.id` en `src/components/entity-list.js`.
+- [X] T042 [US4b] Implementar `open-ticket` en `src/app.js`: verificar permiso, navegar a `?view=postventa`, abrir el panel y precargar `entity_id`.
+- [X] T043 [US4b] Rechazar en `src/storage.js` la baja definitiva con registros vinculados devolviendo `EntityHasRecordsError`.
+- [X] T044 [US4b] Ofrecer archivar como alternativa a la baja bloqueada en `src/components/entity-list.js`.
+- [X] T045 [US4c] Validar campos obligatorios y mensaje exacto `Completa los campos obligatorios.` en `src/components/document-form.js`.
 
-- [x] T037 [P] [US8] Ampliar `tests/unit/field-rules.test.js` para verificar reglas sobre campos base y personalizados, grupos exclusivos, condiciones `when` y opciones `{ value, label }`.
-- [x] T038 [P] [US8] Ampliar `tests/integration/custom-fields.test.js` con un campo numérico obligatorio que bloquee el guardado vacío y sea buscable y visible en lista y ficha.
-- [x] T039 [P] [US8] Ampliar `tests/integration/orphan-fields-ui.test.js` para conservar un valor no declarado en `erp_entities`, ocultarlo y volver a mostrarlo al redeclarar el campo.
-
-### Implementación de US8
-
-- [x] T040 [US8] Completar `src/utils/field-rules.js` para resolver reglas por clave, aplicar `hidden`/`searchable` y descartar valores de grupos inactivos antes de validar.
-- [x] T041 [US8] Completar `renderFieldHtml()`, `renderFieldsHtml()`, `collectFormData()`, `buildFormBaseline()` e `isFormDirty()` en `src/components/form-fields.js`, respetando `order`, `placeholder`, `when` y opciones con valor y etiqueta.
-- [x] T042 [US8] Conectar validación y persistencia de campos personalizados en `src/storage.js` y su presentación en `src/components/entity-list.js` y `src/components/entity-detail.js`.
-
-**Punto de control**: Los campos declarados funcionan de extremo a extremo sin código específico por dominio.
-
----
-
-## Phase 9: US14 - Marco de espacio de trabajo ERP con marca (Prioridad: P1)
-
-**Objetivo**: Barra superior con logotipo derivado y barra lateral persistente con las entradas permitidas por rango en todas las pantallas.
-
-**Prueba independiente**: Recorrer las pantallas y comprobar marca, botones laterales permitidos por rango, resaltado del activo, columna de iconos en viewport estrecho, color de acento y persistencia de datos al navegar; «Clientes» e «Interacciones» no figuran en el marcado y el panel no muestra «Abrir Marketing».
-
-### Pruebas de US14
-
-- [x] T043 [P] [US14a] Ampliar `tests/integration/workspace-shell.test.js` para verificar en `src/components/shell.js` el SVG monograma, `#brand-name`, los botones de `NAV_ITEMS` permitidos por rango, `aria-current`, ausencia de Clientes/Interacciones y etiquetas accesibles con la barra contraída.
-- [x] T044 [P] [US14] Crear `tests/integration/marketing-navigation.test.js` para abrir Marketing desde la barra lateral, navegar a Panel, Buscar y Resumen, y comprobar que `erp_entities`/`erp_documents` permanecen intactos.
-
-### Implementación de US14
-
-- [x] T045 [US14a] Implementar `monogramSvg()`, `NAV_ITEMS` y `renderShellHtml()` en `src/components/shell.js` con Panel, Buscar, Resumen y Marketing filtrados por `can()`, y añadir la regla de barra estrecha en `src/styles.css`.
-- [x] T046 [US14] Aplicar `theme.accentColor` validado por `src/module-config.js` en `src/app.js` mediante `--accent`/`--accent-color`, con valor integrado por defecto en `src/styles.css`.
-- [x] T047 [US14] Ajustar `navigate()` y `activeNavKey()` en `src/app.js` para resaltar la vista activa y pedir confirmación antes de salir de un formulario con cambios sin guardar.
-
-**Punto de control**: El marco es idéntico en todas las vistas y la navegación no pierde datos.
+**Checkpoint**: US4 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 10: US15 - Panel de inicio con acciones rápidas y estadísticas (Prioridad: P1)
+## Phase 6: User Story 5 - Definir perfil de configuración (Priority: P1)
 
-**Objetivo**: Panel de entrada con acciones rápidas exclusivamente en el panel y tarjetas de estadísticas en vivo; las cinco acciones originales quedan reducidas a tres por T223-T250.
+**Goal**: Cargar `MODULE_CONFIG`, aplicar el perfil CRM y avisar de configuración inválida.
 
-**Prueba independiente**: Abrir la aplicación, contar exactamente cinco acciones rápidas en `.dashboard` en el incremento original —tres en el incremento actual—, navegar a Marketing y verificar que no existe `.quick-actions`, abrir cada destino del panel con formulario vacío o búsqueda enfocada y verificar tarjetas en cero y con registros.
+**Independent Test**: Modificar `src/module-config.js` en `tests/integration/config-profile.test.js` y confirmar fallback a `DEFAULT_CONFIG` con aviso visible.
 
-### Pruebas de US15
+- [X] T046 [P] [US5] Crear `tests/integration/config-profile.test.js` para perfil válido, inválido y en conflicto.
+- [X] T047 [US5] Declarar `customFields.entity` y `customFields.document` del perfil CRM en `src/module-config.js`.
+- [X] T048 [US5] Añadir `documentRules.lostReason` con `status: 'cerrado perdido'`, `entityStateField: 'estado_comercial'`, `entityState: 'prospecto'`, `customField: 'motivo_perdida'` y las opciones exactas en `src/module-config.js`.
+- [X] T049 [US5] Implementar validación de bloques opcionales y aviso visible en `src/module-config.js`.
+- [X] T050 [US5] Verificar que los valores huérfanos de campos retirados se conserven sin mostrarse en `src/storage.js` y `src/components/entity-detail.js`.
 
-- [x] T048 [P] [US15] Ampliar `tests/integration/dashboard.test.js` para comprobar las cinco acciones rápidas, la ausencia de «Abrir Marketing», el destino correcto de cada acción, las tarjetas en cero y los recuentos tras crear registros.
-- [x] T049 [P] [US15] Ampliar `tests/unit/dashboard-stats.test.js` para exigir entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)», además del embudo por estados de documento, con cero registros.
-
-### Implementación de US15
-
-- [x] T050 [US15] Implementar `renderDashboardHtml()` y `formatCurrencyUsd()` en `src/components/dashboard.js` con las cinco tarjetas, el embudo por estados de documento y la lista «Últimas Interacciones / Próximos Seguimientos».
-- [x] T051 [US15] Implementar en `src/app.js` los casos `quick-new-entity`, `quick-new-document`, `quick-manage` y `quick-search`, abriendo el formulario vacío o enfocando `#search-input`.
-- [x] T052 [US15] Implementar `computeDashboardStats()` en `src/utils/marketing-stats.js` para derivar tarjetas y embudo desde entidades y documentos, reutilizándolo en `src/components/dashboard.js` sin escribir en `localStorage`.
-- [x] T134 [P] [US15] Ampliar `tests/integration/dashboard.test.js` para exigir que `.dashboard .quick-actions` contenga exactamente cinco botones `data-action="quick-*"`/`data-action="navigate"` y que siga sin aparecer «Abrir Marketing» (FR-091).
-- [x] T135 [P] [US15] Ampliar `tests/integration/marketing-dashboard.test.js` para comprobar que `.marketing-view .quick-actions` no existe tras navegar a Marketing, mientras el panel conserva los cinco accesos (SC-027).
-- [x] T136 [US15] Añadir la opción `showQuickActions = true` a `renderDashboardHtml(config, stats, { title, sectionClass, showQuickActions })` en `src/components/dashboard.js` para omitir `<div class="quick-actions">` cuando sea `false`, sin alterar tarjetas, embudo ni lista de interacciones.
-- [x] T137 [US15] Pasar `showQuickActions: false` en la llamada a `renderDashboardHtml()` dentro de `renderMarketingHtml()` en `src/components/marketing.js`, manteniendo `sectionClass: 'marketing-view'` y el resto del panel compartido.
-
-**Punto de control**: El panel ofrece accesos y cifras correctas incluso sin registros, y Marketing no hereda sus acciones rápidas.
+**Checkpoint**: US5 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 11: US2 - Registrar clientes y contactos comerciales (Prioridad: P2)
+## Phase 7: User Story 7 - Reetiquetar pantallas desde configuración (Priority: P1)
 
-**Objetivo**: Perfil de clientes con campos obligatorios y ocultos, código generado, RUT válido y único, canal de contacto condicional y presentación declarativa.
+**Goal**: Derivar terminología visible de la configuración sin cambiar claves internas.
 
-**Prueba independiente**: Registrar cliente y llamada asociada sin ver Código/Categoría/Descripción/Nº de pedidos; el guardado genera código único, exige fecha, canal, RUT y dato de contacto, y la ficha de un cliente heredado incompleto queda bloqueada hasta editarlo válidamente.
+**Independent Test**: Cambiar etiquetas en `src/module-config.js` y comprobar en `tests/integration/labels.test.js` que «Nuevo Cliente» y «Fecha de nacimiento» aparecen en todas las superficies.
 
-### Pruebas de US2
+- [X] T051 [P] [US7] Crear `tests/integration/labels.test.js` para etiquetas exactas en formularios, tablas, ficha y panel.
+- [X] T052 [US7] Centralizar etiquetas de cliente, interacción y fecha en `src/module-config.js`.
+- [X] T053 [US7] Aplicar `Nuevo Cliente` y `Fecha de nacimiento` en `src/components/entity-form.js` y `src/components/entity-list.js`.
+- [X] T054 [US7] Mantener claves internas estables (`chat`, `estado_comercial`, `motivo_perdida`) en `src/module-config.js`.
 
-- [x] T053 [P] [US2] Ampliar `tests/integration/client-field-rules.test.js` para verificar que formulario, lista, ficha y búsqueda no muestran «Código», «Categoría», «Descripción» ni «Nº de pedidos», que el código generado es distinto por cliente y que buscar por esos valores ocultos no devuelve registros.
-- [x] T054 [P] [US2] Ampliar `tests/integration/register-client.test.js` para rechazar guardados sin «Fecha de nacimiento», «Canal de Contacto» o «RUT», con dígito verificador inválido y con RUT repetido con y sin puntos.
-- [x] T055 [P] [US2] Ampliar `tests/integration/register-client-contact.test.js` para exigir selección explícita del canal, mostrar solo la casilla adicional correspondiente con formatos `phone`/`email`/`nonEmpty` y conservar únicamente el valor del canal final.
-- [x] T056 [P] [US2] Ampliar `tests/integration/client-form-presentation.test.js` para comprobar título y acción rápida «Nuevo Cliente», orden «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla, «Tipo de actividad» y «Ejecutivo Asignado», pistas grises y diez opciones de `rubro`.
-- [x] T057 [P] [US2] Ampliar `tests/integration/client-birthdate-legacy.test.js` para bloquear la ficha de un cliente heredado sin datos obligatorios o con RUT inválido, explicar los campos pendientes, ofrecer «Editar» y desbloquearla al guardar válidamente.
-
-### Implementación de US2
-
-- [x] T058 [US2] Completar `MODULE_CONFIG` en `src/module-config.js` con `entityDate`, `fieldRules.entity` para código generado/oculto, `category`/`description` ocultos, `rut` obligatorio único con `cl-rut` y pista, `canal_contacto` sin preselección, campos `contacto_*` con `when`/`group`/formato/pista, `rubro` con diez opciones, `ejecutivo_asignado` con `order: 6` y `detailPolicy.entity`, sin declarar `pedidos`.
-- [x] T059 [US2] Completar `validateEntityData()`, `validateFieldRules()`, `normalizeForUniqueness()` y `addEntity()` en `src/storage.js` para generar el código antes de validar, aplicar required/format/unique/normalize y conservar los valores ocultos en `updateEntity()`.
-- [x] T060 [US2] Ajustar `src/components/form-fields.js` y `src/components/entity-form.js` para renderizar pistas en gris, orden declarativo y opciones `{ value, label }`, y descartar los valores de canales inactivos al cambiar de selección.
-- [x] T061 [US2] Ajustar `src/components/entity-detail.js` para usar `validateEntity()` con `detailPolicy.entity.blockWhenInvalid` y mostrar la explicación y la acción de editar en lugar de los datos del cliente incompleto.
-- [x] T062 [US2] Ajustar `src/components/dashboard.js` y `src/components/search-bar.js` para mostrar «Nuevo Cliente» en la acción rápida y no mencionar campos ocultos en la ayuda de búsqueda.
-
-**Punto de control**: El perfil de clientes cumple todas las reglas declarativas sin ramas específicas en el código central.
+**Checkpoint**: US7 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 12: US9 - Buscar y encontrar entidades rápidamente (Prioridad: P2)
+## Phase 8: User Story 8 - Declarar campos personalizados (Priority: P1)
 
-**Objetivo**: Búsqueda instantánea sobre entidades y sus documentos, con estado vacío claro y buen comportamiento con cientos de registros.
+**Goal**: Renderizar, validar, buscar y conservar campos configurados.
 
-**Prueba independiente**: Introducir un término y ver solo coincidencias; sin coincidencias ver estado vacío; con 500 entidades obtener resultados sin retraso perceptible.
+**Independent Test**: Declarar campos condicionales en `src/module-config.js` y verificar en `tests/integration/custom-fields.test.js` render, validación, búsqueda y conservación de valores retirados.
 
-### Pruebas de US9
+- [X] T055 [P] [US8a] Crear `tests/unit/field-rules.test.js` para visibilidad, obligatoriedad, `when` y `group`.
+- [X] T056 [P] [US8b] Crear `tests/integration/orphan-fields.test.js` para valores ocultos pero conservados.
+- [X] T057 [US8a] Renderizar campos personalizados en `src/components/entity-form.js` y `src/components/document-form.js`.
+- [X] T058 [US8a] Aplicar reglas de visibilidad y obligatoriedad en `src/utils/field-rules.js`.
+- [X] T059 [US8a] Mostrar campos personalizados en `src/components/entity-detail.js` y `src/components/document-list.js`.
+- [X] T060 [US8a] Incluir solo campos visibles en `src/utils/search.js`.
+- [X] T061 [US8b] Conservar valores huérfanos al guardar en `src/storage.js`.
+- [X] T062 [US8b] Ocultar campos retirados en `src/components/entity-form.js`, `src/components/document-form.js` y `src/components/entity-detail.js`.
+- [X] T063 [P] [US8a] Añadir pistas grises `Ej: 11.111.111-1` y por canal en `src/components/entity-form.js`.
+- [X] T064 [US8a] Validar unicidad de claves de campos en `src/module-config.js`.
 
-- [x] T063 [P] [US9] Ampliar `tests/integration/search-entities.test.js` con coincidencias parciales, estado vacío y actualización de resultados mientras se escribe en `#search-input`.
-- [x] T064 [P] [US9] Ampliar `tests/integration/performance.test.js` para medir búsqueda y renderizado de listas con 500 entidades almacenadas.
-
-### Implementación de US9
-
-- [x] T065 [US9] Implementar `normalizeText()`, `matchesQuery()` y `matchesAny()` en `src/utils/search.js` y usarlos en `searchEntities()` de `src/storage.js` sobre campos visibles y documentos vinculados.
-- [x] T066 [US9] Conectar `handleInput()` y `updateSearchResults()` en `src/app.js` con `renderSearchBarHtml()` y `renderEntityListHtml()` para actualizar solo `#search-results`.
-
-**Punto de control**: La búsqueda es correcta y responde con rapidez sobre 500 registros.
-
----
-
-## Phase 13: US10 - Registrar una fecha objetivo (Prioridad: P2)
-
-**Objetivo**: Fecha objetivo opcional en la base y «Fecha de nacimiento» obligatoria en clientes, con rango local 1910-01-01..hoy y actualización al cambiar de día.
-
-**Prueba independiente**: Aceptar `1910-01-01` y hoy, rechazar fechas imposibles o fuera de rango, y actualizar `max` y la ayuda sin recargar al cruzar la medianoche local conservando el borrador.
-
-### Pruebas de US10
-
-- [x] T067 [P] [US10] Ampliar `tests/unit/entity-date.test.js` con reloj falso para `localTodayISO()`, `isValidISODate()`, `resolveEntityDateRule()` y `watchLocalDayChange()`, incluyendo reprogramación y cancelación.
-- [x] T068 [P] [US10] Ampliar `tests/integration/entity-birthdate.test.js` para comprobar `min`/`max`, rechazo de `1909-12-31`, mañana, `1910-02-29` y `2026-02-30`, y actualización del límite sin perder el borrador.
-
-### Implementación de US10
-
-- [x] T069 [US10] Implementar `src/utils/entity-date.js` con `LOCAL_TODAY`, componentes locales (`getFullYear`/`getMonth`/`getDate`), comparación lexicográfica de ISO y temporizador hasta la medianoche local.
-- [x] T070 [US10] Conectar la regla resuelta a las definiciones de campo en `src/components/entity-form.js` y actualizar `min`, `max` y `[data-role="date-range"]` desde `src/app.js` sin re-renderizar el formulario.
-- [x] T071 [US10] Mantener en `src/storage.js` los valores históricos fuera de rango sin migrarlos, exigiendo corrección sobre el objeto fusionado en `updateEntity()`.
-
-**Punto de control**: La regla de fecha es válida, dinámica y no destruye datos históricos.
+**Checkpoint**: US8 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 14: US11 - Registrar los detalles de documentos de una entidad (Prioridad: P2)
+## Phase 9: User Story 14 - Marco de espacio de trabajo ERP con marca (Priority: P1)
 
-**Objetivo**: Documentos con campos base y personalizados, asociados a exactamente una entidad y eliminados en cascada.
+**Goal**: Navegación filtrada por rango, iconos SVG uniformes y diseño responsive.
 
-**Prueba independiente**: Añadir un documento a una entidad, ver sus detalles junto a ella, editarlo y eliminarlo, y comprobar que la eliminación de la entidad elimina sus documentos.
+**Independent Test**: En `tests/integration/shell.test.js`, verificar cinco botones SVG, resaltado activo, colapso en 640 px y bloqueo de rutas no permitidas.
 
-### Pruebas de US11
+- [X] T065 [P] [US14a] Crear `tests/integration/shell.test.js` para navegación por rango y confirmación al salir con cambios.
+- [X] T066 [P] [US14b] Crear `tests/integration/navigation-icons.test.js` para cinco iconos SVG monocromáticos y nombres accesibles.
+- [X] T067 [US14a] Renderizar barra superior y lateral filtradas en `src/components/shell.js`.
+- [X] T068 [US14b] Derivar logotipo y color de acento desde `src/module-config.js` con fallback en `src/styles.css`.
+- [X] T069 [US14b] Aplicar fondo `#F8FAFC` y tarjetas `#FFFFFF` en `src/styles.css`.
+- [X] T070 [US14a] Proteger navegación directa y Back/Forward en `src/app.js` con `assertPermission()`.
+- [X] T071 [US14b] Implementar colapso de barra lateral en 640 px o menos en `src/components/shell.js`.
+- [X] T072 [US14b] Verificar que no se usen emojis del sistema en `src/components/shell.js`.
 
-- [x] T072 [P] [US11] Ampliar `tests/unit/storage.test.js` con campos base `id`, `entity_id`, `startDate`, `endDate`, `notes`, `status`, marcas de tiempo y regla `endDate >= startDate`, más campos personalizados declarados.
-- [x] T073 [P] [US11] Ampliar `tests/integration/add-document.test.js` para añadir, editar y eliminar un documento desde la pestaña de documentos y verlo en la ficha de la entidad.
-
-### Implementación de US11
-
-- [x] T074 [US11] Completar `validateDocumentData()`, `addDocument()`, `updateDocument()`, `deleteDocument()` y `deleteDocumentsForEntity()` en `src/storage.js`, rechazando entity_id inexistente y fechas inválidas.
-- [x] T075 [US11] Completar `src/components/document-form.js` y `onDocumentFormSubmit()` en `src/app.js` con mensajes de error por campo para datos obligatorios y fechas.
-
-**Punto de control**: Los documentos quedan íntegramente vinculados a su entidad.
-
----
-
-## Phase 15: US12 - Buscar entidades en una pantalla dedicada (Prioridad: P2)
-
-**Objetivo**: Pantalla de búsqueda separada de la gestión, accesible desde barra lateral y panel, sin edición en línea.
-
-**Prueba independiente**: Abrir la pantalla desde la barra lateral o una acción rápida, buscar, ver estado vacío y volver al panel con el botón Panel.
-
-### Pruebas de US12
-
-- [x] T076 [P] [US12] Ampliar `tests/integration/search-screen.test.js` para cubrir ambos accesos, coincidencias, estado vacío, botón Panel y exclusión de categoría/descripción en el perfil de clientes.
-
-### Implementación de US12
-
-- [x] T077 [US12] Implementar `renderSearchView()` y la navegación a `search`/`dashboard` en `src/app.js`, con `focusSearchOnRender` al llegar desde el panel.
-- [x] T078 [US12] Ajustar `src/components/search-bar.js` para ofrecer un formulario accesible con `#search-input` y texto de ayuda derivado de la configuración.
-
-**Punto de control**: La búsqueda dedicada es independiente de la gestión y no expone campos ocultos.
+**Checkpoint**: US14 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 16: US13 - Configurar el ciclo de vida de estados de documentos (Prioridad: P2)
+## Phase 10: User Story 15 - Panel de inicio con acciones y estadísticas (Priority: P1)
 
-**Objetivo**: Estados y transiciones declarados por configuración, con estados pendientes explícitos y texto libre como comportamiento base.
+**Goal**: Mostrar tres acciones rápidas, cinco tarjetas y embudo derivado.
 
-**Prueba independiente**: Configurar cotización→pedido→facturado; ver solo transiciones válidas, rechazar una inválida con explicación, mostrar el estado en listas y conservar texto libre sin ciclo de vida.
+**Independent Test**: En `tests/integration/dashboard.test.js`, comprobar exactamente tres acciones, cero botones de creación y recálculo sin recarga.
 
-### Pruebas de US13
+- [X] T073 [P] [US15a] Crear `tests/integration/dashboard.test.js` para tres acciones rápidas y permisos.
+- [X] T074 [P] [US15b] Crear `tests/unit/dashboard-stats.test.js` para tarjetas y embudo por estados de documento.
+- [X] T075 [US15a] Renderizar «Gestionar clientes», «Gestionar interacciones» y «Buscar registros» en `src/components/dashboard.js`.
+- [X] T076 [US15a] Aplicar jerarquía visual con acción principal sólida y secundarias en blanco en `src/styles.css`.
+- [X] T077 [US15b] Calcular cinco tarjetas en `src/utils/marketing-stats.js`.
+- [X] T078 [US15b] Calcular pendientes con `statusLifecycle.pendingStates` o texto normalizado `pendiente` en `src/utils/marketing-stats.js`.
+- [X] T079 [US15b] Excluir clientes archivados y «Cerrado perdido» de ventas, real mensual y pendientes en `src/utils/marketing-stats.js` y `src/utils/sales-team-metrics.js`.
+- [X] T080 [US15b] Renderizar últimas interacciones y estados vacíos en `src/components/dashboard.js`.
+- [X] T081 [US15a] Ocultar `.quick-actions` en Marketing mediante opción del renderizador en `src/components/dashboard.js`.
 
-- [x] T079 [P] [US13] Ampliar `tests/integration/document-lifecycle.test.js` para verificar transiciones permitidas, rechazo de transición inválida por cualquier vía, estado visible en listas y texto libre sin `statusLifecycle`.
-- [x] T080 [P] [US13] Ampliar `tests/unit/module-config.test.js` para validar `statusLifecycle.states`, `transitions` y `pendingStates` y rechazar referencias a estados desconocidos.
-
-### Implementación de US13
-
-- [x] T081 [US13] Implementar `isValidTransition()` y la rama de `status` en `validateDocumentData()` de `src/storage.js`, y hacer que `computeSummary()` use `pendingStates` antes que la coincidencia normalizada con «pendiente».
-- [x] T082 [US13] Implementar opciones de estado a partir de `statusLifecycle.transitions` en `src/components/document-form.js` y distintivo visual del estado en `src/components/document-list.js`.
-
-**Punto de control**: El ciclo de vida se aplica por igual en formularios, almacenamiento y resumen.
-
----
-
-## Phase 17: US16 - Capturar y convertir prospectos desde Marketing (Prioridad: P2)
-
-**Objetivo**: Captura pública con consentimiento, prospectos como `Entidad`, automatización por eventos, conversión sin pérdida de identidad, panel/Marketing derivados de los mismos registros y cinco atajos de Marketing en orden fijo.
-
-**Prueba independiente**: Enviar `?view=capture` con consentimiento, ver creado el prospecto y la ejecución automática, avanzar a Cliente conservando historial, y comprobar que Marketing muestra las cinco tarjetas y el embudo del panel sin torta ni selector de etapas, sin acciones rápidas del panel y con los cinco atajos ordenados `team`, `campaigns`, `performance`, `chat`, `social`.
-
-### Pruebas de US16
-
-- [x] T083 [P] [US16] Ampliar `tests/unit/capture-consent.test.js` para exigir `consentimiento = true`, `consentimiento_fecha`, `consentimiento_version` desde `marketing.privacyNoticeVersion`, `estado_comercial = 'prospecto'` y rechazo sin consentimiento.
-- [x] T084 [P] [US16] Ampliar `tests/unit/marketing-stats.test.js` para verificar que las cinco tarjetas y el embudo por estados de documento coinciden con el panel, contabilizan cada documento una sola vez y muestran cero sin registros.
-- [x] T085 [P] [US16] Ampliar `tests/integration/marketing-capture.test.js` para comprobar que `?view=capture` se renderiza sin marco ERP, sin consentimiento no crea entidad y con consentimiento muestra una confirmación clara con el mensaje exacto `Prospecto registrado correctamente.`.
-- [x] T086 [P] [US16] Ampliar `tests/integration/marketing-dashboard.test.js` para verificar en Marketing las cinco tarjetas, el embudo y «Últimas Interacciones / Próximos Seguimientos» del panel, sin torta «Estado comercial de la cartera» ni selector de etapas, y sin mostrar `estado_comercial`.
-- [x] T138 [P] [US16] Ampliar `tests/integration/marketing-navigation.test.js` para exigir exactamente cinco botones `.marketing-sections [data-action="marketing-section"]` en el orden `team`, `campaigns`, `performance`, `chat`, `social`, con las etiquetas «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales» (FR-093/SC-029).
-
-### Implementación de US16
-
-- [x] T087 [US16] Reimplementar `computeDashboardStats()` y `computeMarketingStats()` en `src/utils/marketing-stats.js` sobre entidades y documentos, compartiendo fórmulas con `src/components/dashboard.js` y sin escribir resultados derivados en `localStorage`.
-- [x] T088 [US16] Implementar `createProspectFromCapture()` y `CaptureError` en `src/utils/capture-prospect.js`, filtrando por `marketing.captureFields` y guardando consentimiento con fecha y versión.
-- [x] T089 [US16] Implementar `getCaptureFieldDefs()`, `renderCaptureFormHtml()` y `collectCaptureFormData()` en `src/components/capture-form.js` con casilla de consentimiento y errores comprensibles.
-- [x] T090 [US16] Conectar en `src/app.js` las vistas iniciales `?view=capture` y `?view=marketing`, el envío `#capture-form` y `renderMarketingView()` con las estadísticas compartidas.
-- [x] T091 [US16] Reimplementar `renderMarketingHtml()` en `src/components/marketing.js` con cinco tarjetas, embudo por estados de documento, lista de interacciones con «Ver ficha» y estados vacíos, eliminando la torta y el selector de etapas.
-- [x] T092 [US16] Implementar `runAutomationRules()` en `src/utils/marketing-automation.js` y `persistAutomation()` en `src/storage.js`, con `automation_key = event|from|to|label`, `status = 'automatico'` y un `Documento` por ejecución en el historial de la entidad.
-- [x] T093 [US16] Ajustar `transitionStage()` en `src/utils/marketing-stage.js` y `updateEntityStage()` en `src/storage.js` para que el valor interno `ganado` —visible como «Cliente ganado» cuando se requiera— conserve `id`, `entity_id`, documentos y campos personalizados, sin confundirlo con el estado de documento «Cerrado ganado» y manteniendo `estado_comercial` oculto en `src/module-config.js`.
-- [x] T139 [US16] Reordenar y renombrar `SECTIONS` en `src/components/marketing.js` a los cinco atajos exactos `team`, `campaigns`, `performance`, `chat`, `social` con las etiquetas de FR-093, actualizar el `<h2>` de `src/components/marketing-team.js` a «Equipos de ventas y logros» y conservar `data-action="marketing-section"` y el panel renderizado por cada clave.
-
-**Punto de control**: Marketing y panel coinciden exactamente, la captura es trazable sin nueva entidad y los cinco atajos respetan el orden y la terminología aprobada.
+**Checkpoint**: US15 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 18: US17 - Consultar los Equipos de ventas y logros (Prioridad: P2)
+## Phase 11: User Story 22 - Iniciar sesión en modo demostración (Priority: P1)
 
-**Objetivo**: Equipos e integrantes capturados por el usuario con real mensual y objetivo mensual calculados por el sistema, accesibles desde el atajo «Equipos de ventas y logros».
+**Goal**: Acceder directamente con un botón por usuario activo y conservar la sesión sin credenciales.
 
-**Prueba independiente**: Abrir el atajo «Equipos de ventas y logros», crear equipo e integrante con nombre, cargo y estado, sin casillas de métricas, y comprobar que real mensual suma documentos «Cerrado ganado» del mes del ejecutivo y objetivo mensual proyecta `ventas ÷ días transcurridos × días del mes`, conservando `data-section="team"`.
+**Independent Test**: En `tests/integration/login.test.js`, verificar cuatro botones iniciales, usuarios creados detrás, usuarios desactivados sin botón, ausencia de campos/mensajes de contraseña y expiración a las 8 horas.
 
-### Pruebas de US17
+- [X] T082 [P] [US22a] Adaptar `tests/unit/auth.test.js` para `login(userId)`, usuarios activos, orden por `createdAt`, unicidad y expiración sin contraseña.
+- [X] T083 [P] [US22a] Adaptar `tests/integration/login.test.js` a botones `data-action="login-user"` y `data-user-id`, sin `#login-form`, `#login-username` ni `#login-password`.
+- [X] T084 [US22a] Reescribir `src/components/login.js` para renderizar la grilla centrada de dos columnas con etiquetas exactas «Gerente», «Marketing», «Ventas» y «Atención al Cliente».
+- [X] T085 [US22a] Mostrar `username` de los usuarios creados por Gerencia detrás de los cuatro semilla en `src/components/login.js`.
+- [X] T086 [US22a] Eliminar de `src/components/login.js` los mensajes `Ingresa una contraseña` y `Usuario no encontrado`.
+- [X] T087 [US22a] Ajustar `src/auth.js`: `login(userId)` sin contraseña, sin `DEMO_PASSWORD`, sin `failedAttempts` ni `lockedUntil`.
+- [X] T088 [US22a] Inicializar semilla `gerente`, `marketing`, `ventas` y `atencion` solo si `erp_users` no existe en `src/auth.js`.
+- [X] T089 [US22b] Conservar sesión persistente, expiración por inactividad y revocación por desactivación en `src/auth.js`.
+- [X] T090 [US22c] Mantener accesibles `?view=capture` y «Dudas y consultas» sin sesión en `src/app.js`.
+- [X] T091 [US22b] Redirigir la vista solicitada tras pulsar un botón y conservar sesión en recarga y Back/Forward en `src/app.js`.
 
-- [x] T094 [P] [US17] Crear `tests/unit/sales-team-metrics.test.js` con casos de suma de importes «Cerrado ganado» del mes por `ejecutivo_asignado`, proyección al cierre del mes y cero sin ventas o sin días transcurridos.
-- [x] T095 [P] [US17] Crear `tests/integration/marketing-team.test.js` para abrir «Equipo de ventas y logros», crear/editar/eliminar equipos e integrantes con nombre, cargo y «Activo»/«Inactivo», ver estado vacío y actualizar métricas tras cambiar documentos.
-- [x] T140 [P] [US17] Actualizar `tests/integration/marketing-team.test.js` para abrir la sección mediante el atajo «Equipos de ventas y logros» (plural) y verificar que el botón conserva `data-section="team"` y que no aparece la forma singular como etiqueta visible (SC-029).
-
-### Implementación de US17
-
-- [x] T096 [US17] Implementar `computeSalesTeamMetrics()` en `src/utils/sales-team-metrics.js` con las fórmulas de FR-078 y FR-079, sin persistir resultados.
-- [x] T097 [US17] Implementar la sección «Equipos de ventas y logros» —antes «Equipo de ventas y logros»— en `src/components/marketing.js` y sus estilos en `src/styles.css`, sin entradas para real ni objetivo.
-- [x] T098 [US17] Conectar en `src/app.js` las acciones de equipo e integrante y persistir solo nombre, cargo y estado en `erp_marketing_config` desde `src/storage.js`, usando `marketing.salesTeams` como valores iniciales.
-
-**Punto de control**: Las cifras del equipo son calculadas, verificables y recalculadas sin recarga.
-
----
-
-## Phase 19: US18 - Registrar interacciones en redes sociales (Prioridad: P2)
-
-**Objetivo**: Registro manual de interacciones de Twitter, Instagram, YouTube y otras redes, vinculadas al prospecto o cliente como `Documento`.
-
-**Prueba independiente**: Abrir «Redes sociales» desde Marketing, registrar una interacción de Instagram con plataforma, fecha, tipo, nota y enlace, y verla guardada, ordenada por fecha y en la ficha de la entidad.
-
-### Pruebas de US18
-
-- [x] T099 [P] [US18] Crear `tests/unit/marketing-social.test.js` para exigir que `registerSocialInteraction()` cree un `Documento` con `entity_id`, `plataforma`, `startDate`, `tipo_interaccion`, `nota`, `enlace` y `campaña` opcional.
-- [x] T100 [P] [US18] Crear `tests/integration/marketing-social.test.js` para registrar, editar y eliminar una interacción vinculada, ver estado vacío, orden cronológico y reflejo en `src/components/entity-detail.js`.
-
-### Implementación de US18
-
-- [x] T101 [US18] Implementar `registerSocialInteraction()` en `src/utils/marketing-social.js` reutilizando `addDocument()` de `src/storage.js` y los campos personalizados declarados.
-- [x] T102 [US18] Implementar `renderMarketingSocialHtml()` en `src/components/marketing-social.js` con formulario, lista, acciones de edición/eliminación y estado vacío.
-- [x] T103 [US18] Declarar en `src/module-config.js` los campos personalizados de documento `plataforma`, `tipo_interaccion`, `enlace` y `campaña`, y conectar las acciones del componente en `src/app.js` usando `escapeHtml()` de `src/utils/sanitize.js`.
-
-**Punto de control**: Las redes usan `Documento` y permanecen en la ficha de la entidad al navegar.
+**Checkpoint**: US22 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 20: US19 - Ofrecer Dudas y consultas con respuestas rápidas (Prioridad: P2)
+## Phase 12: User Story 23 - Acceso según rango (Priority: P1)
 
-**Objetivo**: Superficie visible «Dudas y consultas» en captura y Marketing con respuestas desde FAQ configuradas, acuse para consultas sin coincidencia y consentimiento previo; el canal interno `chat` permanece estable.
+**Goal**: Aplicar la matriz en UI, rutas, datos y administración de usuarios sin editar permisos.
 
-**Prueba independiente**: Pregunta configurada recibe respuesta inmediata; pregunta sin coincidencia muestra acuse y queda como `Documento`; sin consentimiento no se registra ningún mensaje; ambas superficies comparten historial; los textos visibles dicen «Dudas y consultas» mientras `data-section="chat"`, `#chat-form`, `.chat-*` y `canal: 'chat'` no cambian.
+**Independent Test**: En `tests/integration/permissions.test.js`, comprobar denegaciones desde enlaces profundos y llamadas directas a `src/storage.js` con sesión íntegra.
 
-### Pruebas de US19
+- [X] T092 [P] [US23a] Crear `tests/integration/permissions.test.js` para matriz por rango y propiedad.
+- [X] T093 [P] [US23c] Crear `tests/unit/storage-permissions.test.js` para denegación en llamadas directas.
+- [X] T094 [US23a] Conectar `can()` y `assertPermission()` en `src/app.js`, `src/components/shell.js` y `src/components/dashboard.js`.
+- [X] T095 [US23c] Verificar permisos antes de mutar en `addEntity()`, `updateEntity()`, `deleteEntity()`, `addDocument()`, `updateDocument()` y `deleteDocument()` en `src/storage.js`.
+- [X] T096 [US23b] Crear `tests/integration/users-admin.test.js` para alta, edición, desactivación y unicidad sin contraseña.
+- [X] T097 [US23b] Implementar `createUser()`, `updateUser()` y `deactivateUser()` sin contraseña en `src/auth.js`.
+- [X] T098 [US23b] Mostrar «Gestionar usuarios» solo para Nivel 4 en `src/components/shell.js`.
+- [X] T099 [US23b] Usar `usernameKey` único sin distinguir mayúsculas ni espacios en `src/auth.js`.
+- [X] T100 [US23c] Resolver rango vigente desde `erp_users` en cada acción en `src/auth/permissions.js`.
+- [X] T101 [US23a] Mantener `permissions:view` como contrato interno sin interfaz editable en `src/auth/permissions.js`.
 
-- [x] T104 [P] [US19] Crear `tests/unit/marketing-chat.test.js` para verificar `answerFaq()` con texto normalizado, `null` sin coincidencia y `registerChatMessage()` con consentimiento, canal `chat`, `mensaje`, `tipo_interaccion` y `campaña` opcional.
-- [x] T105 [P] [US19] Crear `tests/integration/marketing-chat.test.js` para usar el chat en `?view=capture` y en Marketing, comprobar respuesta rápida, acuse de recibo con el mensaje exacto `Consulta registrada; un ejecutivo hará seguimiento.`, documento de seguimiento, bloqueo sin consentimiento y mensajes visibles en la ficha.
-- [x] T141 [P] [US19] Ampliar `tests/integration/marketing-chat.test.js` para exigir que encabezado, pestaña y texto de consentimiento digan «Dudas y consultas» en captura y Marketing, sin «Chat» como etiqueta visible, verificando que `data-section="chat"`, `#chat-form`, `.chat-*` y los documentos con `canal: 'chat'` permanezcan iguales (SC-028).
-
-### Implementación de US19
-
-- [x] T106 [US19] Implementar `answerFaq()` y `registerChatMessage()` en `src/utils/marketing-chat.js` usando `marketing.faq` y `addDocument()`, sin APIs externas.
-- [x] T107 [US19] Implementar `renderMarketingChatHtml()` en `src/components/marketing-chat.js` con casilla de consentimiento, mensajes, respuesta/acuse y estado vacío sin FAQ.
-- [x] T108 [US19] Integrar el chat en `src/components/capture-form.js` y `src/components/marketing.js`, con manejadores en `src/app.js` que lean `getEntityDocuments()` para compartir mensajes entre superficies.
-- [x] T109 [US19] Ampliar `validateMarketingConfig()` en `src/utils/marketing-config.js` para exigir pares `pregunta`/`respuesta` no vacíos en `marketing.faq` y añadir ejemplos en `src/module-config.js`.
-- [x] T142 [US19] Renombrar a «Dudas y consultas» el `<h2>` y el texto visible de consentimiento en `src/components/marketing-chat.js`, conservando `data-role="marketing-chat"`, `#chat-form`, `name="consentimiento"` y las clases `.chat-*`.
-- [x] T143 [US19] Actualizar los mensajes visibles de `ChatConsentError` en `src/utils/marketing-chat.js` para usar «Dudas y consultas», conservando el nombre de la clase, `name = 'ChatConsentError'` y `errors.consentimiento` consumido por `src/app.js`.
-
-**Punto de control**: «Dudas y consultas» responde, registra y respeta el consentimiento en ambos puntos de entrada sin cambiar contratos internos.
+**Checkpoint**: US23 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 21: US20 - Programar campañas de marketing internas (Prioridad: P2)
+## Phase 13: User Story 24 - Archivar, restaurar y eliminar clientes (Priority: P1)
 
-**Objetivo**: Campañas por etapa y periodo que ejecutan reglas internas con acciones limitadas y desempate determinista.
+**Goal**: Gestionar el ciclo de vida sin perder historial y bloquear bajas con registros.
 
-**Prueba independiente**: Crear campaña «En proceso», disparar evento sobre prospecto de esa etapa, ver seguimiento/historial sin envíos externos, detenerla sin borrar historial y comprobar que con dos campañas solo se ejecuta la más reciente y la otra queda «omitida por solapamiento».
+**Independent Test**: En `tests/integration/client-lifecycle.test.js`, archivar/restaurar idempotentemente, bloquear baja con documentos, ofrecer archivar y excluir archivados de indicadores.
 
-### Pruebas de US20
+- [X] T102 [P] [US24a] Crear `tests/integration/client-lifecycle.test.js` para archivado, restauración e idempotencia.
+- [X] T103 [P] [US24b] Crear `tests/unit/delete-guard.test.js` para `EntityHasRecordsError` y ausencia de mutación.
+- [X] T104 [US24a] Persistir y eliminar `archivedAt` en `src/storage.js` conservando todos los documentos.
+- [X] T105 [US24b] Rechazar `deleteEntity()` con documentos o registros vinculados en `src/storage.js`.
+- [X] T106 [US24b] Mostrar confirmación explícita y ofrecer archivar en `src/components/entity-list.js`.
+- [X] T107 [US24c] Separar «Activos» y «Archivados» en `src/utils/search.js` y `src/components/entity-list.js`.
+- [X] T108 [US24c] Excluir clientes archivados de panel, resumen y Marketing en `src/utils/marketing-stats.js`.
+- [X] T109 [US24a] Usar la acción canónica `entity:delete` para archivar, restaurar y eliminar en `src/storage.js`.
+- [X] T110 [US24b] Sanitizar el mensaje de historial asociado en `src/components/entity-list.js`.
 
-- [x] T110 [P] [US20] Crear `tests/unit/marketing-campaigns.test.js` con casos de creación, edición, detención, periodo activo y etapa objetivo, verificando que solo se ejecutan acciones internas: crear documento de seguimiento, asignar ejecutivo y actualizar `estado_comercial`.
-- [x] T111 [US20] Crear `tests/unit/marketing-campaigns-overlap.test.js` para dos campañas activas sobre el mismo prospecto y evento: ejecuta la de `createdAt` más reciente, registra la otra con `notes = 'omitida por solapamiento'`, `campaignId`, fecha y motivo, sin acciones duplicadas.
-- [x] T112 [P] [US20] Crear `tests/integration/marketing-campaigns.test.js` para abrir la vista de campañas con estado vacío, crear/editar/detener una campaña y consultar historial con fecha, prospecto y acción.
-
-### Implementación de US20
-
-- [x] T113 [US20] Implementar `createCampaign()`, `updateCampaign()`, `stopCampaign()`, `isCampaignActive()` y `selectCampaignsForEvent()` en `src/utils/marketing-campaigns.js`, sin correos, mensajes externos ni publicaciones.
-- [x] T114 [US20] Ampliar `runAutomationRules()` en `src/utils/marketing-automation.js` y `persistAutomation()` en `src/storage.js` con `campaignId`, contexto de etapa y registro en historial para cada acción o solapamiento.
-- [x] T115 [US20] Implementar la vista de campañas en `src/components/marketing.js` y sus acciones en `src/app.js`, persistiendo en `erp_marketing_config` desde `src/storage.js` con `marketing.campaigns` como semilla y validando fechas en `src/utils/marketing-config.js`.
-
-**Punto de control**: Las campañas ejecutan reglas locales, registran todo y no duplican acciones.
+**Checkpoint**: US24 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 22: US21 - Medir el rendimiento de Marketing (Prioridad: P2)
+## Phase 14: User Story 2 - Registrar clientes y contactos comerciales (Priority: P2)
 
-**Objetivo**: Indicadores derivados de registros existentes, filtrables por campaña, con grupo «Sin campaña» y sin captura manual.
+**Goal**: Capturar identidad, canal, ejecutivo y saneamiento de fichas heredadas.
 
-**Prueba independiente**: Abrir «Rendimiento de campañas», seleccionar una campaña y comprobar prospectos, conversión, interacciones, consultas respondidas y ventas ganadas coinciden con los registros y se actualizan sin recarga; campaña vacía muestra cero con explicación.
+**Independent Test**: En `tests/integration/client-registration.test.js`, registrar un cliente con RUT válido, canal WhatsApp, ejecutivo activo y corregir una ficha heredada bloqueada.
 
-### Pruebas de US21
+- [X] T111 [P] [US2a] Crear `tests/unit/rut.test.js` para `12345678-9` y `12.345.678-9`, dígito verificador y unicidad normalizada.
+- [X] T112 [P] [US2b] Crear `tests/integration/contact-channel.test.js` para canales exactos y campo condicional.
+- [X] T113 [P] [US2c] Crear `tests/integration/owner-assignment.test.js` para ejecutivos N2/N4 activos.
+- [X] T114 [P] [US2d] Crear `tests/integration/blocked-client-edit.test.js` para fichas heredadas incompletas.
+- [X] T115 [US2a] Generar `code` oculto y único en `src/storage.js`.
+- [X] T116 [US2a] Ocultar `code`, `category`, `description` y `pedidos` del perfil cliente en `src/module-config.js`.
+- [X] T117 [US2a] Validar RUT chileno y unicidad normalizada en `src/utils/field-formats.js`.
+- [X] T118 [US2b] Exigir selección explícita de canal sin preselección en `src/components/entity-form.js`.
+- [X] T119 [US2b] Guardar solo el valor del canal elegido en `src/components/entity-form.js`.
+- [X] T120 [US2b] Validar formato del campo de contacto en `src/utils/field-formats.js`.
+- [X] T121 [US2c] Poblar `ejecutivo_asignado` con usuarios activos N2/N4 en `src/components/entity-form.js`.
+- [X] T122 [US2c] Conservar `assignedUserIdAtSale` al cerrar ventas en `src/storage.js`.
+- [X] T123 [US2d] Bloquear ficha incompleta y enumerar campos faltantes en `src/components/entity-detail.js`.
+- [X] T124 [US2d] Permitir editar y desbloquear solo con `entity:edit_own`/`entity:edit_any` en `src/app.js`.
 
-- [x] T116 [P] [US21] Crear `tests/unit/marketing-performance.test.js` para verificar `computeMarketingPerformance()` con prospectos capturados, conversiones por etapa, tasa de conversión, interacciones registradas, consultas respondidas y ventas «Cerrado ganado», sin persistir resultados.
-- [x] T117 [US21] Crear `tests/unit/marketing-performance-attribution.test.js` para comprobar filtro por `campaignId`/`campaña`, agrupación «Sin campaña» y ceros con explicación para campañas sin registros.
-- [x] T118 [P] [US21] Crear `tests/integration/marketing-performance.test.js` para abrir la vista, seleccionar campaña, comparar cifras con el panel y ver actualización sin recarga tras cambios en entidades o documentos.
-
-### Implementación de US21
-
-- [x] T119 [US21] Implementar `computeMarketingPerformance()` en `src/utils/marketing-performance.js` a partir de `entities`, `documents` y `campaigns`, reutilizando `computeDashboardStats()` para los valores compartidos.
-- [x] T120 [US21] Implementar la vista «Rendimiento de campañas» en `src/components/marketing.js` con selector de campaña, tarjetas de indicadores y el mensaje exacto `Sin registros para esta campaña.` para campañas sin registros, sin campos de captura manual.
-- [x] T121 [US21] Conectar `renderMarketingView()` y `handleChange()` en `src/app.js` para recalcular indicadores en cada render, y declarar el campo opcional `campaña` en entidades y documentos de `src/module-config.js`.
-
-**Punto de control**: Rendimiento y panel coinciden porque ambos derivan de los mismos registros.
-
----
-
-## Phase 23: US6 - Consultar indicadores de Gestión Comercial (Prioridad: P2)
-
-**Objetivo**: Resumen de clientes, interacciones y seguimientos pendientes por entidad, con etiquetas de CRM y estado vacío.
-
-**Prueba independiente**: Abrir el resumen, comparar totales y pendientes con las fichas, registrar un seguimiento nuevo y ver el indicador actualizado; sin registros ver ceros y guía inicial.
-
-### Pruebas de US6
-
-- [x] T122 [P] [US6] Ampliar `tests/integration/commercial-summary.test.js` para verificar totales, pendientes por cliente, selección que abre la ficha, estado vacío, etiquetas «Clientes»/«Historial/Ficha» y actualización tras crear o completar seguimientos.
-- [x] T123 [P] [US6] Ampliar `tests/unit/storage.test.js` para comprobar en `computeSummary()` la precedencia de `pendingStates` y, sin ciclo de vida, la coincidencia del estado normalizado con «pendiente».
-
-### Implementación de US6
-
-- [x] T124 [US6] Completar `computeSummary()` en `src/storage.js` con `totalEntities`, `totalDocuments`, `totalPending` y `pendingByEntity` derivados de los registros vigentes.
-- [x] T125 [US6] Completar `renderCommercialSummaryHtml()` en `src/components/commercial-summary.js` y su renderizado desde `src/app.js` con estado vacío y enlaces a la ficha.
-
-**Punto de control**: El resumen refleja exactamente lo registrado en clientes y documentos.
+**Checkpoint**: US2 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 24: Polish & Cross-Cutting Concerns
+## Phase 15: User Story 6 - Consultar indicadores de Gestión Comercial (Priority: P2)
 
-**Propósito**: Regresión, rendimiento, seguridad y cierre de la validación ejecutable.
+**Goal**: Priorizar pendientes del equipo y abrir su detalle.
 
-- [x] T126 [P] Ampliar `tests/integration/performance.test.js` para afirmar que búsqueda y renderizado de listas permanecen correctos con 500 entidades y 500 documentos.
-- [x] T127 [P] Ampliar `tests/unit/sanitize.test.js` y verificar en `src/utils/sanitize.js` que nombres, notas, enlaces y mensajes de chat se escapan antes de renderizarse en `src/components/`.
-- [x] T128 [P] Ampliar `tests/integration/unsaved-navigation.test.js` para confirmar que salir desde cualquier botón de `src/components/shell.js` o `src/components/dashboard.js` con el formulario modificado solo navega tras confirmar descartar.
-- [x] T129 [P] Ampliar `tests/integration/orphan-fields-ui.test.js` para conservar en `erp_entities` los valores de `category`, `description` y `pedidos` sin mostrarlos en `src/components/`.
-- [x] T130 [P] Actualizar `README.md` con los comandos `npm install`, `npm test`, `npm run lint`, `npm run dev` y la limitación de mismo origen de `?view=capture` descrita en `contracts/marketing.md`.
-- [x] T131 [P] Ampliar `tests/integration/marketing-navigation.test.js` para verificar que no existen «Abrir Marketing», torta «Estado comercial de la cartera» ni selector de etapas, y que Marketing está como cuarta opción en `src/components/shell.js`.
-- [x] T132 Ejecutar `npm test` y `npm run lint` definidos en `package.json` y corregir los fallos en `src/` y `tests/` hasta que ambos comandos terminen sin errores.
-- [x] T133 [P] Ampliar `tests/integration/marketing-dashboard.test.js` con la comparación final de cinco tarjetas y embudo entre el panel y Marketing tras crear, editar y eliminar documentos, comprobando que no se escriben resultados derivados en `localStorage`.
-- [x] T144 [P] Ampliar `tests/integration/marketing-navigation.test.js` con la regresión final de clarificaciones: cinco acciones rápidas solo en `.dashboard`, cinco atajos de Marketing en orden exacto y ausencia de las etiquetas obsoletas «Chat» y «Equipo de ventas y logros» como texto visible.
-- [x] T145 Ejecutar `npm test` y `npm run lint` definidos en `package.json` tras T134-T144 y corregir fallos en `src/` y `tests/` hasta que ambos comandos terminen sin errores.
+**Independent Test**: En `tests/integration/commercial-summary.test.js`, agrupar pendientes por cliente y abrir la ficha desde el resumen con permisos own/all.
 
-**Punto de control**: Todas las historias pasan sus pruebas independientes, la suite completa queda en verde y las clarificaciones de Marketing quedan cubiertas.
+- [X] T125 [P] [US6a] Crear `tests/integration/commercial-summary.test.js` para pendientes agrupados por cliente.
+- [X] T126 [US6a] Implementar `computePendingByEntity()` en `src/utils/marketing-stats.js` usando estados configurados o texto normalizado.
+- [X] T127 [US6b] Renderizar lista de pendientes en `src/components/commercial-summary.js`.
+- [X] T128 [US6b] Abrir ficha completa desde el resumen en `src/app.js`.
+- [X] T129 [US6b] Aplicar visibilidad own/all en `src/components/commercial-summary.js`.
+- [X] T130 [US6a] Excluir archivados y «Cerrado perdido» de pendientes en `src/utils/marketing-stats.js`.
+
+**Checkpoint**: US6 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 25: Inicio de sesión y rangos (US22, US23) (Prioridad: P1)
+## Phase 16: User Story 9 - Buscar entidades rápidamente (Priority: P2)
 
-**Objetivo**: Inicio de sesión demostrativo con cuatro usuarios fijos, sesión persistente sin hash ni bloqueo, matriz única de permisos por rango, navegación y acciones filtradas, administración de usuarios y migración de «Ejecutivo Asignado» a usuarios vinculados.
+**Goal**: Buscar por campos visibles con presupuesto de rendimiento.
 
-**Prueba independiente**: Sin sesión solo están disponibles login, formulario público y «Dudas y consultas»; `gerente` (N4), `marketing` (N3), `ventas` (N2) y `atencion` (N1) acceden con cualquier contraseña no vacía y solo a lo permitido; las acciones prohibidas se rechazan con `No tienes permiso para realizar esta acción` o «Acceso denegado» también desde `src/storage.js` o enlaces directos; «Gestionar usuarios» aparece solo para N4 y los ejecutivos asignados provienen de usuarios activos N2/N4.
+**Independent Test**: Ejecutar `tests/performance/search-performance.test.js` con 500 entidades y 500 documentos: menos de 2 s, p95 ≤200 ms en escritorio y ≤500 ms en móvil.
 
-### Pruebas de US22
+- [X] T131 [P] [US9] Crear `tests/performance/search-performance.test.js` con 500 entidades y 500 documentos.
+- [X] T132 [US9] Normalizar búsqueda sin tildes ni mayúsculas en `src/utils/search.js`.
+- [X] T133 [US9] Excluir campos ocultos y retirados en `src/utils/search.js`.
+- [X] T134 [US9] Calcular coincidencias en una sola pasada en `src/utils/search.js`.
+- [X] T135 [US9] Mostrar `No se encontraron resultados.` en `src/components/search.js`.
 
-- [x] T146 [US22a] Crear `tests/unit/auth.test.js` para verificar `normalizeUsername()` sin distinguir mayúsculas ni espacios, que `ensureSeedUsers()` siembra solo `gerente`/`marketing`/`ventas`/`atencion` con rangos N4/N3/N2/N1, y que los usuarios no guardan `passwordHash`, `salt`, `failedAttempts` ni `lockedUntil`.
-- [x] T147 [US22a] Ampliar `tests/unit/auth.test.js` con ingreso de los cuatro usuarios mediante cualquier contraseña no vacía, normalización de `GERENTE` con espacios, mensajes exactos `Ingresa una contraseña` y `Usuario no encontrado`, y comprobación de que cinco intentos fallidos no bloquean al usuario.
-- [x] T148 [US22b] Ampliar `tests/unit/auth.test.js` con `erp_session` persistente, renovación de `lastActivityAt`/`expiresAt` por `touchSession()`, descarte de sesión expirada y revocación inmediata en `logout()` y al desactivar usuario.
-- [x] T149 [US22a] Crear `tests/integration/login.test.js` para abrir la raíz sin `?view=` sin sesión y ver solo «Usuario»/«Contraseña» sin marco ERP; iniciar sesión como los cuatro usuarios demostrativos y comprobar rango exacto, menú del usuario y «Cerrar sesión».
-- [x] T150 [US22a] Ampliar `tests/integration/login.test.js` con contraseña vacía y usuario inexistente que muestran los mensajes exactos sin crear sesión, enlace profundo `?view=summary` redirigido a login y restaurado tras autenticarse, con conservación en recarga y Back/Forward.
-- [x] T151 [US22c] Crear `tests/integration/public-access.test.js` para comprobar que un visitante sin sesión envía `?view=capture` con consentimiento y usa «Dudas y consultas» (`chat`) sin iniciar sesión, sin marco ERP y con prospecto/documento persistidos.
-- [x] T152 [US22b] Ampliar `tests/integration/login.test.js` con recarga y reapertura de navegador conservando la sesión, desactivación de `ventas` que redirige a login en la siguiente acción, y cambio de rango de `ventas` a Nivel 3 reflejado en la barra superior y permisos en la siguiente acción o recarga.
-
-### Pruebas de US23
-
-- [x] T153 [US23c] Crear `tests/unit/permissions.test.js` para verificar `PERMISSION_MATRIX`, `can()` y `assertPermission()` contra el catálogo canónico de `spec.md` en N4, N3, N2, N1 y visitante, con denegación por defecto de acciones no listadas y de `permissions:edit` para todos, usando el mensaje exacto `No tienes permiso para realizar esta acción`.
-- [x] T154 [P] [US23a] Crear `tests/integration/role-n4.test.js` para comprobar permitido de `gerente` (N4): eliminar «Comercial Andina SpA», ver los 47 seguimientos del equipo, gestionar equipos, detener la «Campaña Primavera 2026» creada por `marketing` y abrir «Gestionar usuarios»; y denegado: editar la matriz, `permissions:edit` desde `src/storage.js` y actuar como visitante, incluidas llamadas directas.
-- [x] T155 [P] [US23a] Crear `tests/integration/role-n3.test.js` para comprobar permitido de `marketing` (N3): capturar «Visita 2026-11-23», registrar interacción de Instagram, responder «Dudas y consultas», crear y consultar su «Campaña Primavera 2026», ver fichas y leer «Equipos de ventas y logros»; y denegado: eliminar clientes, abrir resumen, crear integrantes, detener campañas ajenas y gestionar usuarios, también desde `src/storage.js`.
-- [x] T156 [P] [US23a] Crear `tests/integration/role-n2.test.js` para comprobar permitido de `ventas` (N2): crear «Ferretería Central» consigo mismo como «Ejecutivo Asignado», editar sus clientes, registrar y cambiar estados de sus interacciones, ver sus 12 pendientes y su real/objetivo; y denegado: eliminar «Transportes del Norte Ltda.», editar clientes de `ana.munoz`, ver el resumen completo, Marketing, equipo ajeno y llamada directa a `src/storage.js` con el mensaje exacto.
-- [x] T157 [P] [US23a] Crear `tests/integration/role-n1.test.js` para comprobar permitido de `atencion` (N1): buscar y ver fichas, registrar «Llamada» o «Correo» en cualquier cliente y dar seguimiento a consultas del chat; y denegado: registrar «Reunión», cambiar estados, eliminar clientes y abrir Resumen, Marketing o «Equipos de ventas y logros», también desde `src/storage.js`.
-- [x] T158 [P] [US22c] Crear `tests/integration/role-visitor.test.js` para comprobar permitido de visitante: formulario público y «Dudas y consultas»; y denegado: Panel, Buscar, Resumen, Marketing y Equipo, con redirección a login desde la URL raíz sin parámetro `?view=` (no existe `?view=panel`) y sin lectura/escritura interna desde `src/storage.js`.
-- [x] T159 [US23c] Crear `tests/integration/navigation-by-rank.test.js` para verificar en `src/components/shell.js` y `src/components/dashboard.js` que `NAV_ITEMS` y las acciones rápidas ocultan Resumen, Marketing, Equipo y «Gestionar usuarios» según `can()`, sin dejar botones en el DOM para rangos no autorizados.
-- [x] T160 [US23c] Ampliar `tests/integration/navigation-by-rank.test.js` con enlaces directos `?view=summary`, `?view=marketing` y `?view=users-admin`: usuario autenticado sin permiso ve «Acceso denegado» y vuelve al Panel; visitante sin sesión ve login.
-- [x] T161 [P] [US23b] Crear `tests/integration/users-admin.test.js` para ver «Gestionar usuarios» solo en el menú de `gerente`, crear/editar/desactivar usuarios, asignar rangos, rechazar `VENTAS` por duplicado y revocar la sesión de `ventas` al desactivarlo.
-- [x] T162 [US23a] Crear `tests/integration/executive-assignment-migration.test.js` para migrar valores de texto libre de `ejecutivo_asignado` al `userId` de usuarios activos N2/N4, mostrar «Sin asignar» al desactivar `ana.munoz`, conservar sus ventas históricas en el integrante vinculado y ofrecer en el `select` solo usuarios activos válidos.
-- [x] T163 [US23c] Ampliar `tests/unit/storage.test.js` para exigir `assertPermission()` en `saveEntities()`, `addEntity()`, `updateEntity()`, `updateEntityStage()`, `deleteEntity()`, `saveDocuments()`, `addDocument()`, `updateDocument()`, `deleteDocument()`, `deleteDocumentsForEntity()` y escrituras de configuración, verificando que ninguna escritura ocurre cuando `can()` es falso y que `Sistema` solo se usa en automatizaciones. El alcance cubre la API de `storage.js` con sesión local íntegra, incluidas las llamadas iniciadas desde consola; la manipulación deliberada de `localStorage`/`erp_session` o del entorno para falsificar identidad/rango queda fuera de la prueba.
-
-### Implementación de US22 y US23
-
-- [x] T164 [US22a] Implementar `src/auth.js` con `SESSION_HOURS`, `DEMO_PASSWORD`, `normalizeUsername()`, `ensureSeedUsers()`, `listUsers()`, `login()` que acepta cualquier contraseña no vacía, `logout()`, `getCurrentSession()`, `getCurrentUser()`, `touchSession()`, `createUser()`, `updateUser()`, `deactivateUser()`, `listExecutiveUsers()` y `resolveExecutive()` sobre `erp_users`/`erp_session`, sin hash, bloqueo por intentos ni dependencias nuevas.
-- [x] T165 [US22a] Inicializar en `src/auth.js` los usuarios demostrativos `gerente`, `marketing`, `ventas` y `atencion` con rangos N4/N3/N2/N1 y estado activo, solo cuando `erp_users` no exista, sin `passwordHash`, `salt`, `failedAttempts` ni `lockedUntil`.
-- [x] T166 [US22a] Crear `src/components/login.js` con `renderLoginHtml()`, `collectLoginData()` y `renderLoginError()` para mostrar solo «Usuario»/«Contraseña», mantener accesibles captura y «Dudas y consultas», y mostrar `Ingresa una contraseña` o `Usuario no encontrado` según el caso.
-- [x] T167 [US22b] Integrar en `src/app.js` la selección de vista login/pública/shell, el formulario `login-form`, `logout`, la redirección a la vista solicitada, `touchSession()` y la resolución de usuario/rango en cada render o mutación.
-- [x] T168 [P] [US23c] Crear `src/auth/permissions.js` con `ROLES`, `PERMISSION_MATRIX` derivada del catálogo canónico de `spec.md` («Catálogo canónico de acciones»), `can()` y `assertPermission()`, denegando por defecto y excluyendo a `Sistema` de la matriz interactiva.
-- [x] T169 [US23c] Conectar `assertPermission()` en `src/storage.js` antes de todas las mutaciones y escrituras directas, con `context.ownerId`/`campaignOwnerId`, mensaje exacto `No tienes permiso para realizar esta acción`, y ejecución de automatizaciones como `Sistema`.
-- [x] T170 [US14a] Adaptar `src/components/shell.js` para filtrar `NAV_ITEMS` con `can()`, mostrar nombre/rango del usuario en la barra superior, añadir el menú con «Cerrar sesión» y «Gestionar usuarios» solo para N4, sin crear entrada lateral.
-- [x] T171 [US15a] Adaptar `src/components/dashboard.js` para filtrar las acciones rápidas con `can()` y evitar que rangos no autorizados vean botones de creación, gestión o búsqueda.
-- [x] T172 [US23b] Crear `src/components/users-admin.js` con `renderUsersAdminHtml()`, `renderUserFormHtml()`, `collectUserData()`, lista de usuarios y `select` de rangos, rechazando duplicados normalizados y sin ofrecer edición de la matriz.
-- [x] T173 [US23b] Conectar en `src/app.js` las acciones `manage-users`, `user-form`, `edit-user` y `deactivate-user` con `src/auth.js`, refrescando la vista activa tras cambios de rango o desactivación.
-- [x] T174 [US2c] Sustituir en `src/module-config.js` y `src/components/form-fields.js` el texto libre de `ejecutivo_asignado` por un `select` poblado desde `src/auth.js` con usuarios activos N2/N4, guardando el `userId`.
-- [x] T175 [US17b] Adaptar `src/utils/sales-team-metrics.js` y la persistencia de `marketing.salesTeams` en `src/storage.js` para vincular integrantes por `userId` y calcular real/objetivo usando `assignedUserIdAtSale` cuando exista y el `ejecutivo_asignado` vigente en su defecto.
-- [x] T176 [US2d] Implementar en `src/storage.js` la migración de `ejecutivo_asignado` desde texto heredado a `userId`, resolviendo nombres de usuarios activos N2/N4, marcando «Sin asignar» los inactivos y conservando documentos e historial de ventas.
-- [x] T177 [US23c] Ejecutar `npm test` y `npm run lint` definidos en `package.json`, corregir fallos en `src/` y `tests/` y verificar que la Fase 25 no rompe las fases 1-24.
-- [x] T178 [US15b] Crear `tests/integration/usability-criteria.test.js` y `tests/integration/usability-checklist.md` para ejecutar la prueba cronometrada de SC-003 con cinco participantes que creen, editen, eliminen y busquen una entidad sin ayuda, registrando resultados y al menos 90% de éxito.
-- [x] T179 [US16c] Crear `tests/integration/prospect-conversion.test.js` para verificar que un prospecto solo se convierte en Cliente mediante regla automática/campaña o edición de Nivel 4, sin selector de etapas, conservando `id`, documentos y campos personalizados y registrando auditoría; comprobar que el valor interno es `ganado`, que su etiqueta visible es «Cliente ganado» y que «Cerrado ganado» sigue siendo un estado de documento; ajustar `src/storage.js` y `src/utils/marketing-stage.js` según FR-068.
-- [x] T180 [US16a] Ampliar `tests/integration/public-access.test.js` y ajustar `src/components/marketing-chat.js` con `src/utils/capture-prospect.js` para exigir consentimiento y datos mínimos de prospecto antes del primer mensaje, vinculando las consultas sin coincidencia a esa entidad (FR-083, FR-085).
-- [x] T181 [US5] Ampliar `tests/unit/module-config.test.js` para exigir validación autocontenida de `fieldRules`, `statusLifecycle.pendingStates`, `marketing.faq`, `marketing.privacyNoticeVersion` y `marketing.campaigns.actions`, con fallback a `DEFAULT_CONFIG` y advertencia visible.
-- [x] T182 [US23c] Ampliar `tests/unit/permissions.test.js` y `tests/unit/storage.test.js` para verificar denegación de lecturas, agregaciones y acciones con sufijo `_own` cuando `ownerId`/`campaignOwnerId` falta o no coincide, según el catálogo canónico de `spec.md`.
-- [x] T183 [US17b] Ampliar `tests/unit/sales-team-metrics.test.js` y `tests/integration/executive-assignment-migration.test.js` para conservar `assignedUserIdAtSale` tras desactivar o cambiar de rango al ejecutivo, verificar que FR-078/FR-079 lo consumen antes que el campo vigente, mantener el historial de ventas y excluirlo de nuevas asignaciones.
-- [x] T184 [US20c] Ampliar `tests/unit/marketing-campaigns.test.js` y `tests/integration/marketing-campaigns.test.js` para persistir `createdByUserId` en campañas y conservarlo tras cambio de rango o desactivación del creador, separándolo de la ejecución como `Sistema`.
-- [x] T185 [US23c] Ejecutar `npm test` y `npm run lint` definidos en `package.json` tras T178-T184, corregir fallos en `src/`/`tests/` y verificar que T001-T184 y las fases 1-25 siguen en verde sin cambiar los marcadores `[x]` existentes; este gate cubre US5, US15, US16 y US23.
-- [x] T186 [US23] Ejecutar `npm run format:check` definido en `package.json`, corregir el formato de `src/`, `tests/`, `specs/`, `README.md` y archivos de configuración, y verificar que la comprobación termina sin cambios pendientes; esta tarea cierra el gate de calidad sin renumerar T001-T185 ni modificar marcadores `[x]`.
-
-## Phase 26: Remediación de consistencia (I1, I2, U1, U2, U3, A1, D1) (Prioridad: P1)
-
-**Objetivo**: Alinear implementación y pruebas con rutas relativas, terminología de conversión, reglas de casos límite, presupuesto de rendimiento, mensajes exactos, redacción verificable y lista canónica de campos de búsqueda, sin renumerar T001-T186 ni cambiar sus marcadores.
-
-**Prueba independiente**: Abrir cada ruta relativa y recargarla o usar Back/Forward; distinguir «Cliente ganado» de «Cerrado ganado»; ejecutar los casos límite con resultados observables; medir 500 entidades y 500 documentos; comprobar los doce mensajes exactos; verificar FR-004/FR-020/FR-055 con una sola lista canónica.
-
-- [x] T187 [US23c] Crear `tests/integration/relative-routes.test.js` para resolver la vista desde `location.search` en carga inicial, recarga y Back/Forward con `?view=capture`, `?view=summary`, `?view=marketing`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, sin `?view=panel`, conservando la ruta al redirigir a login y restaurándola tras autenticarse; comprobar que `?view=capture` sigue público y que un usuario autenticado sin permiso ve «Acceso denegado» y vuelve al Panel.
-- [x] T188 [US23c] Ajustar `src/app.js`, `src/components/login.js` y `src/components/shell.js` para eliminar cualquier dependencia de host o ruta de servidor, aplicar la matriz en cada resolución de ruta y mantener navegación, botones y acciones rápidas coherentes con la matriz de permisos (FR-094, FR-097).
-- [x] T189 [US16c] Ampliar `tests/integration/prospect-conversion.test.js` y `tests/unit/marketing-performance.test.js` para comprobar que el valor interno de conversión es `ganado`, que su etiqueta visible es «Cliente ganado» y que «Cerrado ganado» sigue siendo exclusivamente un estado de `Documento` en tarjetas, embudo, equipo y rendimiento; ajustar `src/utils/marketing-stage.js`, `src/utils/marketing-stats.js` y `src/module-config.js` sin cambiar datos persistidos.
-- [x] T190 [U1] Crear `tests/integration/edge-case-rules.test.js` con resultados observables para: búsqueda sin coincidencias; editar o eliminar entidad inexistente sin mutación; fechas inválidas y conservación de valores históricos; cascada de documentos; `endDate < startDate`; colisión de clave de campo personalizado; tipo de campo o transición desconocidos; valores huérfanos guardados y ocultos; enlaces profundos con Back/Forward y recarga; cambios sin guardar; estados cero; color de acento inválido; barra lateral estrecha; ficha sin documentos; pendientes empatados por `id`; y sesión conforme a FR-102.
-- [x] T191 [U2] Crear `tests/performance/render-search.test.js` con 500 entidades y 500 documentos para medir renderizado, búsqueda y recálculo de derivados en 200 ms p95 en el navegador de escritorio moderno de referencia y 500 ms p95 en el navegador low-end/móvil de referencia, sin congelación visible, con una sola pasada por juego de datos y sin persistir resultados derivados; ajustar las utilidades de agregación que superen el umbral.
-- [x] T192 [U3] Crear `tests/integration/exact-messages.test.js` para exigir los doce textos exactos `No se encontraron resultados.`, `Completa los campos obligatorios.`, `El RUT es inválido.`, `El RUT ya está registrado.`, `Revisa el dato de contacto según el canal elegido.`, `Prospecto registrado correctamente.`, `Consulta registrada; un ejecutivo hará seguimiento.`, `Sin registros para esta campaña.`, `No tienes permiso para realizar esta acción`, `Acceso denegado`, `Ingresa una contraseña` y `Usuario no encontrado` en los flujos de FR-005, FR-006, FR-057, FR-061, FR-069, FR-083, FR-087, FR-096, FR-097 y US22; ajustar los componentes que usen variantes.
-- [x] T193 [D1] Ampliar `tests/unit/search-fields.test.js` y `tests/unit/module-config.test.js` para verificar que FR-004 es la única lista canónica de campos buscables, que FR-020 y FR-055 solo aplican el perfil mediante `fieldRules` o una anulación explícita, y que ningún campo queda buscable en un sitio y excluido en otro sin esa declaración; ajustar `src/utils/field-rules.js` y `src/module-config.js`.
-- [x] T194 [A1] Revisar `plan.md`, `spec.md`, `tasks.md`, `quickstart.md` y los contratos para comprobar que no quedan URL absolutas ni adjetivos subjetivos sin respaldo medible, que los mensajes exactos y la terminología coinciden, y ejecutar `npm test`, `npm run lint` y `npm run format:check`, conservando los marcadores `[X]` de T001-T186.
-
-**Punto de control**: Login, permisos por rango, administración de usuarios, atribución histórica, conversión de prospectos y usabilidad son verificables de forma independiente; T185 ejecuta el gate final funcional de US5, US15, US16 y US23, T186 cierra el gate de formato y T187-T194 verifican la remediación de consistencia.
+**Checkpoint**: US9 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 27: US25 - Registrar y gestionar tickets de Postventa (Prioridad: P2)
+## Phase 17: User Story 10 - Registrar fecha objetivo (Priority: P2)
 
-**Objetivo**: Añadir «Postventa» como quinta opción de la barra lateral con `?view=postventa`, botón «Nuevo Ticket», tres tarjetas derivadas de tickets y una tabla con cambio libre de estado, reutilizando `Documento` como único almacenamiento y validando permisos en la capa de datos.
+**Goal**: Fecha opcional en base y fecha de nacimiento obligatoria en clientes.
 
-**Prueba independiente**: Con `atencion` (N1) y `gerente` (N4), abrir `?view=postventa`, crear un ticket en `Abierto` para un cliente existente, ver «Tickets abiertos» en 1, cambiar a `Resuelto` con nota, reabrir a `Abierto`, recargar y confirmar que el ticket sigue en la ficha del cliente y que las tarjetas coinciden con los estados almacenados; con `ventas` (N2) ver solo tickets de sus clientes y sin controles de creación/cambio; con `marketing` (N3) y visitante, denegación también por enlace profundo, consola y llamada directa a `src/storage.js`.
+**Independent Test**: En `tests/unit/entity-date.test.js`, validar rango `1910-01-01` hasta la fecha local actual y corregir fechas heredadas sin borrarlas.
 
-### Pruebas de US25
+- [X] T136 [P] [US10a] Crear `tests/unit/entity-date.test.js` para fecha opcional en perfiles base.
+- [X] T137 [P] [US10b] Crear `tests/integration/birth-date.test.js` para rango y etiqueta visible.
+- [X] T138 [US10a] Validar `YYYY-MM-DD` y `endDate >= startDate` en `src/utils/entity-date.js`.
+- [X] T139 [US10b] Exigir fecha de nacimiento en `src/module-config.js` y `src/components/entity-form.js`.
+- [X] T140 [US10b] Actualizar límite superior a medianoche local en `src/utils/entity-date.js`.
+- [X] T141 [US10c] Conservar fechas heredadas inválidas hasta corrección en `src/storage.js`.
+- [X] T142 [US10c] Mostrar fecha inválida y exigir corrección al guardar en `src/components/entity-form.js`.
+- [X] T143 [US10b] Verificar pruebas automatizadas de validación de fecha exigidas por SC-012 en `tests/unit/entity-date.test.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T195 [P] [US25] Crear `tests/unit/postventa.test.js` para exigir que `validatePostventaConfig()` acepte solo `states = ['Abierto', 'En revisión', 'Resuelto']`, `categoryOptions` con «Soporte técnico», «Facturación», «Garantía» y «Consulta», `priorityOptions` con «Baja», «Media» y «Alta» sin preselección, `cardMapping = { abiertos: 'Abierto', enProceso: 'En revisión', resueltos: 'Resuelto' }`, `resolutionNoteStates = ['Resuelto']` y `transitions: []` con significado de cualquier par, incluida `Resuelto → Abierto`; verificar `isTicket()` y que `computeTicketStats()` cuente cada ticket una sola vez en una pasada.
-- [x] T196 [P] [US25] Crear `tests/unit/postventa-permissions.test.js` para exigir en `src/auth/permissions.js` las acciones canónicas `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, con N4 y N1 creando/cambiando cualquier estado, N2 solo `postventa:view_own` con `ownerId`, y N3/visitante denegados por defecto con `No tienes permiso para realizar esta acción`.
-- [x] T197 [P] [US25] Crear `tests/unit/postventa-storage.test.js` para exigir que `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` en `src/storage.js` comprueben permisos antes de leer o escribir, rechacen `entity_id` inexistente, vinculen el ticket al cliente, acepten cualquier transición entre `Abierto`, `En revisión` y `Resuelto`, persistan `nota_resolucion` solo en `Resuelto`, actualicen `updatedAt` y no escriban en `localStorage` cuando `can()` sea falso.
-- [x] T198 [P] [US25] Crear `tests/integration/postventa-view.test.js` para verificar en `src/components/shell.js` y `src/app.js` que «Postventa» aparece como quinta opción después de Marketing, que `?view=postventa` resuelve en carga, recarga y Back/Forward con resaltado activo, que «Nuevo Ticket» va arriba y las tarjetas «Tickets abiertos», «En proceso» y «Resueltos» debajo de la tabla, que el desplegable «Cliente» filtra por nombre y no ofrece clientes con `archivedAt`, y que sin tickets se muestran ceros y un estado vacío explícito.
-- [x] T199 [P] [US25] Crear `tests/integration/postventa-permissions.test.js` para comprobar que `atencion` y `gerente` crean tickets y cambian cualquier estado, que `ventas` ve solo tickets de clientes con `ejecutivo_asignado` igual a su `id` y no ve botón ni control de estado, que `marketing` y el visitante reciben «Acceso denegado» o login desde `?view=postventa`, y que las llamadas directas a `src/storage.js` o desde consola se rechazan con `No tienes permiso para realizar esta acción` sin mutar datos.
-- [x] T200 [P] [US25] Crear `tests/integration/postventa-customer-detail.test.js` para verificar que un ticket creado desde Postventa aparece en la ficha de su cliente con «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», que el texto persistido se sanitiza, que un guardado sin prioridad o en `Resuelto` sin nota muestra exactamente `Completa los campos obligatorios.` y que eliminar el cliente elimina sus tickets por `entity_id`.
-
-### Implementación de US25
-
-- [x] T201 [P] [US25] Crear `src/utils/postventa.js` con `isTicket()`, `validatePostventaConfig()`, `validateTicketValues()` y `computeTicketStats()`, usando `ticket: true` como discriminador, las opciones exactas declaradas, prioridad sin preselección, nota obligatoria solo en `Resuelto` con `Completa los campos obligatorios.`, y una sola pasada para `{ abiertos, enProceso, resueltos }` según `cardMapping`.
-- [x] T202 [US25] Añadir el bloque opcional `postventa` a `DEFAULT_CONFIG` en `src/module-config.js` y validarlo con `validatePostventaConfig()` desde `src/utils/postventa.js`, manteniendo el comportamiento base intacto cuando el bloque está ausente.
-- [x] T203 [US25] Ampliar `src/auth/permissions.js` con `postventa:view` para N4/N1, `postventa:view_own` para N4/N2 con `ownerId`, y `postventa:create`/`postventa:transition` para N4/N1, sin conceder `document:edit_any` a N1 ni acciones a N3/visitante.
-- [x] T204 [US25] Implementar en `src/storage.js` `createTicketDocument()`, `changeTicketStatus()` y `listTicketDocuments()` sobre la ruta existente de `Documento`, llamando a `assertPermission()` con las acciones `postventa:*`, validando `entity_id` existente, cualquier par de estados declarado, `nota_resolucion` condicional, `updatedAt` y el mensaje exacto de denegación sin escritura.
-- [x] T205 [US25] Añadir `postventa` a `NAV_ITEMS` en `src/components/shell.js` inmediatamente después de `marketing`, con etiqueta «Postventa», resaltado por `state.view` y filtrado por `can()` para N1, N2 y N4.
-- [x] T206 [US25] Registrar `postventa` en `ROUTE_VIEWS`, `VIEW_ROUTES` y `routeFromKey()` en `src/app.js`, resolviendo `?view=postventa` desde `location.search` en carga, recarga y Back/Forward y aplicando la matriz antes de renderizar.
-- [x] T207 [US25] Crear `src/components/postventa.js` con botón «Nuevo Ticket» arriba, las tres tarjetas y la tabla debajo, campos en orden «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», buscador `#ticket-client-search`, opciones exactas sin preselección, control de estado, mensaje `Completa los campos obligatorios.`, `No tienes permiso para realizar esta acción`, estado vacío y `escapeHtml()` para texto persistido.
-- [x] T208 [US25] Cablear en `src/app.js` las acciones `ticket-form`, `ticket-client-search`, `ticket-save` y `ticket-status-change` con `src/storage.js`, volviendo a renderizar tarjetas y tabla tras cada mutación sin recarga.
-- [x] T209 [US25] Adaptar `src/components/entity-detail.js` para mostrar los tickets del cliente desde el historial de documentos con sus campos de Postventa, sin crear una lista persistida adicional.
-- [x] T210 [US25] Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T195-T209, corregir fallos en `src/` y `tests/` y verificar que T001-T194 siguen en verde sin cambiar sus marcadores `[x]`.
-
-**Punto de control**: Postventa es funcional de forma independiente con N1/N4 creando y reabriendo tickets, N2 limitado a sus clientes y N3/visitante denegado en UI, enlaces profundos y capa de datos; T210 cierra el gate funcional y de calidad del incremento anterior.
+**Checkpoint**: US10 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 28: Ajustes de Postventa (pestaña nueva, sincronización y tarjetas)
+## Phase 18: User Story 11 - Registrar detalles de documentos (Priority: P2)
 
-**Objetivo**: Al pulsar «Nuevo Ticket» abrir el formulario en una pestaña nueva del navegador sin reemplazar `?view=postventa`, actualizar automáticamente la vista original cuando otra pestaña guarda un ticket, y ajustar el tamaño y la proporción de las tres tarjetas a los indicadores de «Resumen».
+**Goal**: Capturar interacciones, cambiar estados por rango y exigir motivo en cierres perdidos de prospectos.
 
-**Prueba independiente**: Con `atencion` (N1) o `gerente` (N4), abrir `?view=postventa`, pulsar «Nuevo Ticket» y confirmar que el formulario aparece en una pestaña nueva con `?view=ticket-form` mientras la original permanece en Postventa; guardar un ticket en la pestaña nueva y verificar que la original muestra la nueva fila y las tarjetas recalculadas sin recargar; comparar las tres tarjetas con los indicadores de «Resumen»; con `ventas` (N2) verificar que ve el formulario solo para sus clientes y que no puede crear tickets, y con `marketing` (N3) y visitante confirmar la denegación también por enlace profundo.
+**Independent Test**: En `tests/integration/lost-reason.test.js`, guardar `Cerrado perdido` sin motivo debe fallar; con «Eligió competencia» debe persistir en el historial y no alterar ventas, pendientes ni real mensual.
 
-### Pruebas de ajustes de Postventa
+- [X] T144 [P] [US11a] Crear `tests/integration/document-form.test.js` para campos obligatorios y permisos de creación.
+- [X] T145 [P] [US11b] Crear `tests/unit/lost-reason.test.js` con opciones exactas `Precio alto`, `Eligió competencia`, `Sin presupuesto` y `No responde`.
+- [X] T146 [P] [US11b] Crear `tests/integration/lost-reason.test.js` para prospecto, cliente convertido, historial y métricas.
+- [X] T147 [US11a] Renderizar `interactionType`, importes y notas en `src/components/document-form.js`.
+- [X] T148 [US11b] Crear `src/utils/lost-reason.js` con la regla pura derivada de `documentRules.lostReason`.
+- [X] T149 [US11b] Ejecutar la regla en `validateDocumentData()` de `src/storage.js` antes de escribir.
+- [X] T150 [US11b] Mostrar `motivo_perdida` solo si el documento pasa a `cerrado perdido` y la entidad tiene `estado_comercial = prospecto` en `src/components/document-form.js`.
+- [X] T151 [US11b] Rechazar guardado sin motivo con `Completa los campos obligatorios.` en `src/storage.js` y `src/components/document-form.js`.
+- [X] T152 [US11b] Mostrar el motivo elegido en el historial en `src/components/document-list.js`.
+- [X] T153 [US11b] Reevaluar visibilidad y obligatoriedad al cambiar estado o cliente en `src/components/document-form.js`.
+- [X] T154 [US11b] Verificar que `Cerrado perdido` no se añade a `pendingStates`, `ACTIVE_STATES` ni `WON_STATUS` en `src/module-config.js`, `src/utils/marketing-stats.js` y `src/utils/sales-team-metrics.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T211 [P] [US25] Crear `tests/integration/postventa-ticket-tab.test.js` para exigir que el botón «Nuevo Ticket» de `src/components/postventa.js` llame a `window.open(routeUrl('ticket-form'), '_blank', 'noopener')`, que `?view=postventa` no renderice el formulario en línea y que `?view=ticket-form` renderice el formulario completo como vista independiente sin shell en `src/app.js`.
-- [x] T212 [P] [US25] Ampliar `tests/integration/postventa-permissions.test.js` para verificar que `?view=ticket-form` exige `postventa:create`, que N1/N4 pueden abrirlo y guardar, que N2 ve denegado el acceso directo aunque pueda ver Postventa, y que N3/visitante reciben «Acceso denegado» o login sin mutar datos.
-- [x] T213 [P] [US25] Crear `tests/integration/postventa-cross-tab.test.js` para verificar que un `storage` event con `key = 'erp_documents'` o `key = null` dispara `render()` en `src/app.js`, que la tabla y las tres tarjetas se recalculan sin recarga, y que eventos de otras claves no provocan render.
-- [x] T214 [P] [US25] Ampliar `tests/integration/postventa-view.test.js` para exigir que `.postventa-view` contenga `.postventa-cards` con tres `.stat-card` y que `src/styles.css` declare `.postventa-cards` con la misma regla de dimensionamiento y espaciado que `.summary-cards`, sin añadir reglas específicas a `.stat-card` ni cambiar el orden etiqueta/valor.
-- [x] T215 [P] [US25] Adaptar `tests/integration/postventa-customer-detail.test.js` para crear el ticket desde `?view=ticket-form` en lugar del formulario en línea y confirmar que la ficha del cliente sigue mostrando «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con el texto sanitizado.
-
-### Implementación de ajustes de Postventa
-
-- [x] T216 [P] [US25] Crear `src/components/ticket-form.js` con `renderTicketFormHtml()` extrayendo de `src/components/postventa.js` los campos «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», el buscador `#ticket-client-search`, las opciones exactas sin preselección, el mensaje `Completa los campos obligatorios.` y el escape de texto persistido.
-- [x] T217 [US25] Modificar `src/components/postventa.js` para eliminar el formulario en línea, conservar «Nuevo Ticket» junto a las tres tarjetas y la tabla, y convertir el botón en el disparador de la apertura de pestaña sin alterar el filtro de clientes ni el control de estado.
-- [x] T218 [US25] Registrar `ticket-form` en `ROUTE_VIEWS`, `VIEW_ROUTES`, `routeFromKey()` y `routeForState()` en `src/app.js`, resolviendo `?view=ticket-form` en carga, recarga y Back/Forward con `postventa:create` como gate y renderizando la vista sin `renderShellHtml()` igual que las vistas públicas.
-- [x] T219 [US25] Cablear en `src/app.js` la acción `ticket-form` con `window.open(routeUrl('ticket-form'), '_blank', 'noopener')` y adaptar `ticket-save` al formulario de la pestaña nueva, conservando validación, permisos, mensajes exactos y retorno a Postventa tras guardar.
-- [x] T220 [US25] Registrar en `src/app.js` un listener de `window` para `storage` que filtre `key === 'erp_documents'`, `key === 'erp_entities'` o `key === null`, llame a `render()` sin sondeos ni `postMessage`, y se retire en `destroy()`.
-- [x] T221 [P] [US25] Añadir en `src/styles.css` la regla `.postventa-cards` equivalente a `.summary-cards` para igualar tamaño y proporción de las tres tarjetas, sin modificar `.stat-card` global ni el orden de etiqueta y valor.
-- [x] T222 [US25] Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T211-T221, corregir fallos en `src/` y `tests/` y verificar que T001-T210 siguen en verde sin cambiar sus marcadores `[x]`.
-
-**Punto de control**: «Nuevo Ticket» abre una pestaña independiente, la vista Postventa original se actualiza sola tras guardar y las tarjetas igualan a los indicadores de «Resumen»; T222 cierra el gate funcional y de calidad de este incremento, pero sus decisiones de pestaña y sincronización quedan superadas por T223-T249.
+**Checkpoint**: US11 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 29: US4a - Creación dentro de las gestiones (P1)
+## Phase 19: User Story 12 - Buscar entidades en pantalla dedicada (Priority: P2)
 
-**Objetivo**: Conseguir que «Gestionar clientes» y «Gestionar interacciones» abran las pantallas de gestión con el formulario de alta vacío, sin entradas de creación en el panel ni apartados de gestión en la barra lateral.
+**Goal**: Ofrecer búsqueda sin acciones de creación o edición.
 
-**Prueba independiente**: Con `gerente` (N4) y `ventas` (N2), abrir `?view=manage-entity` y `?view=manage-document`, comprobar el formulario vacío con «Nuevo Cliente» o «Nueva interacción» y volver al panel con «Panel» sin mutar `erp_entities` ni `erp_documents`; con `atencion` (N1) verificar que las gestiones siguen denegadas por enlace profundo.
+**Independent Test**: En `tests/integration/search-view.test.js`, abrir `Buscar`, buscar por campo visible y confirmar que no hay botones de alta, edición ni baja.
 
-### Pruebas de US4a
+- [X] T155 [P] [US12] Crear `tests/integration/search-view.test.js` para ruta, resultados y ausencia de acciones de gestión.
+- [X] T156 [US12] Registrar la ruta de búsqueda en `src/app.js` con `search:view`.
+- [X] T157 [US12] Renderizar resultados con apertura de ficha rápida en `src/components/entity-list.js`.
+- [X] T158 [US12] Ocultar acciones de creación, edición y baja en `src/components/search.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T223 [P] [US4a] Adaptar `tests/integration/manage-screen.test.js` para verificar que `?view=manage-entity` muestra `.client-management-table`, `.client-form-section` con el encabezado «Nuevo Cliente» y `#entity-form` vacío, sin `.entity-list`, sin entradas de gestión en `.sidebar` y sin cambios en `erp_entities` al volver al panel.
-- [x] T224 [P] [US4a] Adaptar `tests/integration/manage-document.test.js` para verificar que `?view=manage-document` muestra `#document-form`, el encabezado «Nueva interacción» y `#field-notes` vacío, sin entradas de gestión en `.sidebar` y sin cambios en `erp_documents` al volver al panel.
-
-### Implementación de US4a
-
-- [x] T225 [US4a] Ajustar `renderManageView()` en `src/app.js` para que las acciones de gestión abren `manage-entity` o `manage-document` con el formulario vacío, sin reutilizar borradores ni identificadores de edición, y conservan los enlaces profundos `?view=manage-entity` y `?view=manage-document`.
-- [x] T226 [US4a] Eliminar de `handleClick()` en `src/app.js` los casos `quick-new-entity` y `quick-new-document`, conservando únicamente `quick-manage`, `navigate` a `manage-document` y `quick-search` como entradas del panel hacia gestión/búsqueda.
-
-**Punto de control**: Las gestiones son el único lugar de alta de clientes e interacciones y los formularios aparecen vacíos T223-T226.
+**Checkpoint**: US12 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 30: US7 - Etiquetas de creación coherentes (P1)
+## Phase 20: User Story 13 - Configurar ciclo de vida de estados (Priority: P2)
 
-**Objetivo**: Derivar de `labels` los encabezados de creación y quitar del panel cualquier botón de alta, sin fijar género gramatical en los componentes.
+**Goal**: Declarar estados, transiciones y pendientes con fallback seguro.
 
-**Prueba independiente**: Con el perfil CRM activo, «Nuevo Cliente» aparece solo dentro de «Gestionar clientes», «Nueva interacción» aparece dentro de «Gestionar interacciones», y Panel, Buscar, Resumen, Marketing y gestión muestran «Cliente» e «Interacción» sin «Entidad», «Documento» ni «Nueva cliente».
+**Independent Test**: En `tests/unit/status-lifecycle.test.js`, validar configuración, transiciones permitidas y denegación de estados desconocidos.
 
-### Pruebas de US7
+- [X] T159 [P] [US13a] Crear `tests/unit/status-lifecycle.test.js` para estados, transiciones y `pendingStates`.
+- [X] T160 [US13a] Declarar `statusLifecycle.states` con `cerrado perdido` en `src/module-config.js`.
+- [X] T161 [US13b] Validar transiciones en `isValidTransition()` de `src/storage.js`.
+- [X] T162 [US13b] Aplicar transiciones desde `src/components/document-form.js` y `src/app.js`.
+- [X] T163 [US13a] Proveer fallback ante configuración inválida en `src/module-config.js`.
+- [X] T164 [US13b] Mostrar el estado vigente en `src/components/document-list.js`.
+- [X] T165 [US13a] Normalizar `pendiente` cuando no haya `pendingStates` en `src/utils/marketing-stats.js`.
 
-> **Nota**: Esta suite se escribe primero y debe fallar antes de la implementación.
-
-- [x] T227 [P] [US7] Adaptar `tests/integration/relabeling.test.js` para exigir que Panel, Buscar, Resumen, Marketing y gestión usen «Cliente» e «Interacción» —y «Fecha de nacimiento»—, que «Nuevo Cliente» aparezca solo en la gestión y que no aparezcan «Nueva cliente», «Nuevo Cliente» en `.quick-actions`, «Entidad» ni «Documento» en texto visible.
-
-### Implementación de US7
-
-- [x] T228 [US7] Ajustar los encabezados de creación en `renderManageView()` de `src/app.js` para derivarlos de `getLabel()`: `Nuevo ${entityLabel}` para clientes, `Nueva interacción` con el perfil CRM y `Nuevo documento` con la configuración base, sin texto «Nueva cliente» ni género codificado en `src/components/`.
-
-**Punto de control**: La terminología de alta es consistente en todas las vistas y no depende de constantes de género T227-T228.
+**Checkpoint**: US13 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 31: US15a - Panel con tres acciones rápidas (P1)
+## Phase 21: User Story 16 - Capturar y convertir prospectos desde Marketing (Priority: P2)
 
-**Objetivo**: Reducir el panel a «Gestionar clientes», «Gestionar interacciones» y «Buscar registros», filtradas por rango, sin «Nuevo Cliente», «Nueva interacción» ni «Abrir Marketing».
+**Goal**: Captura pública con consentimiento, automatización como `Sistema`, conversión sin pérdida y panel espejo.
 
-**Prueba independiente**: Con permisos completos, la URL raíz muestra exactamente esas tres acciones en ese orden; `ventas` ve las tres, `atencion` solo «Buscar registros» y `marketing` ninguna de gestión; activar cada acción abre su gestión o enfoca `#search-input`.
+**Independent Test**: En `tests/integration/marketing.test.js`, capturar con consentimiento, ejecutar regla, convertir prospecto conservando historial y comparar panel con Marketing.
 
-### Pruebas de US15a
+- [X] T166 [P] [US16a] Crear `tests/integration/capture-form.test.js` para consentimiento, versión y fecha.
+- [X] T167 [P] [US16b] Crear `tests/unit/marketing-automation.test.js` para reglas ejecutadas como `Sistema`.
+- [X] T168 [P] [US16c] Crear `tests/integration/prospect-conversion.test.js` para conservar ID, documentos y campos.
+- [X] T169 [P] [US16d] Crear `tests/integration/marketing-dashboard.test.js` para paridad de tarjetas, embudo y cinco atajos.
+- [X] T170 [US16a] Renderizar `?view=capture` sin marco ERP en `src/components/capture-form.js`.
+- [X] T171 [US16a] Exigir consentimiento y registrar `consentimiento_fecha`/`consentimiento_version` en `src/utils/capture-prospect.js`.
+- [X] T172 [US16a] Crear entidad con `estado_comercial = Prospecto` en `src/storage.js`.
+- [X] T173 [US16b] Ejecutar `runAutomationRules()` con `createdBy: 'Sistema'` en `src/utils/marketing-automation.js`.
+- [X] T174 [US16b] Registrar ejecuciones como `Documento` en `src/storage.js`.
+- [X] T175 [US16b] Ocultar estado comercial interno en Marketing en `src/components/marketing.js`.
+- [X] T176 [US16c] Convertir prospecto conservando historial en `src/storage.js`.
+- [X] T177 [US16d] Reutilizar tarjetas y embudo del panel en `src/components/marketing.js`.
+- [X] T178 [US16d] Ordenar atajos exactamente: «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas», «Redes sociales» en `src/components/marketing.js`.
+- [X] T179 [US16d] Omitir `.quick-actions` en Marketing desde `src/components/dashboard.js`.
+- [X] T180 [US16d] Renombrar «Chat» a «Dudas y consultas» manteniendo `data-section="chat"` en `src/components/marketing-chat.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T229 [P] [US15a] Adaptar `tests/integration/dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— en ese orden, sin `quick-new-*`, sin «Nuevo Cliente», sin «Nueva interacción» ni «Abrir Marketing», y verificando que cada botón abre su gestión o enfoca `#search-input`.
-- [x] T230 [P] [US15a] Adaptar `tests/integration/client-form-presentation.test.js` para exigir «Nuevo Cliente» solo en `.client-form-section h2` tras abrir la gestión y para eliminar la aserción sobre la acción rápida retirada del panel.
-- [x] T231 [P] [US15a] Adaptar `tests/integration/navigation-by-rank.test.js` para exigir que N4/N2 ven las tres acciones, N1 solo `quick-search`, N3 no ve acciones de gestión y los enlaces profundos de gestión siguen denegados conforme a la matriz.
-
-### Implementación de US15a
-
-- [x] T232 [US15a] Modificar `renderDashboardHtml()` en `src/components/dashboard.js` para renderizar solo `Gestionar ${entityPlural}`, `Gestionar ${documentPlural}` y `Buscar registros`, con `data-action="quick-manage"`, `data-action="navigate" data-view="manage-document"` y `data-action="quick-search"`, sin botones `quick-new-entity` ni `quick-new-document`.
-- [x] T233 [US15a] Simplificar `applyPermissionFilters()` en `src/app.js` para filtrar únicamente esas tres acciones con `entity:create`/`entity:edit_*`, `document:create` y `search:view`, retirando las ramas de `quick-new-entity` y `quick-new-document`.
-
-**Punto de control**: El panel ofrece solo tres entradas permitidas y la búsqueda y las gestiones siguen alcanzables T229-T233.
-
----
-
-## Phase 32: US16d - Marketing sin acciones del panel (P2)
-
-**Objetivo**: Mantener las cinco tarjetas, el embudo y los cinco atajos de Marketing, sin heredar las tres acciones rápidas del panel.
-
-**Prueba independiente**: Tras registrar 47 clientes y 120 interacciones, panel y Marketing muestran las mismas cifras; Marketing no contiene `.quick-actions` ni las etiquetas «Gestionar clientes», «Gestionar interacciones» o «Buscar registros», y conserva sus cinco atajos en orden.
-
-### Pruebas de US16d
-
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T234 [P] [US16d] Adaptar `tests/integration/marketing-dashboard.test.js` para exigir tres acciones en el panel, ninguna `.quick-actions` en `.marketing-view` y las mismas cinco tarjetas, embudo y últimas interacciones en ambas vistas.
-- [x] T235 [P] [US16d] Adaptar `tests/integration/marketing-navigation.test.js` para exigir que Marketing conserve los cinco atajos en el orden acordado y que no aparezcan en Marketing las tres etiquetas de acciones rápidas del panel ni los botones de creación retirados.
-
-### Implementación de US16d
-
-- [x] T236 [US16d] Verificar y ajustar `renderMarketingView()` en `src/app.js` para invocar `renderDashboardHtml()` con `showQuickActions: false`, sin reintroducir acciones del panel y conservando `team`, `campaigns`, `performance`, `chat` y `social` como claves internas de los cinco atajos.
-
-**Punto de control**: Marketing comparte cifras pero no controles de gestión T234-T236.
+**Checkpoint**: US16 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 33: US25 - Panel en línea de «Nuevo Ticket» (P2)
+## Phase 22: User Story 17 - Consultar Equipos de ventas y logros (Priority: P2)
 
-**Objetivo**: Abrir el formulario de ticket dentro de `?view=postventa`, sustituyendo temporalmente la tabla con las tres tarjetas visibles, la misma presentación que «Nuevo Cliente» y sin pestaña nueva, ruta independiente ni sincronización entre pestañas.
+**Goal**: Administrar equipos e integrantes y calcular real/objetivo mensuales.
 
-**Prueba independiente**: Con `atencion` o `gerente`, pulsar «Nuevo Ticket» deja la vista en `?view=postventa`, no llama a `window.open`, muestra el formulario en línea con el orden y las opciones exactas y mantiene las tarjetas; guardar cierra el panel y actualiza tabla y tarjetas; cancelar con cambios pide confirmación antes de descartar; `ventas` no puede crear ni cambiar estados y `marketing`/visitante reciben denegación.
+**Independent Test**: En `tests/integration/sales-teams.test.js`, crear equipo con integrante N2 activo y comparar real del mes con documentos `Cerrado ganado`.
 
-### Pruebas de US25
+- [X] T181 [P] [US17a] Crear `tests/integration/sales-teams.test.js` para alta, edición y baja de equipos.
+- [X] T182 [P] [US17b] Crear `tests/unit/sales-team-metrics.test.js` para real y objetivo mensuales.
+- [X] T183 [US17a] Declarar `salesTeams` en `src/module-config.js`.
+- [X] T184 [US17a] Vincular integrantes a usuarios activos N2/N4 en `src/components/marketing.js`.
+- [X] T185 [US17b] Calcular real mensual desde documentos `Cerrado ganado` del mes actual en `src/utils/sales-team-metrics.js`.
+- [X] T186 [US17b] Calcular objetivo mensual sin persistir resultados derivados en `src/utils/sales-team-metrics.js`.
+- [X] T187 [US17b] Renderizar tarjetas de equipo en `src/components/marketing.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [x] T237 [P] [US25] Crear `tests/integration/postventa-inline-panel.test.js` para exigir que `[data-action="ticket-form"]` active `state.ticketFormOpen`, no llame a `window.open`, no cambie `?view=postventa`, sustituya `.client-management-table` por `#ticket-form` con `.postventa-cards` visible, conserve «Nuevo Ticket» al cerrar y muestre los campos `entity_id`, `asunto`, `categoria`, `prioridad`, `status`, `nota_resolucion` en ese orden con categorías «Soporte técnico», «Facturación», «Garantía» y «Consulta», prioridades sin preselección «Baja», «Media» y «Alta» y pistas grises.
-- [x] T238 [P] [US25] Adaptar `tests/integration/postventa-permissions.test.js` para verificar que N1/N4 abren y guardan el panel en línea, que N2 no ve «Nuevo Ticket» y recibe `No tienes permiso para realizar esta acción` si se fuerza el estado sin mutar `erp_documents`, que N3/visitante reciben «Acceso denegado» o login y que `?view=ticket-form` ya no resuelve como vista.
-- [x] T239 [P] [US25] Adaptar `tests/integration/postventa-customer-detail.test.js` para crear el ticket desde el panel en línea de Postventa y confirmar que la ficha del cliente muestra «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con texto sanitizado y vínculo `entity_id`.
-- [x] T240 [P] [US25] Crear `tests/integration/postventa-inline-cancel.test.js` para exigir que `[data-action="cancel-ticket-form"]` cierra sin confirmar cuando no hay cambios, confirma cuando los hay, conserva el formulario al rechazar el descarte, cierra sin crear ticket al aceptarlo y no persiste borradores en `localStorage`.
-- [x] T241 [P] [US25] Eliminar `tests/integration/postventa-ticket-tab.test.js` y `tests/integration/postventa-cross-tab.test.js` porque sus expectativas de `window.open`, `?view=ticket-form` y eventos `storage` quedan reemplazadas por T237-T240.
-- [x] T242 [P] [US25] Ampliar `tests/integration/postventa-view.test.js` para exigir que las tres tarjetas conserven etiquetas, valores y orden antes, durante y después del panel, y que la tabla vuelva con la fila nueva tras guardar sin recarga ni eventos `storage`.
-
-### Implementación de US25
-
-- [x] T243 [US25] Modificar `renderPostventaHtml()` en `src/components/postventa.js` para renderizar el markup de `renderTicketFormHtml()` dentro de `.postventa-view` cuando esté abierto el panel, manteniendo visibles las tres tarjetas, reemplazando solo la tabla y mostrando de nuevo «Nuevo Ticket» al cerrar.
-- [x] T244 [US25] Modificar `renderTicketFormHtml()` en `src/components/ticket-form.js` para usar `.form-field`, `.client-form-section` y `.form-actions` como «Nuevo Cliente», conservar el orden y las opciones declaradas, los mensajes exactos y añadir un botón `[data-action="cancel-ticket-form"]` sin incorporar campos ni reglas de entidades.
-- [x] T245 [US25] Eliminar de `src/app.js` el registro de `ticket-form` en `ROUTE_VIEWS`, `VIEW_ROUTES`, `routeFromKey()` y `routeForState()`, la vista `renderTicketFormView()`, el `window.open(routeUrl('ticket-form'), '_blank', 'noopener')`, el listener `storage` y su retirada en `destroy()`, conservando `postventa:create` en `createTicketDocument()`.
-- [x] T246 [US25] Cablear en `src/app.js` las acciones `ticket-form` y `cancel-ticket-form` con `state.ticketFormOpen`, preservando `state.ticketValues`, `state.ticketClientSearch` y `state.ticketErrors` durante los `render()` necesarios para actualizar el buscador y los errores en la misma pestaña.
-- [x] T247 [US25] Implementar en `src/app.js` la comprobación de cambios sin guardar del panel de ticket y la confirmación de descarte reutilizando la semántica de `confirmDiscardChanges()`, sin nueva clave de `localStorage`, sin navegación y sin cerrar el panel si el usuario decide quedarse.
-- [x] T248 [US25] Ajustar `onTicketFormSubmit()` en `src/app.js` para guardar con `createTicketDocument()`, limpiar errores y borradores, cerrar el panel, permanecer en `?view=postventa` y recalcular tabla y tarjetas con un solo `render()` y sin `StorageEvent`, `postMessage`, sondeo ni `visibilitychange`.
-- [x] T249 [US25] Retirar `ticket-form` de `VIEW_ACTIONS` en `src/auth/permissions.js` para que el catálogo de vistas ya no exponga una ruta eliminada, conservando `postventa:view`, `postventa:create` y `postventa:transition` y el mensaje exacto `No tienes permiso para realizar esta acción`.
+**Checkpoint**: US17 es funcional y verificable de forma aislada.
 
 ---
 
-## Polish final del incremento
+## Phase 23: User Story 18 - Registrar interacciones en redes sociales (Priority: P2)
 
-**Objetivo**: Cerrar la remediación sin renumerar T001-T222 ni alterar sus marcadores completados.
+**Goal**: Registrar y corregir interacciones de redes como documentos vinculados.
 
-- [X] T250 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T223-T249, corregir fallos en `src/` y `tests/`, verificar que T001-T222 siguen marcados `[x]` y confirmar que no quedan referencias a `quick-new-entity`, `quick-new-document`, `?view=ticket-form`, `window.open` ni listener `storage` en el flujo de Postventa.
+**Independent Test**: En `tests/integration/social-interactions.test.js`, registrar una interacción con consentimiento reutilizado, editarla, borrarla y conservar el vínculo con la entidad.
 
----
+- [X] T188 [P] [US18a] Crear `tests/integration/social-interactions.test.js` para alta, edición y baja.
+- [X] T189 [US18a] Declarar campos de redes en `src/module-config.js`.
+- [X] T190 [US18a] Crear documentos vinculados en `src/utils/marketing-social.js`.
+- [X] T191 [US18a] Reutilizar consentimiento existente en `src/utils/marketing-social.js`.
+- [X] T192 [US18b] Mostrar historial de redes en `src/components/marketing-social.js`.
+- [X] T193 [US18b] Corregir y eliminar interacciones con `document:edit_own`/`document:delete` en `src/storage.js`.
+- [X] T194 [US18b] Sanitizar `enlace` y `nota` en `src/components/marketing-social.js`.
 
-## Phase 34: US14b - Identidad visual de la barra lateral (P1)
-
-**Objetivo**: Sustituir los emojis de `NAV_ITEMS` por iconos SVG monocromáticos de trazo uniforme y fijar el acento `#1D4ED8` sin alterar claves, rutas, permisos ni el logotipo existente.
-
-**Prueba independiente**: Con `gerente` (N4), los cinco botones de `NAV_ITEMS` muestran `svg` dentro de `.sidebar-icon`, sin emojis ni texto SVG, conservan `aria-label`, resaltan el activo y siguen siendo visibles en la barra contraída de 640 px; con `theme.accentColor` inválido se aplica el valor integrado sin perder el resto del perfil CRM.
-
-### Pruebas de US14b
-
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [X] T251 [P] [US14b] Ampliar `tests/integration/workspace-shell.test.js` para exigir que los cinco botones de `NAV_ITEMS` en `src/components/shell.js` rendericen un `<svg>` en `.sidebar-icon` con `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"` y un solo grosor de trazo, sin caracteres emoji en el marcado, conservando `aria-label`, `title`, `aria-current` y las claves `dashboard`, `search`, `summary`, `marketing` y `postventa`; verificar también que el estado contraído declarado en `src/styles.css` bajo `@media (max-width: 640px)` mantiene visible el icono.
-- [X] T252 [P] [US14b] Ampliar `tests/unit/module-config.test.js` y `tests/integration/config-warning.test.js` para exigir `theme.accentColor === '#1D4ED8'` en el perfil CRM y que un valor ausente o inválido retroceda al color integrado sin desactivar etiquetas, campos ni `#config-warning` (FR-038).
-
-### Implementación de US14b
-
-- [X] T253 [US14b] Reemplazar en `NAV_ITEMS` de `src/components/shell.js` los valores `icon` emoji (`⌂`, `🔍`, `📊`, `📣`, `🎫`) por cadenas SVG en línea de trazo uniforme, manteniendo `key`, `label`/`labelKey`, `id`, el filtrado por `can()`, `monogramSvg()` y el `span.sidebar-icon[aria-hidden="true"]` existente.
-- [X] T254 [P] [US14b] Actualizar en `src/styles.css` los tokens `--bg: #F8FAFC`, `--surface: #FFFFFF` y `--accent-color: #1D4ED8`, y aplicar el acento a `.topbar` mediante franja/borde sin reducir la legibilidad, a `.sidebar-button.active` y a los acentos de `.stat-card`, conservando borde sutil y sombra ligera en tarjetas, sin añadir reglas por vista ni dependencias.
-- [X] T255 [US14b] Ajustar `theme.accentColor` del perfil CRM en `src/module-config.js` a `#1D4ED8`, conservar `sanitizeAccentColor()` y verificar en `src/app.js` que `--accent` y `--accent-color` siguen derivándose de la configuración validada sin nuevo estado persistido.
-
-**Punto de control**: La navegación es idéntica en comportamiento y solo cambia su identidad visual; los rangos siguen viendo exactamente los mismos módulos.
+**Checkpoint**: US18 es funcional y verificable de forma aislada.
 
 ---
 
-## Phase 35: US15a - Jerarquía visual de las acciones del panel (P1)
+## Phase 24: User Story 19 - Ofrecer «Dudas y consultas» con respuestas rápidas (Priority: P2)
 
-**Objetivo**: Alinear las tres acciones rápidas existentes en una sola fila con una principal de relleno sólido y dos secundarias blancas con borde, sin añadir ni retirar acciones, rutas o permisos.
+**Goal**: Responder FAQ y registrar consultas como documentos para seguimiento.
 
-**Prueba independiente**: Con permisos completos, `.dashboard .quick-actions` muestra «Gestionar clientes», «Gestionar interacciones» y «Buscar registros» en ese orden y en una fila; la primera usa relleno del color de acento y las otras dos fondo blanco con borde, sobre fondo `#F8FAFC` y tarjetas `#FFFFFF`; Marketing sigue sin `.quick-actions`.
+**Independent Test**: En `tests/integration/marketing-chat.test.js`, enviar consulta sin consentimiento debe fallar; con consentimiento debe responder o registrar y aparecer para Marketing/Atención.
 
-### Pruebas de US15a
+- [X] T195 [P] [US19a] Crear `tests/integration/marketing-chat.test.js` para consentimiento, FAQ y registro.
+- [X] T196 [P] [US19b] Crear `tests/integration/chat-followup.test.js` para seguimiento por Marketing y Atención.
+- [X] T197 [US19a] Declarar `faq` y respuestas rápidas en `src/module-config.js`.
+- [X] T198 [US19a] Exigir consentimiento y lanzar `ChatConsentError` en `src/utils/marketing-chat.js`.
+- [X] T199 [US19a] Registrar consultas no resueltas como `Documento` en `src/storage.js`.
+- [X] T200 [US19a] Mostrar `Consulta registrada; un ejecutivo hará seguimiento.` en `src/components/marketing-chat.js`.
+- [X] T201 [US19b] Listar consultas en `src/components/marketing-chat.js`.
+- [X] T202 [US19b] Permitir respuesta de Marketing/Atención sin ampliar permisos de edición general en `src/auth/permissions.js`.
 
-> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
-
-- [X] T256 [P] [US15a] Ampliar `tests/integration/dashboard.test.js` y ajustar la aserción de `tests/integration/marketing-dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— con texto «Gestionar clientes», «Gestionar interacciones» y «Buscar registros» sin el sufijo «(editar, archivar, eliminar)», `data-variant="primary"` solo en el primero y `data-variant="secondary"` en los otros dos, verificando que siguen abriendo su gestión o enfocando `#search-input` y que `.marketing-view .quick-actions` no existe.
-- [X] T257 [US15a] Ajustar `renderDashboardHtml()` en `src/components/dashboard.js` para etiquetar la primera acción con `data-variant="primary"` y las dos siguientes con `data-variant="secondary"`, quitar el texto parentético de «Gestionar clientes» y conservar los tres `data-action`, el orden, `showQuickActions` y las tarjetas derivadas.
-- [X] T258 [P] [US15a] Ajustar `.quick-actions` en `src/styles.css` para una sola fila (`flex-wrap: nowrap`), relleno sólido de `var(--accent-color)` en `[data-variant="primary"]` y fondo blanco con borde sutil en `[data-variant="secondary"]`, además de `#FFFFFF` con borde y sombra ligera en `.stat-card`, sin modificar `.summary-cards`, `.postventa-cards` ni el orden etiqueta/valor de los indicadores.
-
-**Punto de control**: El panel conserva sus tres destinos y su filtrado por rango; solo cambia la presentación.
-
----
-
-## Phase 36: Verificación de FR-003 y FR-009 sobre el código actual
-
-**Objetivo**: Confirmar que `deleteEntity()` y `onDeleteEntity()` ya bloquean la baja con registros vinculados, no escriben al rechazar y ofrecen archivar, y alinear las pruebas que todavía describen borrado en cascada.
-
-**Prueba independiente**: Una entidad con documentos o tickets vinculados por `entity_id` no se elimina: se rechaza con `EntityHasRecordsError`, `erp_entities` y `erp_documents` quedan intactos y la interfaz ofrece archivar; una entidad sin registros se elimina solo de `erp_entities` tras confirmación explícita, sin tocar `erp_documents`.
-
-- [X] T259 [P] Ampliar `tests/unit/storage.test.js` para verificar en `src/storage.js` que `deleteEntity()` con documentos vinculados lanza `EntityHasRecordsError` y no muta `erp_entities` ni `erp_documents`, que sin registros elimina solo la entidad y devuelve `{ deletedDocumentCount: 0 }`, y que `deleteDocumentsForEntity()` sigue siendo una operación explícita e independiente, no una cascada de la baja.
-- [X] T260 [P] Ampliar `tests/integration/client-lifecycle.test.js` y verificar `onDeleteEntity()` en `src/app.js`: con registros vinculados la confirmación ofrece archivar y solo archiva si se acepta, sin eliminar la entidad ni sus documentos; sin registros pide confirmación explícita y elimina únicamente la entidad; un usuario sin `entity:delete` recibe `No tienes permiso para realizar esta acción` incluso desde llamada directa.
-- [X] T261 [P] Adaptar `tests/integration/edit-delete-entity.test.js`, `tests/integration/add-document.test.js` y `tests/integration/clarifications-regression.test.js` para reemplazar sus expectativas de cascada y recuento por `FR-003`/`FR-009`: la baja con documentos se bloquea u ofrece archivar, la baja sin documentos elimina solo la entidad y el borrado individual de documentos sigue disponible; conservar las suites sin renombrarlas ni desmarcar sus casos vigentes.
-- [X] T262 [P] Verificar en `tests/integration/postventa-customer-detail.test.js` y `tests/integration/edge-case-rules.test.js` que los tickets (`ticket: true`) comparten el bloqueo de `deleteEntity()` por `entity_id`, que `erp_documents` conserva los tickets cuando se rechaza la baja y que `deleteDocument()` sigue siendo la vía para eliminar un ticket individual, sin crear claves ni listas nuevas.
-
-**Punto de control**: FR-003 y FR-009 quedan verificados en capa de datos, interfaz y tickets, con las pruebas antiguas de cascada alineadas al comportamiento actual.
+**Checkpoint**: US19 es funcional y verificable de forma aislada.
 
 ---
 
-## Polish del incremento de identidad visual y verificación
+## Phase 25: User Story 20 - Programar campañas internas (Priority: P2)
 
-**Objetivo**: Cerrar T251-T262 sin renumerar ni desmarcar T001-T250 y sin reintroducir funcionalidades retiradas.
+**Goal**: Crear, ejecutar y detener campañas internas con historial inmutable.
 
-- [X] T263 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T251-T262, corregir los fallos introducidos por este incremento en `src/` y `tests/`, confirmar que T001-T250 permanecen marcados y que no aparecen dependencias nuevas, claves de `localStorage`, rutas ni emojis en `NAV_ITEMS`.
+**Independent Test**: En `tests/integration/campaigns.test.js`, crear campaña por etapa/periodo, ejecutar acciones permitidas y detener conservando historial.
 
-**Punto de control**: El incremento queda verificable de forma independiente y la suite existente sigue en verde.
+- [X] T203 [P] [US20a] Crear `tests/integration/campaigns.test.js` para programación y permisos.
+- [X] T204 [P] [US20b] Crear `tests/unit/campaign-automation.test.js` para acciones internas y desempate por campaña más reciente.
+- [X] T205 [US20a] Declarar `campaigns` en `src/module-config.js`.
+- [X] T206 [US20a] Validar fechas, etapa objetivo y creador en `src/utils/marketing-campaigns.js`.
+- [X] T207 [US20b] Restringir acciones a las declaradas en `src/module-config.js`.
+- [X] T208 [US20b] Registrar cada ejecución como `Documento` en `src/storage.js`.
+- [X] T209 [US20b] Aplicar precedencia de campaña más reciente en `src/utils/marketing-campaigns.js`.
+- [X] T210 [US20c] Detener campaña conservando historial en `src/storage.js`.
+- [X] T211 [US20c] Respetar `campaign:stop_own` y `campaign:stop_any` en `src/auth/permissions.js`.
+
+**Checkpoint**: US20 es funcional y verificable de forma aislada.
 
 ---
 
-## Dependencias y orden de ejecución
+## Phase 26: User Story 21 - Medir el rendimiento de Marketing (Priority: P2)
 
-### Dependencias de fases
+**Goal**: Mostrar indicadores globales y por campaña con atribución opcional.
 
-- **Phase 1 (Setup)**: sin dependencias; solo verifica el entorno existente.
-- **Phase 2 (Foundational)**: depende de Setup y bloquea todas las historias.
-- **Phase 3-23 (historias)**: comienzan tras Foundational; se entregan en el orden de prioridad del documento, no en orden de dependencia.
-- **Phase 24 (Polish)**: depende de que estén completas las historias que se desean incluir en la entrega.
-- **Phase 25 (Inicio de sesión y rangos)**: se añade tras Polish sin renombrar fases existentes; depende de Setup, Foundational y de los contratos de `src/components/shell.js`, `src/components/dashboard.js`, `src/storage.js` y Marketing definidos en Phase 14-23.
-- **Phase 26 (Remediación de consistencia)**: se ejecuta tras Phase 25 sin renombrar T001-T186; depende de los contratos de rutas relativas, mensajes exactos, terminología, casos límite, rendimiento y búsqueda canónica ya declarados en `spec.md`, `plan.md` y los contratos.
-- **Phase 27 (US25 Postventa)**: se ejecuta tras Phase 26 sin renombrar T001-T194; depende de Setup, Foundational, de la matriz de US23, de la relación entidad-documento de US1/US11 y de los contratos `contracts/postventa.md`, `contracts/auth.md` y `contracts/entity-storage.md`.
-- **Phase 28 (ajustes de Postventa)**: se ejecuta tras Phase 27 sin renombrar T001-T210; depende del formulario, las tarjetas y la matriz de permisos de Phase 27, y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre pestaña nueva, sincronización por `storage` y tamaño de tarjetas; sus decisiones de pestaña y sincronización son superadas por Phase 33.
-- **Phase 29 (US4a)**: se ejecuta tras Phase 28 sin renombrar T001-T222; depende de las gestiones de US4, del panel de US15 y de la decisión de `research.md`/`contracts/marketing.md` de mover la creación a «Gestionar clientes» e «Gestionar interacciones».
-- **Phase 30 (US7)**: depende de Phase 29 y de `labels` de US5 para derivar los encabezados de creación sin género codificado.
-- **Phase 31 (US15a)**: depende de Phase 30, de la matriz de US23 y de la decisión de reducir el panel a tres acciones en `spec.md`, `plan.md` y `contracts/marketing.md`.
-- **Phase 32 (US16d)**: depende de Phase 31 y de los contratos compartidos de tarjetas, embudo y cinco atajos de Marketing.
-- **Phase 33 (US25)**: depende de Phase 27/28, de los permisos `postventa:*`, de las clases de formulario compartidas y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre panel en línea, cancelación con cambios y retiro de pestaña/sincronización.
-- **Polish final**: depende de Phase 29-33 y se ejecuta al final sin renumerar ni desmarcar T001-T222.
-- **Phase 34 (US14b)**: se ejecuta tras T250 sin renumerar T001-T250; depende de `NAV_ITEMS`, del filtrado por `can()` de US23, del theme de US5 y de los contratos visuales de `spec.md`, `plan.md` y `data-model.md`.
-- **Phase 35 (US15a)**: depende de Phase 34, de las tres acciones ya reducidas en Phase 31 y de la matriz de US23; no reintroduce `quick-new-*`.
-- **Phase 36 (FR-003/FR-009)**: depende de la capa de datos de US1/US11, del archivado de US24 documentado en `data-model.md`, de `onDeleteEntity()` de `src/app.js` y de los tickets de US25; verifica el código actual sin añadir nuevas funcionalidades.
-- **Polish del incremento 2026-11-27**: depende de Phase 34-36 y se ejecuta después del Polish final histórico sin renumerar ni desmarcar T001-T250.
+**Independent Test**: En `tests/integration/marketing-performance.test.js`, verificar indicadores, `Sin campaña` y estado vacío `Sin registros para esta campaña.`
 
-### Dependencias entre historias
+- [X] T212 [P] [US21a] Crear `tests/integration/marketing-performance.test.js` para indicadores globales.
+- [X] T213 [P] [US21b] Crear `tests/unit/marketing-performance.test.js` para atribución y `Sin campaña`.
+- [X] T214 [US21a] Calcular indicadores en `src/utils/marketing-performance.js`.
+- [X] T215 [US21a] Mostrar estado vacío `Sin registros para esta campaña.` en `src/components/marketing.js`.
+- [X] T216 [US21b] Filtrar por `campaignId` y `campaña` en `src/utils/marketing-performance.js`.
+- [X] T217 [US21b] Agrupar registros sin campaña bajo `Sin campaña` en `src/utils/marketing-performance.js`.
+- [X] T218 [US21a] Recalcular sin recarga tras mutaciones en `src/components/marketing.js`.
 
-- **US1 (P1)**: sin dependencias entre historias; define identidad y vínculo para US3, US4 y US16.
-- **US3 (P1)**: depende de los registros de US1/US2 y de la pantalla de gestión de US4 para reflejar ediciones.
-- **US4 (P1)**: depende de US1 para el modelo y precede a US15 como destino de las acciones rápidas.
-- **US5 (P1)**: prerrequisito lógico de US7, US8, US14, US15 y de todo el bloque Marketing.
-- **US7 (P1)**: depende de US5 para `labels` y de la regla de fecha compartida con US10.
-- **US8 (P1)**: depende de US5 y alimenta US2, US11, US18, US19 y US21.
-- **US14 (P1)**: depende de US5 para nombre, tema y terminología; reestructura la navegación de US4 y US15.
-- **US15 (P1)**: depende de US14 para el marco y de las estadísticas compartidas con US16.
-- **US2 (P2)**: depende de US5, US7, US8 y US10; US3 bloquea su ficha cuando faltan datos.
-- **US9 (P2)**: reutiliza `searchEntities()` de US1 y las reglas de visibilidad de US8.
-- **US10 (P2)**: depende de US5 y US7; conserva valores históricos junto con US2.
-- **US11 (P2)**: depende de US1 y US8 para campos de documento y cascada.
-- **US12 (P2)**: depende de US9 y US14 para pantalla y navegación.
-- **US13 (P2)**: depende de US5/US8 y del resumen de US6 para `pendingStates`.
-- **US16 (P2)**: depende de US15 para las tarjetas compartidas y de US8 para campos personalizados; habilita US17-US21.
-- **US17 (P2)**: depende de US16, US2 y US11 para ejecutivos y documentos de venta.
-- **US18 (P2)**: depende de US16 y US8 para vincular `Documento` y declarar campos de redes.
-- **US19 (P2)**: depende de US16/US18 para consentimiento, FAQ e historial compartido.
-- **US20 (P2)**: depende de US16, US18 y US19 para eventos y reglas existentes.
-- **US21 (P2)**: depende de US16-US20 para los registros que alimentan los indicadores.
-- **US6 (P2)**: depende de US2, US3, US11 y US13 para totales y pendientes.
-- **US22 (P1)**: depende de Foundational y de US14/US15 para envolver la navegación sin romper las vistas públicas existentes; habilita la identidad de US23 y la validación de usabilidad T178.
-- **US23 (P1)**: depende de US22 para resolver rango y estado del usuario, y de US1/US8/US16-US21 para aplicar la matriz sobre clientes, documentos, equipos, campañas y chat; T182-T184 cierran lecturas/agregaciones y atribución histórica.
-- **Correcciones US5/US15/US16 (P1)**: T178, T179, T180 y T181 dependen respectivamente de las definiciones de SC-003, FR-068, FR-083/FR-085 y del esquema `ModuleConfig` ya corregidos en `spec.md`.
-- **Remediación I1/I2/U1/U2/U3/A1/D1 (P1)**: T187-T194 dependen de Phase 25 y de las definiciones corregidas de rutas relativas, terminología, casos límite, FR-032/SC-004, mensajes exactos y FR-004/FR-020/FR-055; T194 cierra el gate documental y de ejecución sin renumerar T001-T186.
-- **US25 (P2)**: depende de US1/US11 para `Documento` y su vínculo `entity_id`, de US23 para `can()`/`assertPermission()` y de US14 para la barra lateral; no altera los cinco atajos de Marketing, el `statusLifecycle` global ni las acciones `document:*` existentes.
-- **US24 (P1)**: permanece documentada en `spec.md` (FR-103, SC-038) pero sin fase en este incremento; requiere artefactos de diseño propios antes de generar sus tareas.
+**Checkpoint**: US21 es funcional y verificable de forma aislada.
 
-### Dentro de cada historia
+---
 
-- Las pruebas marcadas al inicio de la fase se escriben primero y deben fallar antes de la implementación.
-- La configuración declarativa precede a los componentes; los componentes preceden al cableado en `src/app.js`.
-- Las utilidades puras preceden a las vistas que las consumen; el historial de `Documento` es la única fuente de ejecuciones.
-- En US22: auth y hash antes que login, y login antes que el cableado de sesión en `src/app.js`.
-- En US23: matriz y `assertPermission()` antes que filtros de navegación, administración de usuarios o migración de ejecutivos; T185 se ejecuta después de T178-T184 como gate final funcional de US5, US15, US16 y US23, y T186 cierra el gate de formato.
-- En Phase 26: T187/T188 resuelven rutas antes de T189-T193, y T194 se ejecuta al final con `npm test`, `npm run lint` y `npm run format:check`.
-- Clarificaciones Marketing: T134/T135 preceden a T136-T137; T138 precede a T139; T140 depende de T139; T141 precede a T142-T143; T144 y T145 cierran la regresión.
-- En US25: T195-T200 se escriben primero y fallan; T201/T202 definen la configuración y las utilidades puras antes de T203-T209; la matriz T203 precede al filtro de navegación T205 y a la capa de datos T204; el componente T207 y el cableado T208 se integran después de T204/T206; T210 ejecuta el gate final.
-- En Phase 28: T211-T215 se escriben primero y fallan; T216 crea el formulario antes de T217 lo saque de Postventa; T218 registra la ruta antes de T219 abrirla y guardar; T220 añade la sincronización y T221 el estilo; T222 ejecuta el gate final, superado por el incremento actual.
-- En el incremento anterior: T223-T224 y T227 y T229-T231 y T234-T235 y T237-T242 se escriben primero y fallan; T225/T226 y T228 y T232/T233 y T236 y T243-T249 se implementan después; T250 ejecuta el gate final sin cambiar marcadores de T001-T222.
-- En el incremento 2026-11-27: T251/T252 y T256 se escriben primero y fallan; T253-T255 y T257/T258 se implementan después; T259-T262 verifican FR-003/FR-009 y ajustan las pruebas de cascada; T263 ejecuta el gate final sin cambiar marcadores de T001-T250.
+## Phase 27: User Story 25 - Registrar y gestionar tickets de Postventa (Priority: P2)
 
-## Oportunidades de paralelismo
+**Goal**: Gestionar tickets como documentos vinculados, con panel en línea, permisos, alertas y preselección desde clientes.
 
-- Setup: T001, T002, T003 y T004 pueden ejecutarse en paralelo porque tocan `package.json`, `vitest.config.mjs`, `index.html` y `tests/setup/test-setup.js`.
-- Foundational: T005, T007, T009, T011 y T013 pueden avanzar juntas; cada implementación (T006, T008, T010, T012, T014) parte de su prueba correspondiente.
-- US2: T053-T057 son cinco suites independientes en `tests/integration/`; la configuración de T058 y las adaptaciones T059-T062 se hacen después.
-- US16: T083-T086 cubren consentimiento, estadísticas, captura y panel en archivos de prueba distintos; T087-T093 se implementan después.
-- Marketing P2: US17, US18, US19, US20 y US21 pueden repartirse entre personas distintas una vez cerrada US16, siempre que cada una mantenga sus propias suites en `tests/unit/` y `tests/integration/`.
-- Polish: T126-T131 y T133 tocan archivos de prueba o documentación distintos y pueden ejecutarse en paralelo; T132 se ejecuta al final.
-- US22: T146/T147/T148 comparten `auth.test.js`, T149/T150/T152 comparten `login.test.js`, T151/T180 comparten `public-access.test.js` y T159/T160 comparten `navigation-by-rank.test.js`; ninguna lleva `[P]`. T164-T167 se implementan después de esas pruebas.
-- US23: T154-T158 y T161 son suites independientes por rango/administración y conservan `[P]`; T153/T182, T162/T183, T163/T182 y T159/T160 comparten archivos de prueba y no llevan `[P]`. T168-T177 se implementan después de la matriz y de US22.
-- Correcciones post-análisis: T178 y T179 usan archivos propios, mientras T180-T184 amplían suites existentes o dependen del esquema/catálogo/atribución definidos; ninguna lleva `[P]`. T185 depende de todas ellas y tampoco lleva `[P]`; T186 depende de T185 y tampoco lleva `[P]`.
-- Remediación: T187/T190/T191/T192 crean suites propias; T188/T189/T193 ajustan módulos existentes y T194 depende de todas ellas sin llevar `[P]`.
-- Clarificaciones Marketing: T134, T135, T138, T140, T141 y T144 son suites independientes; T136-T137, T139 y T142-T143 se implementan después de sus pruebas; T145 se ejecuta al final.
-- US25: T195-T200 son seis suites independientes en `tests/unit/` y `tests/integration/`; T201 también puede avanzar en paralelo porque crea `src/utils/postventa.js`; T202-T210 se encadenan según las dependencias de configuración, permisos, almacenamiento, ruta, componente y cableado, y T210 se ejecuta al final.
-- Ajustes de Postventa: T211-T215 son cinco suites independientes en `tests/integration/`; T216 y T221 pueden avanzar en paralelo porque crean `src/components/ticket-form.js` y editan `src/styles.css`; T217-T220 se encadenan en `src/components/postventa.js` y `src/app.js`, y T222 se ejecuta al final.
-- Incremento anterior: T223/T224, T227, T229-T231, T234/T235 y T237-T242 tocan suites distintas y pueden repartirse; T225/T226, T228, T232/T233, T236 y T243-T249 se encadenan dentro de `src/app.js`, `src/components/dashboard.js`, `src/components/postventa.js`, `src/components/ticket-form.js` y `src/auth/permissions.js`; T250 se ejecuta al final.
-- Incremento 2026-11-27: T251, T252, T256, T259, T260, T261 y T262 tocan suites distintas y pueden repartirse; T253/T255, T254/T258 y T257 se encadenan dentro de `src/components/shell.js`, `src/module-config.js`, `src/styles.css` y `src/components/dashboard.js`; T263 se ejecuta al final.
+**Independent Test**: En `tests/integration/postventa.test.js`, crear ticket desde el panel con cliente preseleccionado desde la tabla, cambiar estados, ver tres tarjetas y confirmar denegaciones por rango.
 
-### Ejemplo de paralelismo: US16
+- [X] T219 [P] [US25] Crear `tests/unit/postventa.test.js` para discriminador `ticket`, agregaciones y validaciones puras.
+- [X] T220 [P] [US25] Crear `tests/integration/postventa.test.js` para panel en línea, permisos y tarjetas.
+- [X] T221 [P] [US25] Crear `tests/integration/client-ticket-alerts.test.js` para «Ticket abierto» naranja, «Ticket en revisión» azul y coexistencia.
+- [X] T222 [US25] Declarar bloque `postventa` con `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates` en `src/module-config.js`.
+- [X] T223 [US25] Implementar `listTicketDocuments()`, `createTicketDocument()` y `changeTicketStatus()` en `src/storage.js`.
+- [X] T224 [US25] Verificar permisos `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition` en `src/storage.js`.
+- [X] T225 [US25] Renderizar tres tarjetas y tabla en `src/components/postventa.js`.
+- [X] T226 [US25] Implementar `renderTicketFormHtml()` con clientes buscables y sin preselección por defecto en `src/components/ticket-form.js`.
+- [X] T227 [US25] Abrir el formulario como panel dentro de `?view=postventa` con `state.ticketFormOpen` en `src/app.js`.
+- [X] T228 [US25] Preseleccionar `#ticket-client` desde `state.ticketValues.entity_id` al llegar desde «Abrir Ticket» en `src/components/ticket-form.js`.
+- [X] T229 [US25] No crear documento al preseleccionar; crear solo en `ticket-save` en `src/app.js`.
+- [X] T230 [US25] Exigir prioridad sin valor preseleccionado y nota de resolución solo en `Resuelto` en `src/components/ticket-form.js`.
+- [X] T231 [US25] Confirmar cancelación con cambios sin guardar en `src/app.js`.
+- [X] T232 [US25] Aplicar estilo de «Nuevo Cliente» con `.form-field`, `.client-form-section` y `.form-actions` en `src/styles.css`.
+- [X] T233 [US25] Asegurar ausencia de `?view=ticket-form`, `window.open` y listener `storage` en `src/app.js`.
+- [X] T234 [US25] Verificar que los tickets aparecen en la ficha del cliente y en la vista rápida permitida en `src/components/entity-detail.js` y `src/components/client-quick-view.js`.
+- [X] T235 [US25] Verificar que `deleteEntity()` conserva tickets y bloquea la baja con registros en `src/storage.js`.
+- [X] T236 [US25] Comprobar que `marketing` y visitante no ven alertas ni botón de apertura en `src/components/entity-list.js`.
+
+**Checkpoint**: US25 es funcional y verificable de forma aislada.
+
+---
+
+## Phase 28: Polish & Cross-Cutting Concerns
+
+**Purpose**: Consistencia, rendimiento, documentación y verificación final.
+
+- [X] T237 [P] Actualizar `specs/001-erp-base-module/plan.md` con cualquier desviación de implementación detectada.
+- [X] T238 [P] Actualizar `specs/001-erp-base-module/data-model.md` si cambian campos o reglas de `motivo_perdida`.
+- [X] T239 [P] Actualizar `specs/001-erp-base-module/contracts/auth.md` si cambia la forma de `login(userId)`.
+- [X] T240 [P] Actualizar `specs/001-erp-base-module/contracts/client-ui.md` si cambian selectores o alertas.
+- [X] T241 Verificar en `src/styles.css` que no se añadieron dependencias ni estilos duplicados por vista.
+- [X] T242 Ejecutar `npm test` y corregir fallos en `tests/`.
+- [X] T243 Ejecutar `npm run lint` y corregir avisos en `src/` y `tests/`.
+- [X] T244 Ejecutar `npm run format:check` y aplicar formato a `src/`, `tests/` y `specs/001-erp-base-module/`.
+- [X] T245 Ejecutar `npm run build` y confirmar que `dist/` se genera sin errores.
+- [X] T246 Validar en `specs/001-erp-base-module/quickstart.md` los escenarios de login por botones, ficha rápida, alertas de ticket y cierre perdido, y marcar las tareas completadas en `specs/001-erp-base-module/tasks.md`.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Setup (Phase 1)**: Sin dependencias; puede iniciar de inmediato.
+- **Foundational (Phase 2)**: Depende de Setup; bloquea todas las historias de usuario.
+- **User Stories (Phase 3+)**: Dependen de Foundational; pueden ejecutarse en paralelo si hay capacidad.
+- **Polish (Phase 28)**: Depende de las historias que se entreguen en el incremento.
+
+### User Story Dependencies
+
+- **US1 (P1)**: Base de datos; puede iniciar tras Foundational y facilita US4, US11 y US25.
+- **US3 (P1)**: Depende de búsqueda y ficha; comparte componentes con US4 y US25.
+- **US4 (P1)**: Depende de US1 y US3 para gestión, baja segura, vista rápida y alertas.
+- **US5/US7/US8 (P1)**: Configuración transversal; deben preceder a US2, US11 y US16.
+- **US14/US15 (P1)**: Marco y panel; independientes entre sí tras Foundational.
+- **US22/US23 (P1)**: Autenticación y permisos; bloquean la verificación de cualquier historia con control por rango.
+- **US24 (P1)**: Depende de US1 y US4 para baja sin cascada y filtros.
+- **US2, US6, US9, US10, US11, US12, US13 (P2)**: Pueden iniciar tras P1; US11 depende de US5 y US13.
+- **US16–US21 (P2)**: Dependen de configuración Marketing y permisos; US21 depende de US20 y US16.
+- **US25 (P2)**: Depende de US4, US11 y US23 para tickets, permisos y preselección.
+
+### Within Each User Story
+
+1. Escribir primero las pruebas marcadas como `[P]`; deben fallar antes de la implementación.
+2. Implementar utilidades puras y modelos antes de componentes.
+3. Integrar componentes y cablear acciones en `src/app.js`.
+4. Verificar el criterio independiente antes de pasar a la siguiente prioridad.
+
+### Parallel Opportunities
+
+- Todas las tareas `[P]` de Setup y Foundational pueden ejecutarse en paralelo.
+- Las suites de prueba de cada historia pueden ejecutarse en paralelo entre sí.
+- Las historias P1 pueden trabajarse en paralelo tras Foundational, salvo las dependencias explícitas.
+- Las utilidades puras (`lost-reason.js`, `postventa.js`, `marketing-stats.js`, `sales-team-metrics.js`) pueden implementarse en paralelo.
+- Los contratos y documentación de Phase 28 pueden actualizarse en paralelo.
+
+---
+
+## Parallel Example: User Story 11
 
 ```bash
-T083 "Ampliar tests/unit/capture-consent.test.js ..."
-T084 "Ampliar tests/unit/marketing-stats.test.js ..."
-T085 "Ampliar tests/integration/marketing-capture.test.js ..."
-T086 "Ampliar tests/integration/marketing-dashboard.test.js ..."
+# Ejecutar juntas las pruebas de cierre perdido:
+Task: "T145 [P] [US11b] Crear tests/unit/lost-reason.test.js"
+Task: "T146 [P] [US11b] Crear tests/integration/lost-reason.test.js"
+
+# Ejecutar juntas las utilidades puras:
+Task: "T148 [US11b] Crear src/utils/lost-reason.js"
+Task: "T149 [US11b] Conectar la regla en validateDocumentData() de src/storage.js"
 ```
 
-### Ejemplo de paralelismo: campañas y rendimiento
+---
 
-```bash
-T110 "Crear tests/unit/marketing-campaigns.test.js ..."
-T112 "Crear tests/integration/marketing-campaigns.test.js ..."
-T116 "Crear tests/unit/marketing-performance.test.js ..."
-T118 "Crear tests/integration/marketing-performance.test.js ..."
-```
+## Implementation Strategy
 
-### Ejemplo de paralelismo: inicio de sesión y rangos
+### MVP First (User Story 1 Only)
 
-```bash
-T154 "Crear tests/integration/role-n4.test.js ..."
-T155 "Crear tests/integration/role-n3.test.js ..."
-T156 "Crear tests/integration/role-n2.test.js ..."
-T157 "Crear tests/integration/role-n1.test.js ..."
-```
+1. Completar Phase 1: Setup.
+2. Completar Phase 2: Foundational.
+3. Completar Phase 3: US1.
+4. **DETENER Y VALIDAR** con `tests/integration/entity-document.test.js`.
+5. Mostrar la relación entidad-documento y la baja bloqueada como primer incremento demostrable.
 
-### Ejemplo de paralelismo: clarificaciones Marketing
+### Incremental Delivery
 
-```bash
-T134 "Ampliar tests/integration/dashboard.test.js ..."
-T135 "Ampliar tests/integration/marketing-dashboard.test.js ..."
-T138 "Ampliar tests/integration/marketing-navigation.test.js ..."
-T141 "Ampliar tests/integration/marketing-chat.test.js ..."
-```
+1. Setup + Foundational → base lista.
+2. US1 → integridad referencial (MVP).
+3. US3 + US4 → consulta y gestión.
+4. US5 + US7 + US8 + US14 + US15 → configuración, marco y panel.
+5. US22 + US23 + US24 → acceso, permisos y ciclo de vida del cliente.
+6. Historias P2 en orden, con US11 y US25 como cierres funcionales del CRM y Postventa.
+7. Polish → documentación, quality gates y despliegue.
 
-### Ejemplo de paralelismo: US25
+### Parallel Team Strategy
 
-```bash
-T195 "Crear tests/unit/postventa.test.js ..."
-T196 "Crear tests/unit/postventa-permissions.test.js ..."
-T197 "Crear tests/unit/postventa-storage.test.js ..."
-T198 "Crear tests/integration/postventa-view.test.js ..."
-T199 "Crear tests/integration/postventa-permissions.test.js ..."
-T200 "Crear tests/integration/postventa-customer-detail.test.js ..."
-```
+1. El equipo completa Setup y Foundational juntos.
+2. Tras Foundational:
+   - Desarrollador A: US1, US4, US24.
+   - Desarrollador B: US3, US25.
+   - Desarrollador C: US5, US7, US8, US11.
+   - Desarrollador D: US22, US23.
+   - Desarrollador E: US16–US21.
+3. Cada historia se valida de forma independiente antes de integrarse.
 
-### Ejemplo de paralelismo: ajustes de Postventa
+---
 
-```bash
-T211 "Crear tests/integration/postventa-ticket-tab.test.js ..."
-T212 "Ampliar tests/integration/postventa-permissions.test.js ..."
-T213 "Crear tests/integration/postventa-cross-tab.test.js ..."
-T214 "Ampliar tests/integration/postventa-view.test.js ..."
-T215 "Adaptar tests/integration/postventa-customer-detail.test.js ..."
-```
+## Notes
 
-### Ejemplo de paralelismo: panel en línea y panel simplificado
-
-```bash
-T223 "Adaptar tests/integration/manage-screen.test.js ..."
-T224 "Adaptar tests/integration/manage-document.test.js ..."
-T227 "Adaptar tests/integration/relabeling.test.js ..."
-T229 "Adaptar tests/integration/dashboard.test.js ..."
-T234 "Adaptar tests/integration/marketing-dashboard.test.js ..."
-T237 "Crear tests/integration/postventa-inline-panel.test.js ..."
-T240 "Crear tests/integration/postventa-inline-cancel.test.js ..."
-```
-
-### Ejemplo de paralelismo: identidad visual y verificación FR-003/FR-009
-
-```bash
-T251 "Ampliar tests/integration/workspace-shell.test.js ..."
-T252 "Ampliar tests/unit/module-config.test.js ..."
-T256 "Ampliar tests/integration/dashboard.test.js ..."
-T259 "Ampliar tests/unit/storage.test.js ..."
-T261 "Adaptar tests/integration/edit-delete-entity.test.js ..."
-```
-
-## Estrategia de implementación
-
-### MVP primero
-
-1. Completar Phase 1 (Setup) y Phase 2 (Foundational).
-2. Completar Phase 3 (US1: identidad, código único y relación entidad-documento).
-3. **DETENER Y VALIDAR**: ejecutar T015 y T016 y comprobar la prueba independiente de US1.
-4. Mostrar una demo mínima con cliente e interacción persistidos; no incluir Marketing todavía.
-
-### Entrega incremental
-
-1. Añadir US3, US4, US5, US7, US8, US14 y US15 para completar el espacio de trabajo ERP base.
-2. Añadir US2, US9, US10, US11, US12 y US13 para el perfil de clientes y la búsqueda avanzada.
-3. Añadir US16 para habilitar Marketing con panel compartido y captura con consentimiento.
-4. Añadir US17-US21 para equipo, redes, dudas y consultas, campañas y rendimiento.
-5. Cerrar con US6 y Polish; cada fase se valida con su prueba independiente antes de continuar.
-6. Añadir Phase 25 con US22 y US23 sin reordenar fases: primero sesión y matriz, luego navegación, administración de usuarios y migración de «Ejecutivo Asignado»; cerrar con T178-T184 para usabilidad, conversión interna, chat consent-first, esquema config, lecturas protegidas y atribución histórica, T185 como gate final funcional de US5, US15, US16 y US23, y T186 como gate final de formato.
-7. Cerrar con Phase 26 (T187-T194) sin renumerar T001-T186: rutas relativas, terminología, casos límite, presupuesto de rendimiento, mensajes exactos, redacción verificable y búsqueda canónica.
-8. Aplicar el incremento T134-T145 sobre las fases US15, US16, US17, US19 y Polish para quitar acciones rápidas de Marketing, fijar los cinco atajos y usar «Dudas y consultas» sin cambiar contratos internos.
-9. Añadir Phase 27 (US25) sin renumerar T001-T194: primero las seis suites que fallan, luego configuración/utilidades, matriz, capa de datos, navegación, ruta, componente, cableado y ficha del cliente; T210 cierra el gate funcional y de calidad.
-10. Añadir Phase 28 sin renumerar T001-T210: primero las cinco suites que fallan, luego `ticket-form.js`, la ruta `ticket-form`, `window.open`, el listener `storage` y `.postventa-cards`; T222 cierra el gate funcional y de calidad de los ajustes, superados por el siguiente incremento.
-11. Aplicar T223-T250 sin renumerar ni desmarcar T001-T222: primero gestiones y etiquetas de creación, luego el panel de tres acciones y Marketing sin atajos de gestión, y finalmente el panel en línea de «Nuevo Ticket» con cancelación segura; T250 cierra el gate funcional y de calidad.
-12. Aplicar T251-T263 sin renumerar ni desmarcar T001-T250: primero las pruebas visuales y de baja, luego SVG/acento/tokens y jerarquía del panel, y finalmente la verificación de FR-003/FR-009 con las pruebas de cascada alineadas; T263 cierra el gate del incremento sin tocar funcionalidades ya implementadas.
-
-### Estrategia con equipo paralelo
-
-- Una persona completa Setup + Foundational antes de repartir historias.
-- Después de Foundational: un desarrollador toma US1-US4, otro US5-US8 y otro US14-US15.
-- Tras US16: equipo A US17/US20, equipo B US18/US19, equipo C US21; US6 se asigna al cierre.
-- Para Phase 25: una persona toma autenticación y sesión, otra matriz y `storage.js`, otra pruebas de rangos y administración de usuarios; la migración de ejecutivos se integra al final.
-
-## Trazabilidad de requisitos a tareas
-
-La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, `T210` el gate de US25, `T222` el gate de los ajustes de pestaña/sincronización superados y `T250` el gate final del panel en línea y el panel simplificado, y `T263` el gate del incremento de identidad visual y verificación de FR-003/FR-009.
-
-| Requirement Key | Task IDs                                                                                                                                                               | Notes                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| FR-001          | `T015`, `T017`                                                                                                                                                         | Identidad y código único.                                                            |
-| FR-002          | `T005`, `T006`, `T020`, `T026`                                                                                                                                         | Edición base y desde gestión.                                                        |
-| FR-003          | `T026`, `T029`, `T259`, `T260`, `T261`, `T263`                                                                                                                        | Baja sin cascada: bloqueo, archivado y verificación del código actual.               |
-| FR-004          | `T063`, `T065`, `T076`, `T193`                                                                                                                                         | Lista canónica de campos buscables y anulaciones de perfil.                          |
-| FR-005          | `T019`, `T063`, `T066`, `T192`                                                                                                                                         | Lista, estado vacío y mensaje exacto en búsqueda/ficha.                              |
-| FR-006          | `T059`, `T075`, `T089`, `T192`                                                                                                                                         | Mensajes exactos de validación.                                                      |
-| FR-007          | `T005`, `T006`, `T016`                                                                                                                                                 | Consistencia CRUD.                                                                   |
-| FR-008          | `T025`, `T073`, `T074`                                                                                                                                                 | Altas, ediciones y bajas de documentos.                                              |
-| FR-009          | `T016`, `T018`, `T029`, `T074`, `T259`, `T261`, `T262`, `T263`                                                                                                         | Vínculo exacto por `entity_id` y protección referencial sin cascada.                 |
-| FR-010          | `T048`, `T050`, `T051`                                                                                                                                                 | Panel y acciones rápidas.                                                            |
-| FR-011          | `T043`, `T045`                                                                                                                                                         | Marco persistente.                                                                   |
-| FR-012          | `T043`, `T045`, `T159`, `T170`, `T251`, `T253`, `T263`                                                                                                                 | Barra lateral filtrada por rango con iconos SVG uniformes.                           |
-| FR-013          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a entidades desde el panel.                                                   |
-| FR-014          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a documentos desde el panel.                                                  |
-| FR-015          | `T047`, `T077`                                                                                                                                                         | Botón Panel y retorno al inicio.                                                     |
-| FR-016          | `T024`, `T027`                                                                                                                                                         | Gestión sin lista de entidades.                                                      |
-| FR-017          | `T024`, `T026`, `T027`                                                                                                                                                 | CRUD de entidades en gestión.                                                        |
-| FR-018          | `T025`, `T027`, `T028`                                                                                                                                                 | CRUD de documentos en gestión.                                                       |
-| FR-019          | `T076`, `T077`                                                                                                                                                         | Pantalla de búsqueda dedicada.                                                       |
-| FR-020          | `T063`, `T065`, `T076`, `T193`                                                                                                                                         | Aplicación del perfil sin lista independiente.                                       |
-| FR-021          | `T051`, `T076`, `T077`, `T229`, `T250`                                                                                                                                 | Accesos a búsqueda y foco en `#search-input`.                                        |
-| FR-022          | `T047`, `T128`, `T240`, `T247`, `T250`                                                                                                                                 | Confirmación al salir con cambios y al cancelar el panel de ticket.                  |
-| FR-023          | `T007`, `T008`, `T033`                                                                                                                                                 | Carga de configuración.                                                              |
-| FR-024          | `T007`, `T008`, `T031`                                                                                                                                                 | Valores predeterminados.                                                             |
-| FR-025          | `T031`, `T033`                                                                                                                                                         | Configuración inválida con advertencia.                                              |
-| FR-026          | `T011`, `T012`, `T041`                                                                                                                                                 | Campos personalizados en formularios.                                                |
-| FR-027          | `T037`, `T040`, `T042`                                                                                                                                                 | Validación de campos personalizados.                                                 |
-| FR-028          | `T038`, `T042`                                                                                                                                                         | Campos personalizados en listas/ficha.                                               |
-| FR-029          | `T034`, `T035`                                                                                                                                                         | Etiquetas derivadas de configuración.                                                |
-| FR-030          | `T079`, `T081`                                                                                                                                                         | Transiciones configuradas por cualquier vía.                                         |
-| FR-031          | `T079`, `T081`                                                                                                                                                         | Estado como texto libre.                                                             |
-| FR-032          | `T064`, `T126`, `T191`                                                                                                                                                 | 500 entidades y 500 documentos con umbrales p95.                                     |
-| FR-033          | `T048`, `T051`, `T171`, `T223`, `T225`, `T226`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`, `T256`, `T257`, `T258`, `T263`                                 | Tres acciones rápidas filtradas por rango, solo en el panel y con jerarquía visual.   |
-| FR-034          | `T028`, `T051`, `T223`, `T224`, `T225`, `T226`, `T228`, `T229`, `T232`, `T250`                                                                                         | Formulario vacío dentro de las gestiones.                                            |
-| FR-035          | `T049`, `T050`, `T052`, `T084`, `T133`, `T254`, `T258`, `T263`                                                                                                         | Tarjetas y embudo canónicos sobre fondo `#F8FAFC` y tarjetas `#FFFFFF`.               |
-| FR-036          | `T043`, `T045`                                                                                                                                                         | Marca en barra superior.                                                             |
-| FR-037          | `T045`, `T047`                                                                                                                                                         | Módulo activo resaltado.                                                             |
-| FR-038          | `T008`, `T046`, `T252`, `T253`, `T254`, `T255`, `T256`, `T258`, `T263`                                                                                                 | Acento `#1D4ED8`, fondo `#F8FAFC`, tarjetas `#FFFFFF`, iconos SVG y fallback seguro.  |
-| FR-039          | `T043`, `T045`, `T251`, `T253`, `T254`, `T263`                                                                                                                         | Barra estrecha operable con iconos SVG accesibles.                                   |
-| FR-040          | `T039`, `T129`                                                                                                                                                         | Valores huérfanos conservados.                                                       |
-| FR-041          | `T019`, `T022`, `T023`                                                                                                                                                 | Ficha de entidad.                                                                    |
-| FR-042          | `T021`, `T022`                                                                                                                                                         | Historial ordenado por fecha.                                                        |
-| FR-043          | `T020`, `T022`                                                                                                                                                         | Ficha refleja ediciones.                                                             |
-| FR-044          | `T081`, `T123`, `T124`                                                                                                                                                 | Indicadores y precedencia de pendientes.                                             |
-| FR-045          | `T122`, `T124`, `T125`                                                                                                                                                 | Actualización y selección desde resumen.                                             |
-| FR-046          | `T122`, `T125`                                                                                                                                                         | Estado vacío del resumen.                                                            |
-| FR-047          | `T036`, `T068`, `T069`                                                                                                                                                 | Rango de fecha de nacimiento.                                                        |
-| FR-048          | `T067`, `T068`, `T069`                                                                                                                                                 | Actualización al cambiar de día.                                                     |
-| FR-049          | `T067`, `T069`                                                                                                                                                         | Fecha local del dispositivo.                                                         |
-| FR-050          | `T057`, `T071`                                                                                                                                                         | Valores históricos conservados y corregidos.                                         |
-| FR-051          | `T053`, `T058`, `T129`                                                                                                                                                 | Campos ocultos del cliente.                                                          |
-| FR-052          | `T015`, `T017`, `T053`, `T058`                                                                                                                                         | Código interno único no visible.                                                     |
-| FR-053          | `T058`, `T129`                                                                                                                                                         | Campo `pedidos` eliminado.                                                           |
-| FR-054          | `T039`, `T053`, `T129`                                                                                                                                                 | Valores ocultos conservados.                                                         |
-| FR-055          | `T053`, `T065`, `T076`, `T193`                                                                                                                                         | Perfil de clientes sin contradecir FR-004.                                           |
-| FR-056          | `T054`, `T058`, `T059`                                                                                                                                                 | Campos obligatorios del cliente.                                                     |
-| FR-057          | `T009`, `T010`, `T054`, `T059`                                                                                                                                         | RUT válido y único.                                                                  |
-| FR-058          | `T057`, `T061`                                                                                                                                                         | Ficha bloqueada de cliente incompleto.                                               |
-| FR-059          | `T055`, `T058`                                                                                                                                                         | Canal sin preselección.                                                              |
-| FR-060          | `T055`, `T058`, `T060`                                                                                                                                                 | Casilla adicional por canal.                                                         |
-| FR-061          | `T009`, `T010`, `T055`, `T059`                                                                                                                                         | Validación por canal.                                                                |
-| FR-062          | `T056`, `T058`, `T060`                                                                                                                                                 | Pista gris del RUT.                                                                  |
-| FR-063          | `T056`, `T058`                                                                                                                                                         | Opciones de canal.                                                                   |
-| FR-064          | `T056`, `T062`, `T227`, `T228`, `T230`, `T250`                                                                                                                         | Texto «Nuevo Cliente» solo dentro de «Gestionar clientes».                           |
-| FR-065          | `T056`, `T058`, `T174`                                                                                                                                                 | Orden de casillas y `select` de ejecutivo.                                           |
-| FR-066          | `T056`, `T058`                                                                                                                                                         | Diez opciones de tipo de actividad.                                                  |
-| FR-067          | `T056`, `T058`, `T060`                                                                                                                                                 | Pistas de casilla adicional.                                                         |
-| FR-068          | `T083`, `T088`, `T092`, `T093`, `T179`                                                                                                                                 | Conversión interna y auditoría.                                                      |
-| FR-069          | `T085`, `T088`, `T089`, `T090`, `T151`                                                                                                                                 | Captura pública.                                                                     |
-| FR-070          | `T092`, `T114`, `T169`                                                                                                                                                 | Reglas por evento y ejecución como `Sistema`.                                        |
-| FR-071          | `T083`, `T085`, `T088`, `T089`                                                                                                                                         | Consentimiento de captura.                                                           |
-| FR-072          | `T084`, `T086`, `T087`, `T091`, `T133`                                                                                                                                 | Embudo compartido.                                                                   |
-| FR-073          | `T084`, `T086`, `T087`, `T091`, `T133`                                                                                                                                 | Tarjetas compartidas.                                                                |
-| FR-074          | `T084`, `T087`, `T118`, `T133`                                                                                                                                         | Coincidencia panel/Marketing.                                                        |
-| FR-075          | `T086`, `T091`, `T131`                                                                                                                                                 | Sin torta ni selector de etapas.                                                     |
-| FR-076          | `T095`, `T097`, `T098`                                                                                                                                                 | Equipos e integrantes.                                                               |
-| FR-077          | `T095`, `T175`, `T183`                                                                                                                                                 | Integrantes y atribución histórica.                                                  |
-| FR-078          | `T094`, `T096`, `T175`, `T183`                                                                                                                                         | Real mensual.                                                                        |
-| FR-079          | `T094`, `T096`, `T175`, `T183`                                                                                                                                         | Objetivo mensual.                                                                    |
-| FR-080          | `T099`, `T100`, `T102`                                                                                                                                                 | Apartado de redes sociales.                                                          |
-| FR-081          | `T099`, `T101`, `T103`                                                                                                                                                 | Interacciones como documentos.                                                       |
-| FR-082          | `T104`, `T106`, `T107`, `T109`                                                                                                                                         | Respuestas rápidas por FAQ.                                                          |
-| FR-083          | `T104`, `T105`, `T106`, `T180`                                                                                                                                         | Consultas sin coincidencia.                                                          |
-| FR-084          | `T105`, `T108`, `T151`                                                                                                                                                 | Chat en captura y Marketing.                                                         |
-| FR-085          | `T104`, `T105`, `T107`, `T180`                                                                                                                                         | Consentimiento y prospecto previo.                                                   |
-| FR-086          | `T110`, `T112`, `T113`, `T184`                                                                                                                                         | Campañas e historial con creador.                                                    |
-| FR-087          | `T116`, `T119`, `T120`                                                                                                                                                 | Indicadores de rendimiento.                                                          |
-| FR-088          | `T117`, `T121`                                                                                                                                                         | Campaña opcional y «Sin campaña».                                                    |
-| FR-089          | `T110`, `T113`, `T114`                                                                                                                                                 | Acciones internas de campaña.                                                        |
-| FR-090          | `T111`, `T114`                                                                                                                                                         | Solapamiento y omitidas.                                                             |
-| FR-091          | `T134`, `T135`, `T136`, `T137`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                                 | Tres acciones rápidas solo en el panel; Marketing no las hereda.                     |
-| FR-092          | `T141`, `T142`, `T143`                                                                                                                                                 | «Dudas y consultas» como terminología visible.                                       |
-| FR-093          | `T138`, `T139`, `T140`, `T144`                                                                                                                                         | Cinco atajos de Marketing en orden y terminología aprobada.                          |
-| FR-094          | `T153`, `T159`, `T168`, `T223`, `T224`, `T229`, `T231`, `T233`, `T238`, `T250`                                                                                         | Matriz como fuente única para panel, gestiones y Postventa.                          |
-| FR-095          | `T153`, `T163`, `T169`, `T182`                                                                                                                                         | Validación en capa de datos.                                                         |
-| FR-096          | `T153`, `T156`, `T157`, `T163`, `T169`                                                                                                                                 | Mensaje exacto de denegación.                                                        |
-| FR-097          | `T150`, `T160`                                                                                                                                                         | Acceso denegado y redirección.                                                       |
-| FR-098          | `T146`, `T161`, `T172`, `T173`                                                                                                                                         | Administración de usuarios.                                                          |
-| FR-099          | `T056`, `T161`, `T174`                                                                                                                                                 | Select de ejecutivos activos.                                                        |
-| FR-100          | `T094`, `T175`, `T183`                                                                                                                                                 | Vinculación del integrante y métricas.                                               |
-| FR-101          | `T092`, `T114`, `T184`                                                                                                                                                 | Identidad `Sistema` y creador persistido.                                            |
-| FR-102          | `T148`, `T152`, `T167`                                                                                                                                                 | Persistencia y revocación de sesión.                                                 |
-| SC-001          | `T015`, `T178`                                                                                                                                                         | Crear entidad en menos de 2 minutos.                                                 |
-| SC-002          | `T063`, `T064`                                                                                                                                                         | Búsqueda en menos de 10 segundos.                                                    |
-| SC-003          | `T178`, `T185`                                                                                                                                                         | Prueba cronometrada con cinco participantes.                                         |
-| SC-004          | `T064`, `T126`                                                                                                                                                         | 500 registros sin pérdida funcional.                                                 |
-| SC-005          | `T048`, `T077`                                                                                                                                                         | Accesos iniciales en menos de 10 segundos.                                           |
-| SC-006          | `T132`, `T177`, `T185`                                                                                                                                                 | Sin regresiones.                                                                     |
-| SC-007          | `T016`, `T128`                                                                                                                                                         | Navegación sin pérdida de datos.                                                     |
-| SC-008          | `T030`, `T032`, `T058`                                                                                                                                                 | Adaptación solo por configuración.                                                   |
-| SC-009          | `T043`, `T045`                                                                                                                                                         | Marco con marca consistente.                                                         |
-| SC-010          | `T049`, `T052`, `T133`                                                                                                                                                 | Estadísticas del panel coincidentes.                                                 |
-| SC-011          | `T122`, `T124`                                                                                                                                                         | Indicadores del resumen coincidentes.                                                |
-| SC-012          | `T068`, `T069`                                                                                                                                                         | Fechas inválidas y límite diario.                                                    |
-| SC-013          | `T053`, `T129`                                                                                                                                                         | Campos ocultos del cliente.                                                          |
-| SC-014          | `T054`, `T055`, `T059`                                                                                                                                                 | Rechazo de guardados inválidos.                                                      |
-| SC-015          | `T056`, `T227`, `T228`, `T230`, `T250`                                                                                                                                 | Pista, opciones y texto «Nuevo Cliente» solo en la gestión.                          |
-| SC-016          | `T056`, `T058`                                                                                                                                                         | Orden y opciones de tipo de actividad.                                               |
-| SC-017          | `T056`, `T060`                                                                                                                                                         | Pistas de canales.                                                                   |
-| SC-018          | `T084`, `T086`, `T133`                                                                                                                                                 | Embudo de Marketing.                                                                 |
-| SC-019          | `T084`, `T086`, `T133`                                                                                                                                                 | Tarjetas de Marketing.                                                               |
-| SC-020          | `T043`, `T044`, `T131`                                                                                                                                                 | Navegación y etiquetas.                                                              |
-| SC-021          | `T086`, `T091`, `T131`                                                                                                                                                 | Sin torta ni selector.                                                               |
-| SC-022          | `T094`, `T095`, `T183`                                                                                                                                                 | Equipo y métricas.                                                                   |
-| SC-023          | `T099`, `T100`, `T102`                                                                                                                                                 | Redes sociales.                                                                      |
-| SC-024          | `T116`, `T117`, `T118`, `T119`, `T141`, `T142`, `T143`, `T180`, `T192`                                                                                                 | «Dudas y consultas» con respuesta, acuse y consentimiento.                           |
-| SC-025          | `T122`, `T123`, `T124`, `T125`, `T126`, `T184`, `T192`                                                                                                                 | Campañas internas con historial y solapamiento.                                      |
-| SC-026          | `T128`, `T129`, `T130`, `T192`                                                                                                                                         | Rendimiento por campaña coherente con los registros.                                 |
-| SC-027          | `T134`, `T135`, `T136`, `T137`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                                 | Tres acciones rápidas solo en el panel.                                              |
-| SC-028          | `T141`, `T142`, `T143`                                                                                                                                                 | Etiquetas «Dudas y consultas» sin cambiar contratos.                                 |
-| SC-029          | `T138`, `T139`, `T140`, `T144`                                                                                                                                         | Cinco atajos de Marketing en orden exacto.                                           |
-| SC-030          | `T104`, `T105`, `T180`                                                                                                                                                 | Chat con consentimiento.                                                             |
-| SC-031          | `T110`, `T111`, `T112`, `T184`                                                                                                                                         | Campañas y solapamientos.                                                            |
-| SC-032          | `T116`, `T117`, `T118`                                                                                                                                                 | Rendimiento por campaña.                                                             |
-| SC-033          | `T154`                                                                                                                                                                 | Verificaciones de Nivel 4.                                                           |
-| SC-034          | `T155`                                                                                                                                                                 | Verificaciones de Nivel 3.                                                           |
-| SC-035          | `T156`                                                                                                                                                                 | Verificaciones de Nivel 2.                                                           |
-| SC-036          | `T157`                                                                                                                                                                 | Verificaciones de Nivel 1.                                                           |
-| SC-037          | `T158`                                                                                                                                                                 | Verificaciones de visitante.                                                         |
-| FR-104          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T211`, `T212`, `T215`, `T216`, `T218`, `T219`, `T237`, `T239`, `T242`, `T243`, `T244`, `T245`, `T246`, `T248`, `T250` | Ticket como `Documento` y panel en línea con desplegable buscable.                   |
-| FR-105          | `T195`, `T198`, `T201`, `T207`, `T208`, `T213`, `T214`, `T220`, `T221`, `T237`, `T242`, `T243`, `T245`, `T248`, `T250`                                                 | Tres tarjetas derivadas, actualizadas en la misma pestaña y con tamaño de «Resumen». |
-| FR-106          | `T196`, `T199`, `T203`, `T204`, `T205`, `T212`, `T218`, `T219`, `T238`, `T245`, `T247`, `T249`, `T250`                                                                 | Permisos en UI, panel en línea y capa de datos, sin ruta de ticket.                  |
-| FR-107          | `T195`, `T198`, `T204`, `T207`, `T208`, `T237`, `T242`, `T243`, `T244`, `T248`, `T250`                                                                                 | Categorías y cambios entre cualquier par de estados.                                 |
-| FR-108          | `T195`, `T200`, `T201`, `T204`, `T207`, `T237`, `T242`, `T243`, `T244`, `T248`, `T250`                                                                                 | Prioridad sin preselección y nota condicional.                                       |
-| FR-109          | `T195`, `T198`, `T205`, `T206`, `T207`, `T214`, `T217`, `T221`, `T237`, `T242`, `T243`, `T245`, `T250`                                                                 | Quinta opción, panel en línea, tarjetas y estado vacío.                              |
-| SC-039          | `T195`, `T198`, `T200`, `T201`, `T207`, `T208`, `T210`, `T211`, `T213`, `T215`, `T222`, `T237`, `T238`, `T239`, `T242`, `T248`, `T250`                                 | Verificaciones funcionales de Postventa y del panel en línea.                        |
-| SC-040          | `T196`, `T199`, `T203`, `T204`, `T205`, `T206`, `T210`, `T212`, `T218`, `T219`, `T222`, `T238`, `T245`, `T247`, `T249`, `T250`                                         | Verificaciones de permisos de Postventa sin pestaña nueva.                           |
-
-## Notas
-
-- `[P]` significa archivos distintos y sin dependencias pendientes; no implica que las pruebas deban ejecutarse en paralelo, porque `vitest.config.mjs` fija `fileParallelism: false`. T177 verifica la base US22/US23, T185 verifica Phase 25 completa para US5, US15, US16 y US23 y T186 verifica el formato del repositorio.
-- `[USn]` permite trazar cada tarea hasta su historia y su prueba independiente en `spec.md`.
-- Todas las suites se escriben antes de la implementación y se comprueba que fallan; `npm test` y `npm run lint` se ejecutan al final de cada fase y en Polish, mientras `npm run format:check` cierra la verificación de calidad en T186.
-- Marketing reutiliza `Entidad` y `Documento`: no hay nueva entidad, backend, dependencias ni almacenamiento de resultados derivados.
-- El campo `estado_comercial`, las reglas y las campañas son internos; Marketing no ofrece torta ni selector de etapas y el panel no ofrece «Abrir Marketing».
-- La captura pública se sirve en `?view=capture` y requiere mismo origen con el `localStorage` de la aplicación.
-- Phase 25 se añade después de Polish para conservar todas las fases existentes, sus números y sus marcadores `[X]`; T186 se añade tras T185 sin renumerar T001-T185 y `tasks.md` no se regenera.
-- La matriz de permisos es solo código en `src/auth/permissions.js`: ninguna vista permite editarla y `Sistema` queda fuera del selector interactivo.
-- El catálogo canónico de acciones está en `spec.md`; `contracts/auth.md` y `data-model.md` solo pueden reflejarlo y T153/T168 fallan si aparece una acción nueva o una variante propio/cualquiera no declarada.
-- Los permisos se comprueban en UI, lecturas/agregaciones y en `src/storage.js`; la negación no es solo ocultar botones y usa siempre `No tienes permiso para realizar esta acción` o «Acceso denegado» según la capa.
-- La garantía de denegación cubre la API local con sesión íntegra, incluidas las llamadas iniciadas desde consola; la manipulación deliberada de `localStorage`/`erp_session` o del entorno para falsificar identidad/rango queda fuera del alcance demostrativo sin backend.
-- T183/T184 conservan `assignedUserIdAtSale` y `createdByUserId` como atribución histórica aunque el usuario cambie de rango o sea desactivado.
-- Phase 26 añade T187-T194 sin renumerar ni cambiar marcadores de T001-T186; T194 verifica que no queden URL absolutas, adjetivos subjetivos sin respaldo medible, variantes de mensajes exactos ni contradicciones entre FR-004, FR-020 y FR-055.
-- En el incremento de clarificaciones, los cambios de terminología son solo visuales: `chat` sigue siendo la clave, el canal y el nombre interno de `ChatConsentError`.
-- Phase 27 añade T195-T210 sin renumerar ni cambiar marcadores de T001-T194; T210 verifica `npm test`, `npm run lint` y `npm run format:check` al cierre de Postventa.
-- Phase 28 añade T211-T222 sin renumerar ni cambiar marcadores de T001-T210; T222 verificó `npm test`, `npm run lint` y `npm run format:check`, pero las decisiones de pestaña nueva y sincronización quedan superadas por T223-T250.
-- El panel en línea usa `state.ticketFormOpen` dentro de `?view=postventa`, exige `postventa:create` en la capa de datos y no introduce `?view=ticket-form`, `window.open`, eventos `storage`, `postMessage`, sondeo ni `visibilitychange`.
-- Guardar cierra el panel y vuelve a la tabla con un solo `render()`; cancelar sin cambios cierra directamente y cancelar con cambios pide confirmación sin persistir borradores.
-- El formulario de ticket reutiliza `.form-field`, `.client-form-section` y `.form-actions` del formulario de clientes sin adoptar sus campos ni reglas; las etiquetas y pistas grises conservan los valores de tickets.
-- El panel principal ofrece solo «Gestionar clientes», «Gestionar interacciones» y «Buscar registros»; «Nuevo Cliente» y «Nueva interacción» viven dentro de las gestiones y Marketing no hereda esas tres acciones.
-- `.postventa-cards` iguala el dimensionamiento de `.summary-cards`; no se modifica `.stat-card` global ni el orden de etiqueta y valor de los indicadores.
-- T250 añade el gate final sin renumerar ni desmarcar T001-T222 y comprueba que no queden referencias vivas a `quick-new-*`, `?view=ticket-form`, `window.open` ni listener `storage`.
-- Los tickets son `Documento` con `ticket: true` y `entity_id` de un cliente existente: no hay clave `support_tickets`, resultados derivados persistidos ni cambio del `statusLifecycle` global.
-- Las acciones `postventa:*` son aditivas al catálogo canónico; N1 no recibe `document:edit_any` y N3 no recibe `postventa:view` aunque pueda leer documentos genéricos.
-- US24 (FR-103, SC-038) queda fuera de este incremento: sus tareas requieren primero artefactos de diseño propios y no deben inferirse de la implementación de Postventa.
-- Phase 34-36 y T263 añaden T251-T263 sin renumerar ni desmarcar T001-T250; cubren solo FR-038, US14b, US15a y la verificación de FR-003/FR-009.
-- Los iconos de `NAV_ITEMS` son SVG en línea con trazo uniforme: no cambian `key`, `id`, etiquetas accesibles, permisos ni `monogramSvg()`.
-- El color integrado del perfil CRM pasa a ser `#1D4ED8`; `--bg` pasa a `#F8FAFC` y `--surface` permanece `#FFFFFF`, sin nuevas claves de configuración.
-- La baja definitiva no elimina documentos en cascada: `deleteEntity()` rechaza con `EntityHasRecordsError` sin escribir y `deleteDocumentsForEntity()` sigue siendo una operación explícita separada.
+- `[P]` significa archivos distintos y sin dependencias incompletas.
+- `[Story]` garantiza trazabilidad con `spec.md`.
+- Cada historia debe poder completarse y probarse de forma independiente.
+- Las pruebas deben fallar antes de la implementación.
+- No usar `?view=ticket-form`, `window.open` ni listener `storage` para Postventa.
+- No reintroducir contraseñas, hash, bloqueo por intentos ni borrado en cascada.
+- Verificar siempre mensajes exactos y opciones exactas de `spec.md` y `contracts/`.

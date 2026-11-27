@@ -25,6 +25,20 @@ function optionsFromCampaigns(campaigns, selected) {
     .join('');
 }
 
+const ACTION_LABELS = {
+  create_document: 'Crear documento de seguimiento',
+  assign_executive: 'Asignar ejecutivo',
+  update_stage: 'Actualizar estado comercial',
+};
+
+function campaignActions(marketingConfig) {
+  const campaigns = marketingConfig.campaigns;
+  const declared = Array.isArray(campaigns) ? campaigns.actions : campaigns?.actions;
+  return Array.isArray(declared) && declared.length
+    ? declared.filter((action) => ACTION_LABELS[action])
+    : Object.keys(ACTION_LABELS);
+}
+
 function stageOptions(selected) {
   return MARKETING_STAGES.map(
     (stage) =>
@@ -58,10 +72,10 @@ function renderCampaignsHtml({
         <label>Fin<input type="date" name="endDate" value="${escapeHtml(campaignForm.endDate || '')}" required /></label>
         <label>Acción interna
           <select name="action">
-            ${['create_document', 'assign_executive', 'update_stage']
+            ${campaignActions(marketingConfig)
               .map(
                 (action) =>
-                  `<option value="${action}" ${campaignForm.action === action || (!campaignForm.action && action === 'create_document') ? 'selected' : ''}>${action === 'create_document' ? 'Crear documento de seguimiento' : action === 'assign_executive' ? 'Asignar ejecutivo' : 'Actualizar estado comercial'}</option>`
+                  `<option value="${action}" ${campaignForm.action === action || (!campaignForm.action && action === 'create_document') ? 'selected' : ''}>${ACTION_LABELS[action]}</option>`
               )
               .join('')}
           </select>
@@ -154,6 +168,7 @@ export function renderMarketingHtml(config, stats, options = {}) {
     social = {},
     chat = {},
     campaigns = {},
+    users = [],
     selectedCampaignId = 'all',
     role = 'visitor',
     authEnabled = false,
@@ -180,7 +195,7 @@ export function renderMarketingHtml(config, stats, options = {}) {
     </div>
     <div class="marketing-section-panel">${
       section === 'team'
-        ? renderMarketingTeamHtml({ ...team, teams: marketingConfig.salesTeams || [] })
+        ? renderMarketingTeamHtml({ ...team, teams: marketingConfig.salesTeams || [], users })
         : section === 'social'
           ? renderMarketingSocialHtml({
               ...social,

@@ -1,12 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { computeSalesTeamMetrics } from '../../src/utils/sales-team-metrics.js';
-import {
-  DEMO_PASSWORD,
-  createUser,
-  deactivateUser,
-  listUsers,
-  updateUser,
-} from '../../src/auth.js';
+import { createUser, deactivateUser, listUsers, updateUser } from '../../src/auth.js';
 import { seedAuth } from '../helpers/auth-session.js';
 
 afterEach(() => {
@@ -327,7 +321,6 @@ describe('Atribución histórica de ventas (FR-077 a FR-079)', () => {
     seedAuth();
     const ana = await createUser({
       username: 'ana.munoz',
-      password: DEMO_PASSWORD,
       rank: 'n2_sales',
     });
     const teams = teamWith(ana.id);
@@ -349,6 +342,20 @@ describe('Atribución histórica de ventas (FR-077 a FR-079)', () => {
     ).toBe(450);
     expect(documents[0].assignedUserIdAtSale).toBe(ana.id);
     expect(listUsers().find((user) => user.id === ana.id).active).toBe(false);
+  });
+
+  it('excluye ventas de entidades archivadas', () => {
+    const archivedEntities = [
+      { entity_id: 'venta-1', ejecutivo_asignado: 'user-ana', archivedAt: '2026-01-10' },
+    ];
+    const result = computeSalesTeamMetrics({
+      teams: teamWith('user-ana'),
+      entities: archivedEntities,
+      documents: [wonSale()],
+      now,
+    });
+    expect(result.totals.realMonthly).toBe(0);
+    expect(result.teams[0].members[0].realMonthly).toBe(0);
   });
 
   it('excluye a los integrantes inactivos incluso cuando la venta conserva su userId', () => {

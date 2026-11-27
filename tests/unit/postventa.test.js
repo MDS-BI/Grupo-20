@@ -4,10 +4,13 @@ import {
   DEFAULT_POSTVENTA_CONFIG,
   allowsTicketTransition,
   computeTicketStats,
+  isResolutionNoteRequired,
   isTicket,
   validatePostventaConfig,
   validateTicketValues,
 } from '../../src/utils/postventa.js';
+import { renderTicketFormHtml } from '../../src/components/ticket-form.js';
+import { renderPostventaHtml } from '../../src/components/postventa.js';
 
 describe('Configuración y utilidades de Postventa (T195)', () => {
   it('declara exactamente los estados, opciones y tarjetas contratados', () => {
@@ -147,5 +150,43 @@ describe('Configuración y utilidades de Postventa (T195)', () => {
       DEFAULT_POSTVENTA_CONFIG
     );
     expect(validateConfig({ postventa: { states: ['Abierto'] } }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Formulario y vista de tickets (T226/T230)', () => {
+  it('deja la prioridad sin preseleccionar y marca la nota como exclusiva de Resuelto', () => {
+    const html = renderTicketFormHtml(null, {
+      clients: [{ entity_id: 'e-1', name: 'Cliente', code: 'C-1' }],
+      formValues: { entity_id: 'e-1' },
+    });
+    expect(html).toContain('<option value="e-1" selected>Cliente (C-1)</option>');
+    expect(html).toMatch(
+      /id="ticket-prioridad"[\s\S]*<option value="" selected>-- Selecciona --<\/option>/
+    );
+    expect(html).toContain('data-when-equals="Resuelto"');
+    expect(html).not.toMatch(/<option value="baja" selected>/);
+  });
+
+  it('exige la nota solo en Resuelto y valida prioridad obligatoria', () => {
+    expect(isResolutionNoteRequired('Resuelto')).toBe(true);
+    expect(isResolutionNoteRequired('Abierto')).toBe(false);
+    expect(
+      validateTicketValues(
+        { entity_id: 'e-1', asunto: 'Falla', categoria: 'garantia', status: 'Abierto' },
+        { entities: [{ entity_id: 'e-1' }] }
+      )._form
+    ).toBe('Completa los campos obligatorios.');
+  });
+
+  it('renderiza tres tarjetas y el panel en línea sin abrir pestaña', () => {
+    const html = renderPostventaHtml(null, {
+      tickets: [{ id: 't-1', ticket: true, entity_id: 'e-1', status: 'Abierto' }],
+      clients: [{ entity_id: 'e-1', name: 'Cliente' }],
+      ticketFormOpen: true,
+      ticketFormHtml: '<form id="ticket-form"></form>',
+    });
+    expect(html.match(/class="stat-card"/g)).toHaveLength(3);
+    expect(html).toContain('id="ticket-form"');
+    expect(html).not.toContain('ticket-form?view');
   });
 });

@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils/sanitize.js';
 import { getLabel } from '../module-config.js';
+import { can } from '../auth/permissions.js';
 
 function monogramSvg(moduleName) {
   const initial = escapeHtml((moduleName || 'E').trim().charAt(0).toUpperCase() || 'E');
@@ -47,11 +48,27 @@ export const NAV_ITEMS = [
   },
 ];
 
-export function renderShellHtml(config, activeNavKey) {
-  const navButtons = NAV_ITEMS.map((item) => {
-    const label = item.label || getLabel(config, item.labelKey);
-    const isActive = item.key === activeNavKey;
-    return `
+const NAV_ACTIONS = {
+  dashboard: [['panel:view']],
+  search: [['search:view']],
+  summary: [['summary:view_all'], ['summary:view_own']],
+  marketing: [['marketing:view']],
+  postventa: [['postventa:view'], ['postventa:view_own']],
+};
+
+function navAllowed(item, options) {
+  if (!options?.authEnabled || !options?.role) return true;
+  const groups = NAV_ACTIONS[item.key] || [];
+  const check = typeof options.can === 'function' ? options.can : can;
+  return groups.some((actions) => actions.some((action) => check(options.role, action)));
+}
+
+export function renderShellHtml(config, activeNavKey, options = {}) {
+  const navButtons = NAV_ITEMS.filter((item) => navAllowed(item, options))
+    .map((item) => {
+      const label = item.label || getLabel(config, item.labelKey);
+      const isActive = item.key === activeNavKey;
+      return `
       <button
         id="${item.id}"
         type="button"
@@ -65,7 +82,8 @@ export function renderShellHtml(config, activeNavKey) {
         <span class="sidebar-icon" aria-hidden="true">${item.icon}</span>
         <span id="${item.id}-label" class="sidebar-label">${escapeHtml(label)}</span>
       </button>`;
-  }).join('');
+    })
+    .join('');
 
   return `
     <header class="topbar">

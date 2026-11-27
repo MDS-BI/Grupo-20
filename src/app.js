@@ -41,6 +41,8 @@ import {
   isDocumentFormDirty,
 } from './components/document-form.js';
 import { renderEntityListHtml, renderClientManagementTableHtml } from './components/entity-list.js';
+import { renderClientQuickViewHtml } from './components/client-quick-view.js';
+import { renderLoginHtml } from './components/login.js';
 import { renderDocumentListHtml } from './components/document-list.js';
 import { renderSearchBarHtml } from './components/search-bar.js';
 import { renderEntityDetailHtml } from './components/entity-detail.js';
@@ -50,6 +52,7 @@ import { createProspectFromCapture, CaptureError } from './utils/capture-prospec
 import { renderMarketingHtml } from './components/marketing.js';
 import { renderPostventaHtml } from './components/postventa.js';
 import { renderTicketFormHtml } from './components/ticket-form.js';
+import { isTicket } from './utils/postventa.js';
 import { renderMarketingChatHtml } from './components/marketing-chat.js';
 import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
 import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
@@ -79,7 +82,6 @@ import {
   updateUser,
 } from './auth.js';
 import { actionForView, can } from './auth/permissions.js';
-import { renderLoginHtml } from './components/login.js';
 import { collectUserData, RANK_OPTIONS, renderUsersAdminHtml } from './components/users-admin.js';
 
 const ROUTE_VIEWS = new Set([
@@ -306,6 +308,7 @@ export function initApp(rootEl = null, options = {}) {
     documentFormDraft: null,
     entityFormBaseline: null,
     documentFormBaseline: null,
+    quickViewEntityId: null,
     ticketFormOpen: false,
     ticketClientSearch: '',
     ticketValues: {},
@@ -320,7 +323,7 @@ export function initApp(rootEl = null, options = {}) {
     state.marketingConfig = loadMarketingConfig();
   }
 
-  function refreshAuth() {
+  function refreshAuth({ touch = true } = {}) {
     const auth = resolveAuthState();
     state.authEnabled = auth.enabled;
     state.currentUser = auth.user;
@@ -335,7 +338,7 @@ export function initApp(rootEl = null, options = {}) {
     if (typeof storageApi.setStorageAuthEnforced === 'function') {
       storageApi.setStorageAuthEnforced(enableAuth || auth.enabled);
     }
-    if (auth.user) touchSession();
+    if (auth.user && touch) touchSession();
     return auth;
   }
 
@@ -373,7 +376,7 @@ export function initApp(rootEl = null, options = {}) {
 
   function applyRoute(
     route,
-    { skipDirtyCheck = false, replace = false, fromPopState = false } = {}
+    { skipDirtyCheck = false, replace = false, fromPopState = false, touchAuth = true } = {}
   ) {
     if (
       !skipDirtyCheck &&
@@ -393,7 +396,7 @@ export function initApp(rootEl = null, options = {}) {
       target.route = null;
     }
     const forceReplace = replace || Boolean(target.legacyPanel);
-    refreshAuth();
+    refreshAuth({ touch: touchAuth });
     if (state.authEnabled && target.view !== 'capture' && !state.currentUser) {
       state.pendingRoute = target;
       state.view = 'login';
@@ -423,20 +426,21 @@ export function initApp(rootEl = null, options = {}) {
     return true;
   }
 
-  async function handleLoginSubmit(formEl) {
-    const values = formValues(formEl);
+  async function handleLoginUser(userId) {
+    if (!userId) return;
     try {
-      await login(values.username, values.password);
-    } catch (error) {
-      state.loginError = error instanceof Error ? error.message : MESSAGES.userNotFound;
+      await login(userId);
+    } catch {
+      state.loginError = 'No se pudo iniciar sesión.';
       render();
       return;
     }
     state.loginError = '';
-    refreshAuth();
+    refreshAuth({ touch: false });
     applyRoute(state.pendingRoute || routeFromKey('dashboard'), {
       skipDirtyCheck: true,
       replace: true,
+      touchAuth: false,
     });
   }
 
@@ -496,6 +500,41 @@ export function initApp(rootEl = null, options = {}) {
     return state.documents.filter((document) => activeIds.has(document.entity_id));
   }
 
+  function canSeeEntityTickets(entity) {
+    if (!state.authEnabled) return true;
+    if (uiCan('postventa:view')) return true;
+    return (
+      state.role === 'n2_sales' &&
+      isEntityOwnedByCurrentUser(entity) &&
+      uiCan('postventa:view_own', {
+        userId: state.currentUser?.id,
+        ownerId: entity.ownerId,
+      })
+    );
+  }
+
+  function ticketMetaForEntities(entities = []) {
+    const meta = {};
+    for (const entity of entities) {
+      const tickets = state.documents.filter(
+        (doc) => isTicket(doc) && doc.entity_id === entity.entity_id
+      );
+      const visible = canSeeEntityTickets(entity) ? tickets : [];
+      const isOpen = visible.some((doc) => doc.status === 'Abierto');
+      const isReview = visible.some((doc) => doc.status === 'En revisión');
+      const canOpen =
+        uiCan('postventa:create') &&
+        (state.role !== 'n2_sales' || isEntityOwnedByCurrentUser(entity)) &&
+        !isArchivedEntity(entity);
+      meta[entity.entity_id] = {
+        alertClass: isOpen ? 'open' : isReview ? 'review' : null,
+        alertLabel: isOpen ? 'Ticket abierto' : isReview ? 'Ticket en revisión' : null,
+        canOpenTicket: canOpen,
+      };
+    }
+    return meta;
+  }
+
   function applyPermissionFilters() {
     if (!state.authEnabled || !state.currentUser) return;
     rootEl.querySelectorAll('[data-action="navigate"][data-view]').forEach((button) => {
@@ -504,7 +543,6 @@ export function initApp(rootEl = null, options = {}) {
         button.remove();
         return;
       }
-      if (view === 'summary' && state.role === 'n2_sales') button.remove();
       if (view === 'marketing' && state.role === 'n1_support') button.remove();
     });
     rootEl.querySelectorAll('[data-action="quick-manage"]').forEach((button) => {
@@ -625,7 +663,11 @@ export function initApp(rootEl = null, options = {}) {
         <section class="client-management" aria-labelledby="client-management-heading">
           <h2 id="client-management-heading">Gestión de ${escapeHtml(entityPlural.toLowerCase())}</h2>
           ${statusFilterHtml}
-          ${renderClientManagementTableHtml(clients, state.config, { archived, entityLabel })}
+          ${renderClientManagementTableHtml(clients, state.config, {
+            archived,
+            entityLabel,
+            ticketMeta: ticketMetaForEntities(clients),
+          })}
         </section>
         <section class="client-form-section">
           <h2>${editing ? 'Editar' : 'Nuevo'} ${escapeHtml(editing ? entityLabel.toLowerCase() : entityLabel)}</h2>
@@ -652,6 +694,7 @@ export function initApp(rootEl = null, options = {}) {
         ? state.documents.find((d) => d.id === state.editingDocumentId)
         : null;
       const docValues = state.documentFormDraft || editingDoc || {};
+      const docEntity = state.entities.find((e) => e.entity_id === state.documentEntityId) || {};
       const docsForEntity = state.documentEntityId
         ? getEntityDocuments(state.documentEntityId, state.documents)
         : [];
@@ -669,7 +712,7 @@ export function initApp(rootEl = null, options = {}) {
             ? `<p class="empty-state">Crea una ${escapeHtml(entityLabel.toLowerCase())} primero.</p>`
             : ''
         }
-        ${state.documentEntityId ? renderDocumentFormHtml(state.config, docValues, state.documentFormErrors) : ''}
+        ${state.documentEntityId ? renderDocumentFormHtml(state.config, docValues, state.documentFormErrors, docEntity) : ''}
         ${
           editingDoc
             ? `<button type="button" data-action="delete-document" data-id="${escapeHtml(editingDoc.id)}">Eliminar ${escapeHtml(documentLabel.toLowerCase())}</button>`
@@ -698,6 +741,7 @@ export function initApp(rootEl = null, options = {}) {
 
   function renderSearchView() {
     const archived = state.clientStatusFilter === 'archived';
+    const results = currentSearchResults();
     const filterHtml = `
       <div class="tabs client-status-filter" role="tablist" aria-label="Estado del cliente">
         <button type="button" role="tab" data-action="client-status-filter" data-status="active"
@@ -714,7 +758,10 @@ export function initApp(rootEl = null, options = {}) {
         ${renderSearchBarHtml(state.config, state.searchQuery)}
         ${filterHtml}
         <div id="search-results-list">
-          <div id="search-results">${renderEntityListHtml(currentSearchResults(), state.config, { archived })}</div>
+          <div id="search-results">${renderEntityListHtml(results, state.config, {
+            archived,
+            ticketMeta: ticketMetaForEntities(results),
+          })}</div>
         </div>
       </div>
     `;
@@ -854,7 +901,7 @@ export function initApp(rootEl = null, options = {}) {
   function renderCurrentView() {
     switch (state.view) {
       case 'login':
-        return renderLoginHtml(state.loginError);
+        return renderLoginHtml(listUsers(), state.loginError);
       case 'users-admin':
         return renderUsersAdminView();
       case 'marketing':
@@ -893,6 +940,21 @@ export function initApp(rootEl = null, options = {}) {
       default:
         return renderDashboardView();
     }
+  }
+
+  function renderQuickViewOverlay() {
+    if (!state.quickViewEntityId) return;
+    const entity = state.entities.find((item) => item.entity_id === state.quickViewEntityId);
+    if (!entity) {
+      state.quickViewEntityId = null;
+      return;
+    }
+    const documents = getEntityDocuments(entity.entity_id, state.documents);
+    const tickets = canSeeEntityTickets(entity) ? documents.filter(isTicket) : [];
+    rootEl.insertAdjacentHTML(
+      'beforeend',
+      renderClientQuickViewHtml(entity, documents, state.config, { tickets })
+    );
   }
 
   // -- Main render -------------------------------------------------------
@@ -939,6 +1001,7 @@ export function initApp(rootEl = null, options = {}) {
     }
     const viewRoot = rootEl.querySelector('#view-root');
     if (viewRoot && !bareStandalone) viewRoot.innerHTML = renderCurrentView();
+    renderQuickViewOverlay();
 
     applyPermissionFilters();
     applyExecutiveLabels();
@@ -990,7 +1053,8 @@ export function initApp(rootEl = null, options = {}) {
     return isDocumentFormDirty(
       rootEl.querySelector('#document-form'),
       state.config,
-      state.documentFormBaseline
+      state.documentFormBaseline,
+      state.entities.find((e) => e.entity_id === state.documentEntityId) || {}
     );
   }
 
@@ -1086,8 +1150,9 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function onDocumentFormSubmit(formEl) {
+    const docEntity = state.entities.find((e) => e.entity_id === state.documentEntityId) || {};
     const data = {
-      ...collectDocumentFormData(formEl, state.config),
+      ...collectDocumentFormData(formEl, state.config, docEntity),
       entity_id: state.documentEntityId,
     };
     const editingDocument = state.editingDocumentId
@@ -1114,11 +1179,13 @@ export function initApp(rootEl = null, options = {}) {
         updateDocument(state.editingDocumentId, data, {
           customFieldDefs: state.config.customFields.document,
           statusLifecycle: state.config.statusLifecycle,
+          documentRules: state.config.documentRules,
         });
       } else {
         addDocument(data, {
           customFieldDefs: state.config.customFields.document,
           statusLifecycle: state.config.statusLifecycle,
+          documentRules: state.config.documentRules,
         });
       }
       state.documentFormErrors = {};
@@ -1408,11 +1475,54 @@ export function initApp(rootEl = null, options = {}) {
     render();
   }
 
+  function openTicketForEntity(entityId) {
+    const entity = state.entities.find((item) => item.entity_id === entityId);
+    if (!entity) return;
+    if (!uiCan('postventa:create')) {
+      showPermissionDenied();
+      return;
+    }
+    if (state.authEnabled && state.role === 'n2_sales' && !isEntityOwnedByCurrentUser(entity)) {
+      showPermissionDenied();
+      return;
+    }
+    if (hasUnsavedChanges() && !confirmDiscardChanges()) return;
+    discardDrafts();
+    state.view = 'postventa';
+    state.manageTab = 'entity';
+    state.ticketFormOpen = true;
+    state.ticketValues = buildTicketFormBaseline({ entity_id: entity.entity_id });
+    state.ticketBaseline = { ...state.ticketValues };
+    state.ticketErrors = {};
+    state.ticketClientSearch = '';
+    syncUrl();
+    render();
+  }
+
   function handleClick(event) {
     const target = event.target.closest('[data-action]');
     if (!target) return;
     const { action } = target.dataset;
     switch (action) {
+      case 'login-user':
+        handleLoginUser(target.dataset.userId);
+        break;
+      case 'open-client-quick-view':
+        state.quickViewEntityId = target.dataset.entityId;
+        render();
+        break;
+      case 'close-quick-view':
+        state.quickViewEntityId = null;
+        render();
+        break;
+      case 'view-entity-full':
+        state.detailEntityId = state.quickViewEntityId || target.dataset.entityId;
+        state.quickViewEntityId = null;
+        navigate('detail');
+        break;
+      case 'open-ticket':
+        openTicketForEntity(target.dataset.entityId);
+        break;
       case 'navigate':
         if (target.dataset.view === 'manage-document' && state.view !== 'manage') {
           resetDocumentCreation();
@@ -1693,9 +1803,6 @@ export function initApp(rootEl = null, options = {}) {
     } else if (event.target.id === 'chat-form') {
       event.preventDefault();
       handleChatSubmit(event.target);
-    } else if (event.target.id === 'login-form') {
-      event.preventDefault();
-      handleLoginSubmit(event.target);
     } else if (event.target.id === 'user-form') {
       event.preventDefault();
       handleUserSubmit(event.target);
@@ -1706,11 +1813,7 @@ export function initApp(rootEl = null, options = {}) {
     const values = collectUserData(formEl);
     const validRanks = new Set(RANK_OPTIONS.map(([rank]) => rank));
     try {
-      if (
-        !values.username.trim() ||
-        !validRanks.has(values.rank) ||
-        (!state.editingUserId && !values.password)
-      ) {
+      if (!values.username.trim() || !validRanks.has(values.rank)) {
         throw new Error(MESSAGES.required);
       }
       if (state.editingUserId) {

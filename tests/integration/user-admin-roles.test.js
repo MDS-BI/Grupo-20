@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
-import { DEMO_PASSWORD, deactivateUser, listUsers, updateUser } from '../../src/auth.js';
+import { deactivateUser, listUsers, updateUser } from '../../src/auth.js';
 import { can, PERMISSION_MATRIX } from '../../src/auth/permissions.js';
 import { DEFAULT_CONFIG, MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
 import {
@@ -45,16 +45,15 @@ function click(selector) {
   element.click();
 }
 
-function submitLogin(username, password) {
-  document.querySelector('#login-username').value = username;
-  document.querySelector('#login-password').value = password;
-  document.querySelector('#login-form').dispatchEvent(new Event('submit', { bubbles: true }));
+function clickLogin(usernameKey) {
+  const user = listUsers().find((candidate) => candidate.usernameKey === usernameKey);
+  expect(user, `No se encontró el usuario ${usernameKey}`).toBeTruthy();
+  document.querySelector(`[data-action="login-user"][data-user-id="${user.id}"]`).click();
 }
 
-function submitUserForm({ username, password, rank }) {
+function submitUserForm({ username, rank }) {
   const form = document.querySelector('#user-form');
   form.querySelector('[name="username"]').value = username;
-  form.querySelector('[name="password"]').value = password;
   form.querySelector('[name="rank"]').value = rank;
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 }
@@ -99,7 +98,7 @@ afterEach(() => {
 describe('Gestor comercial (Nivel 4)', () => {
   it('inicia sesión con la identidad, rango y menú de gerente', async () => {
     mount();
-    submitLogin('gerente', DEMO_PASSWORD);
+    clickLogin('gerente');
 
     await vi.waitFor(() => expect(app.getState().view).toBe('dashboard'));
     expect(document.querySelector('#current-user').textContent).toBe('gerente');
@@ -151,14 +150,14 @@ describe('Gestor comercial (Nivel 4)', () => {
   it('crea usuarios, rechaza duplicados normalizados y desactiva una sesión activa', async () => {
     await mountAs('gerente');
     app.navigate('users-admin');
-    submitUserForm({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
+    submitUserForm({ username: 'ana.munoz', rank: 'n2_sales' });
 
     await vi.waitFor(() =>
       expect(document.querySelector('.users-admin-view').textContent).toContain('ana.munoz')
     );
     expect(listUsers().find((user) => user.usernameKey === 'ana.munoz').rank).toBe('n2_sales');
 
-    submitUserForm({ username: ' VENTAS ', password: DEMO_PASSWORD, rank: 'n4_manager' });
+    submitUserForm({ username: ' VENTAS ', rank: 'n4_manager' });
     await vi.waitFor(() => expect(document.querySelector('#users-admin-error')).toBeTruthy());
     expect(document.querySelector('#users-admin-error').textContent).toBe(MESSAGES.required);
     expect(listUsers().filter((user) => user.usernameKey === 'ventas')).toHaveLength(1);

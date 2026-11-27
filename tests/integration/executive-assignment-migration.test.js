@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { seedAuth } from '../helpers/auth-session.js';
 import { signIn } from '../helpers/auth-session.js';
-import { createUser, deactivateUser, DEMO_PASSWORD, listUsers } from '../../src/auth.js';
+import { createUser, deactivateUser, listUsers } from '../../src/auth.js';
 import {
   loadEntities,
   loadDocuments,
@@ -70,7 +70,7 @@ describe('Migración de Ejecutivo Asignado', () => {
     pedro = listUsers().find((user) => user.usernameKey === 'ventas');
     ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
     if (!ana) {
-      ana = await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
+      ana = await createUser({ username: 'ana.munoz', rank: 'n2_sales' });
     }
     saveEntities([]);
     saveDocuments([]);

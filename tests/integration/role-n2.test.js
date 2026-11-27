@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { signIn, seedAuth } from '../helpers/auth-session.js';
-import { createUser, DEMO_PASSWORD, listUsers } from '../../src/auth.js';
+import { createUser, listUsers } from '../../src/auth.js';
 import {
   addDocument,
   addEntity,
@@ -70,7 +70,7 @@ describe('Permisos de Nivel 2 - Ejecutivo de Ventas', () => {
     pedro = listUsers().find((user) => user.usernameKey === 'ventas');
     ana = listUsers().find((user) => user.usernameKey === 'ana.munoz');
     if (!ana) {
-      ana = await createUser({ username: 'ana.munoz', password: DEMO_PASSWORD, rank: 'n2_sales' });
+      ana = await createUser({ username: 'ana.munoz', rank: 'n2_sales' });
     }
     setSearch('');
   });

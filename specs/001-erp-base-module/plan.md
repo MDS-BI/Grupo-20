@@ -318,6 +318,11 @@ specs/001-erp-base-module/
 ├── data-model.md
 ├── quickstart.md
 ├── contracts/
+│   ├── auth.md
+│   ├── client-ui.md
+│   ├── entity-storage.md
+│   ├── marketing.md
+│   └── postventa.md
 └── tasks.md
 ```
 
@@ -369,7 +374,7 @@ src/
     └── client-quick-view.js (consulta rápida de solo lectura del cliente con compras, historial y tickets permitidos)
 
 tests/
-├── unit/          (incluye entity-date, validación de rango, marketing-stats y postventa)
+├── unit/          (incluye entity-date, validación de rango, marketing-stats, postventa, orden de usuarios y lost-reason)
 ├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública, postventa, panel en línea del ticket, cancelación con cambios, tres acciones rápidas del panel, iconos SVG de navegación, jerarquía visual, login por botones, consulta rápida, alertas de ticket y cierre perdido)
 └── setup/
 ```
@@ -427,5 +432,5 @@ Los cuatro elementos marcados como pendientes en `checklists/requirements.md` se
 | 2026-11-26 | «Nuevo Ticket» vuelve a ser un panel en línea en `?view=postventa`; se retiran `?view=ticket-form`, `window.open` y el listener `storage`; el formulario adopta la presentación de «Nuevo Cliente» y la cancelación con cambios pide confirmación. | Clarificación del usuario: el formulario debe abrirse en la misma página de Postventa y conservar la apariencia del formulario de clientes. |
 | 2026-11-26 | El panel principal queda con tres acciones rápidas; «Nuevo Cliente» y «Nueva interacción» se eliminan del panel y su creación pasa a «Gestionar clientes» y «Gestionar interacciones».                                                             | Clarificación del usuario: simplificar el panel principal sin perder las acciones de creación dentro de las gestiones.                      |
 | 2026-11-26 | Se actualizan `research.md`, `data-model.md`, `contracts/postventa.md`, `contracts/marketing.md`, `contracts/entity-storage.md` y `quickstart.md` para reflejar ambas decisiones.                                                                  | Alinear Phase 0/Phase 1 con la especificación aclarada antes de regenerar tareas.                                                           |
-| 2026-11-27 | Se actualizan `plan.md` y `data-model.md` con los iconos SVG uniformes de la barra lateral, el fondo `#F8FAFC` con tarjetas `#FFFFFF` y la jerarquía de botones del panel, además del bloqueo de borrado de entidades con registros vinculados. | Reflejar en los artefactos de diseño los cambios recientes de `spec.md` (FR-003, FR-009, FR-038, US14b, US15a) sin alterar la arquitectura. |
-| 2026-11-27 | Se planifican login por botones, ficha rápida del cliente, «Abrir Ticket» con alertas en la tabla de clientes y motivo obligatorio para «Cerrado perdido»; se actualizan Phase 0 y Phase 1. | Alinear el plan con las cinco clarificaciones de la sesión 2026-11-27 antes de regenerar tareas. |
+| 2026-11-27 | Se actualizan `plan.md` y `data-model.md` con los iconos SVG uniformes de la barra lateral, el fondo `#F8FAFC` con tarjetas `#FFFFFF` y la jerarquía de botones del panel, además del bloqueo de borrado de entidades con registros vinculados.    | Reflejar en los artefactos de diseño los cambios recientes de `spec.md` (FR-003, FR-009, FR-038, US14b, US15a) sin alterar la arquitectura. |
+| 2026-11-27 | Se planifican login por botones, ficha rápida del cliente, «Abrir Ticket» con alertas en la tabla de clientes y motivo obligatorio para «Cerrado perdido»; se actualizan Phase 0 y Phase 1.                                                        | Alinear el plan con las cinco clarificaciones de la sesión 2026-11-27 antes de regenerar tareas.                                            |

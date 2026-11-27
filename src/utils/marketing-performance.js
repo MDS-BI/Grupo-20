@@ -26,11 +26,24 @@ function hasCampaign(record) {
   return hasValue(record?.campaña) || hasValue(record?.campaignId);
 }
 
-function belongsToCampaign(record, campaignId, isGlobal) {
+function belongsToCampaign(record, campaignId, isGlobal, campaigns = []) {
   if (isGlobal) return true;
   if (campaignId === null || campaignId === undefined || campaignId === '') return false;
   if (campaignId === 'none') return !hasCampaign(record);
-  return record?.campaña === campaignId || record?.campaignId === campaignId;
+  const selectedKey = normalizeText(campaignId);
+  const selected = safeArray(campaigns).find(
+    (campaign) =>
+      normalizeText(campaign?.id) === selectedKey || normalizeText(campaign?.name) === selectedKey
+  );
+  const keys = new Set([selectedKey]);
+  if (selected) {
+    if (hasValue(selected.id)) keys.add(normalizeText(selected.id));
+    if (hasValue(selected.name)) keys.add(normalizeText(selected.name));
+  }
+  const recordKeys = [record?.campaña, record?.campaignId]
+    .filter(hasValue)
+    .map((value) => normalizeText(value));
+  return recordKeys.some((key) => keys.has(key));
 }
 
 function countWonDocuments(documents) {
@@ -77,8 +90,12 @@ function campaignGroups(campaigns, entities, documents) {
   }));
   groups.push({ id: 'none', name: 'Sin campaña' });
   return groups.map((group) => {
-    const groupEntities = entities.filter((record) => belongsToCampaign(record, group.id, false));
-    const groupDocuments = documents.filter((record) => belongsToCampaign(record, group.id, false));
+    const groupEntities = entities.filter((record) =>
+      belongsToCampaign(record, group.id, false, campaigns)
+    );
+    const groupDocuments = documents.filter((record) =>
+      belongsToCampaign(record, group.id, false, campaigns)
+    );
     const totalProspects = groupEntities.length;
     const interactions = groupDocuments.length;
     const wonSales = countWonDocuments(groupDocuments);
@@ -109,10 +126,10 @@ export function computeMarketingPerformance({
     ? dashboard.documents
     : safeArray(documents);
   const scopedEntities = sourceEntities.filter((record) =>
-    belongsToCampaign(record, selectedId, isGlobal)
+    belongsToCampaign(record, selectedId, isGlobal, campaigns)
   );
   const scopedDocuments = sourceDocuments.filter((record) =>
-    belongsToCampaign(record, selectedId, isGlobal)
+    belongsToCampaign(record, selectedId, isGlobal, campaigns)
   );
   const totalProspects =
     isGlobal && Number.isFinite(dashboard?.entityCount)

@@ -72,4 +72,43 @@ export function computeDashboardStats({ entities = [], documents = [], config } 
   };
 }
 
+export function computePendingByEntity(entitiesOrOptions = [], documentsArg = [], configArg = {}) {
+  const options = Array.isArray(entitiesOrOptions)
+    ? { entities: entitiesOrOptions, documents: documentsArg, config: configArg }
+    : entitiesOrOptions || {};
+  const safeEntities = Array.isArray(options.entities) ? options.entities : [];
+  const safeDocuments = Array.isArray(options.documents) ? options.documents : [];
+  const config = options.config || {};
+  const activeEntities = safeEntities.filter((entity) => !entity?.archivedAt);
+  const activeIds = new Set(activeEntities.map((entity) => entity.entity_id));
+  const pendingStates =
+    Array.isArray(config.statusLifecycle?.pendingStates) &&
+    config.statusLifecycle.pendingStates.length
+      ? config.statusLifecycle.pendingStates.map((state) => normalizeText(state))
+      : null;
+  const pendingStatus = normalizeText(
+    config.statusLifecycle?.states?.find((state) => normalizeText(state) === 'pendiente') ||
+      'pendiente'
+  );
+
+  let totalPending = 0;
+  const counts = new Map();
+  for (const doc of safeDocuments) {
+    if (!activeIds.has(doc?.entity_id)) continue;
+    const status = normalizeText(doc?.status);
+    if (status === 'cerrado perdido') continue;
+    const isPending = pendingStates ? pendingStates.includes(status) : status === pendingStatus;
+    if (!isPending) continue;
+    totalPending += 1;
+    counts.set(doc.entity_id, (counts.get(doc.entity_id) || 0) + 1);
+  }
+
+  const pendingByEntity = Array.from(counts.entries()).map(([entityId, count]) => ({
+    entityId,
+    entity: activeEntities.find((entity) => entity.entity_id === entityId) || null,
+    count,
+  }));
+  return { totalPending, pendingByEntity };
+}
+
 export const computeMarketingStats = computeDashboardStats;

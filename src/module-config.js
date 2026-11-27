@@ -75,6 +75,12 @@ export const MODULE_CONFIG = {
       { key: 'mensaje', type: 'text', label: 'Mensaje' },
       { key: 'respuesta', type: 'text', label: 'Respuesta' },
       { key: 'campaña', type: 'select', label: 'Campaña', options: [] },
+      {
+        key: 'motivo_perdida',
+        type: 'select',
+        label: 'Motivo de pérdida',
+        options: ['Precio alto', 'Eligió competencia', 'Sin presupuesto', 'No responde'],
+      },
     ],
   },
   statusLifecycle: {
@@ -85,8 +91,11 @@ export const MODULE_CONFIG = {
       'cerrado ganado',
       'cerrado perdido',
       'pendiente',
+      'automatico',
+      'respondida',
     ],
     transitions: {},
+    pendingStates: ['pendiente'],
   },
   marketing: {
     privacyNoticeVersion: '2026-11-23',
@@ -106,7 +115,7 @@ export const MODULE_CONFIG = {
         event: 'stage_changed',
         from: 'prospecto',
         to: 'en_proceso',
-        action: 'notify',
+        action: 'create_document',
         label: 'Prospecto en seguimiento',
       },
     ],
@@ -121,8 +130,21 @@ export const MODULE_CONFIG = {
         respuesta: 'Todas tus interacciones quedan registradas en tu ficha dentro del CRM.',
       },
     ],
-    campaigns: [],
+    campaigns: {
+      actions: ['create_document', 'assign_executive', 'update_stage'],
+      items: [],
+    },
   },
+  documentRules: {
+    lostReason: {
+      status: 'cerrado perdido',
+      entityStateField: 'estado_comercial',
+      entityState: 'prospecto',
+      customField: 'motivo_perdida',
+      options: ['Precio alto', 'Eligió competencia', 'Sin presupuesto', 'No responde'],
+    },
+  },
+  postventa: DEFAULT_POSTVENTA_CONFIG,
   theme: {
     accentColor: '#1D4ED8',
   },
@@ -294,6 +316,7 @@ export const DEFAULT_CONFIG = {
   customFields: { entity: [], document: [] },
   statusLifecycle: null,
   marketing: null,
+  documentRules: null,
   postventa: DEFAULT_POSTVENTA_CONFIG,
   theme: { accentColor: null },
   entityDate: null,
@@ -522,6 +545,28 @@ export function validateConfig(raw) {
     errors.push('entityDate debe declarar una etiqueta, min ISO y max ISO o "localToday" válidos.');
   }
 
+  if (raw.documentRules !== undefined && raw.documentRules !== null) {
+    if (!isPlainObject(raw.documentRules)) {
+      errors.push('documentRules debe ser un objeto.');
+    } else if (raw.documentRules.lostReason !== undefined) {
+      const rule = raw.documentRules.lostReason;
+      if (!isPlainObject(rule)) {
+        errors.push('documentRules.lostReason debe ser un objeto.');
+      } else {
+        for (const key of ['status', 'entityStateField', 'entityState', 'customField']) {
+          if (typeof rule[key] !== 'string' || !rule[key].trim()) {
+            errors.push(`documentRules.lostReason.${key} debe ser una cadena no vacía.`);
+          }
+        }
+        if (
+          !Array.isArray(rule.options) ||
+          !rule.options.every((option) => typeof option === 'string' && option.trim())
+        ) {
+          errors.push('documentRules.lostReason.options debe ser una lista de opciones.');
+        }
+      }
+    }
+  }
   if (raw.fieldRules !== undefined) validateFieldRules(raw.fieldRules, errors);
   if (raw.detailPolicy !== undefined) validateDetailPolicy(raw.detailPolicy, errors);
   if (raw.marketing !== undefined) validateMarketingConfig(raw.marketing, errors);
@@ -597,6 +642,7 @@ export function loadModuleConfig(rawConfig = MODULE_CONFIG) {
     },
     statusLifecycle: rawConfig.statusLifecycle || null,
     marketing: rawConfig.marketing ? normalizeMarketingConfig(rawConfig.marketing).config : null,
+    documentRules: rawConfig.documentRules || null,
     postventa: rawConfig.postventa
       ? normalizePostventaConfig(rawConfig.postventa)
       : DEFAULT_CONFIG.postventa,
@@ -658,6 +704,7 @@ export function normalizeConfig(rawConfig) {
     customFields: normalizeCustomFields(rawConfig.customFields),
     statusLifecycle: rawConfig.statusLifecycle ?? null,
     marketing: rawConfig.marketing ?? null,
+    documentRules: rawConfig.documentRules ?? null,
     postventa: rawConfig.postventa ?? DEFAULT_CONFIG.postventa,
     theme: isPlainObject(rawConfig.theme)
       ? rawConfig.theme
@@ -680,6 +727,7 @@ export function normalizeConfig(rawConfig) {
       customFields: candidate.customFields,
       statusLifecycle: candidate.statusLifecycle,
       marketing: candidate.marketing ? normalizeMarketingConfig(candidate.marketing).config : null,
+      documentRules: candidate.documentRules,
       postventa: candidate.postventa
         ? normalizePostventaConfig(candidate.postventa)
         : DEFAULT_CONFIG.postventa,
