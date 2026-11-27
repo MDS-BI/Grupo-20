@@ -415,6 +415,6 @@ documentRules: {
 - `motivo_perdida` es opcional en el documento base y obligatorio solo cuando el documento pasa a `cerrado perdido` y la entidad vinculada tiene `estado_comercial = prospecto` (FR-113).
 - Sin motivo, `validateDocumentData()` devuelve un error y ni `addDocument()` ni `updateDocument()` escriben en `erp_documents`; por tanto el documento conserva su estado anterior.
 - El motivo elegido se guarda como campo personalizado y `document-list.js` lo muestra en el historial de la entidad.
-- «Cerrado ganado», `computeSalesTeamMetrics()` y `computeDashboardStats()` siguen ignoring el nuevo estado: no suma al real mensual, al total de ventas ni a pendientes; el estado solo aparece en el embudo por estados de documento (SC-043).
+- «Cerrado ganado», `computeSalesTeamMetrics()` y `computeDashboardStats()` siguen ignorando el nuevo estado: no suma al real mensual, al total de ventas ni a pendientes; el estado solo aparece en el embudo por estados de documento (SC-043).
 
 La forma detallada de estas reglas y sus selectores está en `contracts/client-ui.md`, `contracts/auth.md`, `contracts/postventa.md` y `contracts/entity-storage.md`.
