@@ -931,7 +931,7 @@ export function initApp(rootEl = null, options = {}) {
     rootEl.innerHTML = bareStandalone
       ? `${warningHtml}${noticeHtml}${wrappedStandalone ? `<main id="view-root">${renderCurrentView()}</main>` : renderCurrentView()}`
       : `${warningHtml}${noticeHtml}${userHtml}${renderShellHtml(state.config, activeNavKey())}`;
-    const accent = state.config.theme?.accentColor || '#2563eb';
+    const accent = state.config.theme?.accentColor || '#1D4ED8';
     rootEl.style.setProperty('--accent-color', state.config.theme?.accentColor || '');
     if (typeof document !== 'undefined' && document.documentElement?.style) {
       document.documentElement.style.setProperty('--accent', accent);

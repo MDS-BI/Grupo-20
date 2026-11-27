@@ -49,7 +49,8 @@ describe('Clarifications 2026-11-01', () => {
     expect(qs('config-warning').hidden).toBe(false);
     expect(qs('config-warning').textContent).toContain('Configuración');
     expect(qs('brand-name').textContent).toBe('Módulo Base ERP');
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#2563eb');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#1D4ED8');
+    expect(document.documentElement.style.getPropertyValue('--accent-color')).toBe('#1D4ED8');
   });
 
   it('renders user-provided text as text without executing markup', () => {

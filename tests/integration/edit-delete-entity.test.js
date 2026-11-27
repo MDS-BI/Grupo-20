@@ -36,7 +36,7 @@ describe('Editar y eliminar entidades con confirmación (H4)', () => {
     expect(document.querySelector('#search-results').textContent).toContain('Acme Actualizado');
   });
 
-  it('pide confirmación indicando cuántos documentos se eliminarán y cancela si el usuario rechaza', () => {
+  it('bloquea la baja con registros vinculados y ofrece archivar al confirmar', () => {
     createEntity('Acme', 'AC-1');
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
@@ -50,14 +50,16 @@ describe('Editar y eliminar entidades con confirmación (H4)', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     document.querySelector('[data-action="edit-entity"]').click();
     document.querySelector('[data-action="delete-entity"]').click();
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('1'));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('No se puede eliminar'));
+    expect(confirmSpy.mock.calls[0][0]).toContain('1 registros vinculados');
+    expect(confirmSpy).not.toHaveBeenCalledWith('¿Eliminar este cliente?');
 
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     expect(document.querySelectorAll('#search-results .list-item')).toHaveLength(1);
     confirmSpy.mockRestore();
   });
 
-  it('elimina la entidad y sus documentos en cascada cuando el usuario confirma', () => {
+  it('elimina definitivamente una entidad sin registros cuando el usuario confirma', () => {
     createEntity('Acme', 'AC-1');
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     document.querySelector('[data-action="navigate"][data-view="search"]').click();

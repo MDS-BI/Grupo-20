@@ -63,6 +63,13 @@ describe('Carga de configuración del módulo (H5)', () => {
     expect(badLifecycle.length).toBeGreaterThan(0);
   });
 
+  it('usa #1D4ED8 como acento del perfil CRM y conserva los colores hexadecimales válidos', () => {
+    expect(MODULE_CONFIG.moduleName).toBe('CRM Comercial');
+    expect(MODULE_CONFIG.theme.accentColor).toBe('#1D4ED8');
+    expect(sanitizeAccentColor('#1D4ED8')).toBe('#1D4ED8');
+    expect(sanitizeAccentColor('#1a73e8')).toBe('#1a73e8');
+  });
+
   it('retrocede en silencio a los valores integrados ante un color de acento inválido, sin invalidar el resto de la configuración', () => {
     expect(sanitizeAccentColor('not-a-color')).toBeNull();
     expect(sanitizeAccentColor('#1a73e8')).toBe('#1a73e8');

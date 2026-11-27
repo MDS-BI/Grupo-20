@@ -124,7 +124,7 @@ export const MODULE_CONFIG = {
     campaigns: [],
   },
   theme: {
-    accentColor: '#0f766e',
+    accentColor: '#1D4ED8',
   },
   entityDate: {
     label: 'Fecha de nacimiento',

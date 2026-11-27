@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
+import { loadDocuments } from '../../src/storage.js';
 
 let app;
 
@@ -38,7 +39,7 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     );
   });
 
-  it('elimina los documentos asociados cuando se elimina la entidad', () => {
+  it('conserva los documentos cuando se intenta eliminar la entidad con registros', () => {
     createEntity('Acme', 'AC-1');
     app.navigate('manage-document');
     const select = document.getElementById('document-entity-select');
@@ -53,6 +54,7 @@ describe('Registrar, editar, eliminar y cascada de documentos (H11)', () => {
     document.querySelector('[data-action="edit-entity"]').click();
     document.querySelector('[data-action="delete-entity"]').click();
 
+    expect(loadDocuments()).toHaveLength(1);
     app.navigate('manage-document');
     expect(
       document.getElementById('document-entity-select').querySelectorAll('option').length

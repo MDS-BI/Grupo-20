@@ -28,7 +28,7 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     expect(document.querySelector('.field-error').textContent).toMatch(/código/i);
   });
 
-  it('confirmación de eliminación indica cuántos documentos se eliminarán', () => {
+  it('confirmación de eliminación bloquea la baja con registros vinculados', () => {
     mount();
     app.navigate('manage-entity');
     document.getElementById('field-name').value = 'Acme';
@@ -56,7 +56,8 @@ describe('Regresión de aclaraciones (sesión 2026-11-01)', () => {
     document.querySelector('[data-action="navigate"][data-view="search"]').click();
     document.querySelector('[data-action="edit-entity"]').click();
     document.querySelector('[data-action="delete-entity"]').click();
-    expect(capturedMessage).toContain('2');
+    expect(capturedMessage).toContain('No se puede eliminar');
+    expect(capturedMessage).toContain('2 registros vinculados');
   });
 
   it('configuración inválida arranca con valores predeterminados y muestra una advertencia visible', () => {

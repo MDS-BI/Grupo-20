@@ -151,7 +151,7 @@ describe('Panel y Marketing comparten tarjetas y embudo (T086/T133)', () => {
     app.navigate('dashboard');
     const actions = [...document.querySelectorAll('.dashboard .quick-actions button')];
     expect(actions.map((button) => button.textContent.trim())).toEqual([
-      'Gestionar clientes (editar, archivar, eliminar)',
+      'Gestionar clientes',
       'Gestionar interacciones',
       'Buscar registros',
     ]);

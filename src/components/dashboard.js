@@ -30,9 +30,9 @@ export function renderDashboardHtml(
   const quickActions = showQuickActions
     ? `
       <div class="quick-actions">
-        <button type="button" data-action="quick-manage">Gestionar ${escapeHtml(entityPlural.toLowerCase())} (editar, archivar, eliminar)</button>
-        <button type="button" data-action="navigate" data-view="manage-document">Gestionar ${escapeHtml(documentPlural.toLowerCase())}</button>
-        <button type="button" data-action="quick-search">Buscar registros</button>
+        <button type="button" data-action="quick-manage" data-variant="primary">Gestionar ${escapeHtml(entityPlural.toLowerCase())}</button>
+        <button type="button" data-action="navigate" data-view="manage-document" data-variant="secondary">Gestionar ${escapeHtml(documentPlural.toLowerCase())}</button>
+        <button type="button" data-action="quick-search" data-variant="secondary">Buscar registros</button>
       </div>`
     : '';
 

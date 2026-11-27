@@ -130,10 +130,15 @@ describe('Edición, eliminación y cascada (H4)', () => {
     expect(loadDocuments()).toHaveLength(1);
   });
 
-  it('elimina definitivamente una entidad sin registros vinculados', () => {
+  it('elimina definitivamente una entidad sin registros vinculados sin tocar otros documentos', () => {
     const entity = addEntity({ name: 'Acme', code: 'AC-1' });
+    const other = addEntity({ name: 'Otra', code: 'AC-2' });
+    addDocument({ entity_id: other.entity_id, notes: 'Historial conservado' });
+
     expect(deleteEntity(entity.id)).toMatchObject({ deletedDocumentCount: 0 });
-    expect(loadEntities()).toHaveLength(0);
+    expect(loadEntities()).toHaveLength(1);
+    expect(loadDocuments()).toHaveLength(1);
+    expect(loadDocuments()[0].entity_id).toBe(other.entity_id);
   });
 
   it('actualiza y elimina un documento individualmente', () => {

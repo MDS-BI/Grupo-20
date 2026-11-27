@@ -39,7 +39,7 @@ Registro transaccional vinculado a exactamente una `Entidad` mediante `entity_id
 | `createdAt` / `updatedAt` | string (ISO timestamp) | Sí                  | Marcas de tiempo de auditoría.                                                                                                                                         |
 | _(campos personalizados)_ | según configuración    | según configuración | Declarados en `module-config.js` (Historia de Usuario 8).                                                                                                              |
 
-**Integridad referencial**: eliminar una `Entidad` elimina en cascada todos sus `Documento` asociados, tras confirmación explícita que indica el número de documentos afectados (FR-003, FR-009).
+**Integridad referencial**: la eliminación definitiva de una `Entidad` solo se permite cuando no tiene `Documento` ni registros comerciales vinculados, tras confirmación explícita. Si existen registros vinculados por `entity_id`, la operación se bloquea con `EntityHasRecordsError`, no se mutan `erp_entities` ni `erp_documents` y se ofrece archivar la entidad para conservar su historial. Por tanto, borrar una entidad no elimina sus documentos en cascada (FR-003, FR-009, FR-103).
 
 ### 1.3 `ModuleConfig`
 
@@ -57,9 +57,13 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067).                                                                                                                                                        |
 | `options` (en campos `select`)                                    | array           | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063).                                                                                                                                                 |
 | `marketing`                                                       | object \| null  | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-093).                                                                                                       |
-| `theme.accentColor`                                               | string          | Color de acento opcional (FR-038).                                                                                                                                                                                                                                                    |
+| `theme.accentColor`                                               | string          | Color de acento opcional (`#1D4ED8` en el perfil CRM), aplicado a la barra superior, al elemento activo de la barra lateral, al botón principal del panel y a los acentos de tarjetas KPI; el área de trabajo usa fondo `#F8FAFC` y tarjetas `#FFFFFF`, con iconos SVG monocromáticos uniformes en la navegación (FR-038).                                                                                                                                                                                                                                                    |
 
 Una configuración ausente, inválida o conflictiva hace que el sistema arranque con los valores predeterminados integrados (Entidad/Documento, sin campos personalizados, sin ciclo de vida) y muestre una advertencia visible (FR-024, FR-025).
+
+### 1.4 Presentación del marco y del panel
+
+Los botones de módulo (`NAV_ITEMS`: Panel, Buscar, Resumen, Marketing y Postventa) se renderizan con iconos SVG monocromáticos de trazo uniforme y nombres accesibles, sin emojis del sistema, tanto expandidos como contraídos (US14b, FR-012, FR-039). El área de trabajo usa fondo `#F8FAFC` y tarjetas `#FFFFFF` con borde sutil y sombra ligera; `theme.accentColor` tiñe la barra superior, el módulo activo, la acción rápida principal y los acentos de KPI, con retorno al valor integrado si es inválido (FR-038). Las tres acciones rápidas del panel se alinean en una sola fila: «Gestionar clientes» con relleno sólido del color de acento y «Gestionar interacciones» y «Buscar registros» con fondo blanco y borde sutil (US15a, FR-033, FR-035). Estas decisiones son solo de presentación: no añaden campos, claves de `localStorage` ni nuevas acciones canónicas.
 
 ## 2. Perfil CRM (Historias de Usuario 2, 3, 5, 6, 7)
 
@@ -292,7 +296,7 @@ La identidad simulada no sustituye la autenticación de servidor requerida para 
 
 ### 9.1 Decisión de modelo
 
-Un ticket de Postventa **no es una entidad nueva**: es un `Documento` de la sección 1.2 con `entity_id` apuntando al cliente afectado. El campo personalizado `ticket: true` lo distingue del resto del historial; por tanto aparece en la ficha del cliente y se elimina junto con él mediante `deleteDocumentsForEntity()` (FR-009, FR-104). No se crea la clave `support_tickets` ni una segunda lista persistida.
+Un ticket de Postventa **no es una entidad nueva**: es un `Documento` de la sección 1.2 con `entity_id` apuntando al cliente afectado. El campo personalizado `ticket: true` lo distingue del resto del historial; por tanto aparece en la ficha del cliente y comparte la regla de integridad referencial de la sección 1.2: si el cliente tiene tickets u otros documentos vinculados, la eliminación definitiva se bloquea y debe archivarse para conservar el historial; el borrado individual de documentos sigue siendo una operación distinta (FR-003, FR-009, FR-104). No se crea la clave `support_tickets` ni una segunda lista persistida.
 
 ### 9.2 Forma de un ticket
 

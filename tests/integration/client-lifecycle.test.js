@@ -5,6 +5,7 @@ import {
   archiveEntity,
   addDocument,
   addEntity,
+  deleteEntity,
   loadDocuments,
   loadEntities,
 } from '../../src/storage.js';
@@ -124,8 +125,14 @@ describe('Ciclo de vida de clientes: archivar, restaurar y eliminar', () => {
       expect.stringContaining('No se puede eliminar este cliente')
     );
     expect(confirmSpy.mock.calls[0][0]).toContain('1 registros vinculados');
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(loadEntities().find((item) => item.id === entity.id).archivedAt).toBeTruthy();
     expect(loadDocuments()).toHaveLength(1);
+
+    await logout();
+    await signIn('ventas');
+    expect(() => deleteEntity(entity.id)).toThrow(MESSAGES.permissionDenied);
+    expect(loadEntities().find((item) => item.id === entity.id).archivedAt).toBeTruthy();
   });
 
   it('pide confirmación antes de eliminar definitivamente un cliente sin registros', async () => {

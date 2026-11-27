@@ -14,7 +14,9 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Incremento anterior**: T134-T145 (grupo) cubren `FR-091`, `FR-092`, `FR-093`, `SC-027`, `SC-028` y `SC-029`; T146-T194 (usuario) cubren `FR-094`–`FR-102` y `SC-030`–`SC-037`; T195-T210 (Postventa) cubren `FR-104`–`FR-109` y `SC-039`–`SC-040`; T211-T222 (ajustes de Postventa) cubren la pestaña nueva, la sincronización entre pestañas y el tamaño de las tarjetas, y quedan superados por el incremento actual sin renumerar ni cambiar marcadores.
 
-**Incremento actual**: T223-T250 (panel de Postventa en línea y panel simplificado) cubren `FR-022`, `FR-033`, `FR-034`, `FR-064`, `FR-091`, `FR-094`, `FR-104`–`FR-109`, `SC-015`, `SC-027`, `SC-039` y `SC-040`; «Nuevo Ticket» abre un panel en línea dentro de `?view=postventa`, sin pestaña nueva ni sincronización, y el panel principal queda con tres acciones rápidas; conservan T001-T222 como historial completado sin renumerar ni cambiar marcadores.
+**Incremento anterior**: T223-T250 (panel de Postventa en línea y panel simplificado) cubren `FR-022`, `FR-033`, `FR-034`, `FR-064`, `FR-091`, `FR-094`, `FR-104`–`FR-109`, `SC-015`, `SC-027`, `SC-039` y `SC-040`; «Nuevo Ticket» abre un panel en línea dentro de `?view=postventa`, sin pestaña nueva ni sincronización, y el panel principal queda con tres acciones rápidas; conservan T001-T222 como historial completado sin renumerar ni cambiar marcadores.
+
+**Incremento actual**: T251-T263 cubren únicamente las mejoras visuales de `FR-038`, `US14b` y `US15a` (iconos SVG monocromáticos en la barra lateral, fondo `#F8FAFC` con tarjetas `#FFFFFF` y jerarquía de los tres botones del panel) y la verificación de `FR-003`/`FR-009` sobre el código actual (baja sin cascada, bloqueo `EntityHasRecordsError` y oferta de archivado); T001-T250 se conservan sin renumerar ni desmarcar.
 
 **Convención de historias desglosadas**: `spec.md` conserva `US1`–`US23` como epígrafes de trazabilidad y detalla las responsabilidades en subhistorias `US2a`–`US2d`, `US3a`–`US3b`, `US4a`–`US4c`, `US6a`–`US6b`, `US8a`–`US8b`, `US10a`–`US10c`, `US11a`–`US11b`, `US13a`–`US13b`, `US14a`–`US14b`, `US15a`–`US15b`, `US16a`–`US16d`, `US17a`–`US17b`, `US18a`–`US18b`, `US19a`–`US19b`, `US20a`–`US20c`, `US21a`–`US21b`, `US22a`–`US22c` y `US23a`–`US23c`. Las etiquetas de tarea siguen siendo `[USn]`; cuando una tarea cubre una responsabilidad concreta, la descripción indica la subhistoria sin renumerar IDs.
 
@@ -803,6 +805,72 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 ---
 
+## Phase 34: US14b - Identidad visual de la barra lateral (P1)
+
+**Objetivo**: Sustituir los emojis de `NAV_ITEMS` por iconos SVG monocromáticos de trazo uniforme y fijar el acento `#1D4ED8` sin alterar claves, rutas, permisos ni el logotipo existente.
+
+**Prueba independiente**: Con `gerente` (N4), los cinco botones de `NAV_ITEMS` muestran `svg` dentro de `.sidebar-icon`, sin emojis ni texto SVG, conservan `aria-label`, resaltan el activo y siguen siendo visibles en la barra contraída de 640 px; con `theme.accentColor` inválido se aplica el valor integrado sin perder el resto del perfil CRM.
+
+### Pruebas de US14b
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [X] T251 [P] [US14b] Ampliar `tests/integration/workspace-shell.test.js` para exigir que los cinco botones de `NAV_ITEMS` en `src/components/shell.js` rendericen un `<svg>` en `.sidebar-icon` con `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"` y un solo grosor de trazo, sin caracteres emoji en el marcado, conservando `aria-label`, `title`, `aria-current` y las claves `dashboard`, `search`, `summary`, `marketing` y `postventa`; verificar también que el estado contraído declarado en `src/styles.css` bajo `@media (max-width: 640px)` mantiene visible el icono.
+- [X] T252 [P] [US14b] Ampliar `tests/unit/module-config.test.js` y `tests/integration/config-warning.test.js` para exigir `theme.accentColor === '#1D4ED8'` en el perfil CRM y que un valor ausente o inválido retroceda al color integrado sin desactivar etiquetas, campos ni `#config-warning` (FR-038).
+
+### Implementación de US14b
+
+- [X] T253 [US14b] Reemplazar en `NAV_ITEMS` de `src/components/shell.js` los valores `icon` emoji (`⌂`, `🔍`, `📊`, `📣`, `🎫`) por cadenas SVG en línea de trazo uniforme, manteniendo `key`, `label`/`labelKey`, `id`, el filtrado por `can()`, `monogramSvg()` y el `span.sidebar-icon[aria-hidden="true"]` existente.
+- [X] T254 [P] [US14b] Actualizar en `src/styles.css` los tokens `--bg: #F8FAFC`, `--surface: #FFFFFF` y `--accent-color: #1D4ED8`, y aplicar el acento a `.topbar` mediante franja/borde sin reducir la legibilidad, a `.sidebar-button.active` y a los acentos de `.stat-card`, conservando borde sutil y sombra ligera en tarjetas, sin añadir reglas por vista ni dependencias.
+- [X] T255 [US14b] Ajustar `theme.accentColor` del perfil CRM en `src/module-config.js` a `#1D4ED8`, conservar `sanitizeAccentColor()` y verificar en `src/app.js` que `--accent` y `--accent-color` siguen derivándose de la configuración validada sin nuevo estado persistido.
+
+**Punto de control**: La navegación es idéntica en comportamiento y solo cambia su identidad visual; los rangos siguen viendo exactamente los mismos módulos.
+
+---
+
+## Phase 35: US15a - Jerarquía visual de las acciones del panel (P1)
+
+**Objetivo**: Alinear las tres acciones rápidas existentes en una sola fila con una principal de relleno sólido y dos secundarias blancas con borde, sin añadir ni retirar acciones, rutas o permisos.
+
+**Prueba independiente**: Con permisos completos, `.dashboard .quick-actions` muestra «Gestionar clientes», «Gestionar interacciones» y «Buscar registros» en ese orden y en una fila; la primera usa relleno del color de acento y las otras dos fondo blanco con borde, sobre fondo `#F8FAFC` y tarjetas `#FFFFFF`; Marketing sigue sin `.quick-actions`.
+
+### Pruebas de US15a
+
+> **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
+
+- [X] T256 [P] [US15a] Ampliar `tests/integration/dashboard.test.js` y ajustar la aserción de `tests/integration/marketing-dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— con texto «Gestionar clientes», «Gestionar interacciones» y «Buscar registros» sin el sufijo «(editar, archivar, eliminar)», `data-variant="primary"` solo en el primero y `data-variant="secondary"` en los otros dos, verificando que siguen abriendo su gestión o enfocando `#search-input` y que `.marketing-view .quick-actions` no existe.
+- [X] T257 [US15a] Ajustar `renderDashboardHtml()` en `src/components/dashboard.js` para etiquetar la primera acción con `data-variant="primary"` y las dos siguientes con `data-variant="secondary"`, quitar el texto parentético de «Gestionar clientes» y conservar los tres `data-action`, el orden, `showQuickActions` y las tarjetas derivadas.
+- [X] T258 [P] [US15a] Ajustar `.quick-actions` en `src/styles.css` para una sola fila (`flex-wrap: nowrap`), relleno sólido de `var(--accent-color)` en `[data-variant="primary"]` y fondo blanco con borde sutil en `[data-variant="secondary"]`, además de `#FFFFFF` con borde y sombra ligera en `.stat-card`, sin modificar `.summary-cards`, `.postventa-cards` ni el orden etiqueta/valor de los indicadores.
+
+**Punto de control**: El panel conserva sus tres destinos y su filtrado por rango; solo cambia la presentación.
+
+---
+
+## Phase 36: Verificación de FR-003 y FR-009 sobre el código actual
+
+**Objetivo**: Confirmar que `deleteEntity()` y `onDeleteEntity()` ya bloquean la baja con registros vinculados, no escriben al rechazar y ofrecen archivar, y alinear las pruebas que todavía describen borrado en cascada.
+
+**Prueba independiente**: Una entidad con documentos o tickets vinculados por `entity_id` no se elimina: se rechaza con `EntityHasRecordsError`, `erp_entities` y `erp_documents` quedan intactos y la interfaz ofrece archivar; una entidad sin registros se elimina solo de `erp_entities` tras confirmación explícita, sin tocar `erp_documents`.
+
+- [X] T259 [P] Ampliar `tests/unit/storage.test.js` para verificar en `src/storage.js` que `deleteEntity()` con documentos vinculados lanza `EntityHasRecordsError` y no muta `erp_entities` ni `erp_documents`, que sin registros elimina solo la entidad y devuelve `{ deletedDocumentCount: 0 }`, y que `deleteDocumentsForEntity()` sigue siendo una operación explícita e independiente, no una cascada de la baja.
+- [X] T260 [P] Ampliar `tests/integration/client-lifecycle.test.js` y verificar `onDeleteEntity()` en `src/app.js`: con registros vinculados la confirmación ofrece archivar y solo archiva si se acepta, sin eliminar la entidad ni sus documentos; sin registros pide confirmación explícita y elimina únicamente la entidad; un usuario sin `entity:delete` recibe `No tienes permiso para realizar esta acción` incluso desde llamada directa.
+- [X] T261 [P] Adaptar `tests/integration/edit-delete-entity.test.js`, `tests/integration/add-document.test.js` y `tests/integration/clarifications-regression.test.js` para reemplazar sus expectativas de cascada y recuento por `FR-003`/`FR-009`: la baja con documentos se bloquea u ofrece archivar, la baja sin documentos elimina solo la entidad y el borrado individual de documentos sigue disponible; conservar las suites sin renombrarlas ni desmarcar sus casos vigentes.
+- [X] T262 [P] Verificar en `tests/integration/postventa-customer-detail.test.js` y `tests/integration/edge-case-rules.test.js` que los tickets (`ticket: true`) comparten el bloqueo de `deleteEntity()` por `entity_id`, que `erp_documents` conserva los tickets cuando se rechaza la baja y que `deleteDocument()` sigue siendo la vía para eliminar un ticket individual, sin crear claves ni listas nuevas.
+
+**Punto de control**: FR-003 y FR-009 quedan verificados en capa de datos, interfaz y tickets, con las pruebas antiguas de cascada alineadas al comportamiento actual.
+
+---
+
+## Polish del incremento de identidad visual y verificación
+
+**Objetivo**: Cerrar T251-T262 sin renumerar ni desmarcar T001-T250 y sin reintroducir funcionalidades retiradas.
+
+- [X] T263 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T251-T262, corregir los fallos introducidos por este incremento en `src/` y `tests/`, confirmar que T001-T250 permanecen marcados y que no aparecen dependencias nuevas, claves de `localStorage`, rutas ni emojis en `NAV_ITEMS`.
+
+**Punto de control**: El incremento queda verificable de forma independiente y la suite existente sigue en verde.
+
+---
+
 ## Dependencias y orden de ejecución
 
 ### Dependencias de fases
@@ -821,6 +889,10 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **Phase 32 (US16d)**: depende de Phase 31 y de los contratos compartidos de tarjetas, embudo y cinco atajos de Marketing.
 - **Phase 33 (US25)**: depende de Phase 27/28, de los permisos `postventa:*`, de las clases de formulario compartidas y de las decisiones de `research.md`, `data-model.md`, `contracts/postventa.md` y `quickstart.md` sobre panel en línea, cancelación con cambios y retiro de pestaña/sincronización.
 - **Polish final**: depende de Phase 29-33 y se ejecuta al final sin renumerar ni desmarcar T001-T222.
+- **Phase 34 (US14b)**: se ejecuta tras T250 sin renumerar T001-T250; depende de `NAV_ITEMS`, del filtrado por `can()` de US23, del theme de US5 y de los contratos visuales de `spec.md`, `plan.md` y `data-model.md`.
+- **Phase 35 (US15a)**: depende de Phase 34, de las tres acciones ya reducidas en Phase 31 y de la matriz de US23; no reintroduce `quick-new-*`.
+- **Phase 36 (FR-003/FR-009)**: depende de la capa de datos de US1/US11, del archivado de US24 documentado en `data-model.md`, de `onDeleteEntity()` de `src/app.js` y de los tickets de US25; verifica el código actual sin añadir nuevas funcionalidades.
+- **Polish del incremento 2026-11-27**: depende de Phase 34-36 y se ejecuta después del Polish final histórico sin renumerar ni desmarcar T001-T250.
 
 ### Dependencias entre historias
 
@@ -863,7 +935,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - Clarificaciones Marketing: T134/T135 preceden a T136-T137; T138 precede a T139; T140 depende de T139; T141 precede a T142-T143; T144 y T145 cierran la regresión.
 - En US25: T195-T200 se escriben primero y fallan; T201/T202 definen la configuración y las utilidades puras antes de T203-T209; la matriz T203 precede al filtro de navegación T205 y a la capa de datos T204; el componente T207 y el cableado T208 se integran después de T204/T206; T210 ejecuta el gate final.
 - En Phase 28: T211-T215 se escriben primero y fallan; T216 crea el formulario antes de T217 lo saque de Postventa; T218 registra la ruta antes de T219 abrirla y guardar; T220 añade la sincronización y T221 el estilo; T222 ejecuta el gate final, superado por el incremento actual.
-- En el incremento actual: T223-T224 y T227 y T229-T231 y T234-T235 y T237-T242 se escriben primero y fallan; T225/T226 y T228 y T232/T233 y T236 y T243-T249 se implementan después; T250 ejecuta el gate final sin cambiar marcadores de T001-T222.
+- En el incremento anterior: T223-T224 y T227 y T229-T231 y T234-T235 y T237-T242 se escriben primero y fallan; T225/T226 y T228 y T232/T233 y T236 y T243-T249 se implementan después; T250 ejecuta el gate final sin cambiar marcadores de T001-T222.
+- En el incremento 2026-11-27: T251/T252 y T256 se escriben primero y fallan; T253-T255 y T257/T258 se implementan después; T259-T262 verifican FR-003/FR-009 y ajustan las pruebas de cascada; T263 ejecuta el gate final sin cambiar marcadores de T001-T250.
 
 ## Oportunidades de paralelismo
 
@@ -880,7 +953,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - Clarificaciones Marketing: T134, T135, T138, T140, T141 y T144 son suites independientes; T136-T137, T139 y T142-T143 se implementan después de sus pruebas; T145 se ejecuta al final.
 - US25: T195-T200 son seis suites independientes en `tests/unit/` y `tests/integration/`; T201 también puede avanzar en paralelo porque crea `src/utils/postventa.js`; T202-T210 se encadenan según las dependencias de configuración, permisos, almacenamiento, ruta, componente y cableado, y T210 se ejecuta al final.
 - Ajustes de Postventa: T211-T215 son cinco suites independientes en `tests/integration/`; T216 y T221 pueden avanzar en paralelo porque crean `src/components/ticket-form.js` y editan `src/styles.css`; T217-T220 se encadenan en `src/components/postventa.js` y `src/app.js`, y T222 se ejecuta al final.
-- Incremento actual: T223/T224, T227, T229-T231, T234/T235 y T237-T242 tocan suites distintas y pueden repartirse; T225/T226, T228, T232/T233, T236 y T243-T249 se encadenan dentro de `src/app.js`, `src/components/dashboard.js`, `src/components/postventa.js`, `src/components/ticket-form.js` y `src/auth/permissions.js`; T250 se ejecuta al final.
+- Incremento anterior: T223/T224, T227, T229-T231, T234/T235 y T237-T242 tocan suites distintas y pueden repartirse; T225/T226, T228, T232/T233, T236 y T243-T249 se encadenan dentro de `src/app.js`, `src/components/dashboard.js`, `src/components/postventa.js`, `src/components/ticket-form.js` y `src/auth/permissions.js`; T250 se ejecuta al final.
+- Incremento 2026-11-27: T251, T252, T256, T259, T260, T261 y T262 tocan suites distintas y pueden repartirse; T253/T255, T254/T258 y T257 se encadenan dentro de `src/components/shell.js`, `src/module-config.js`, `src/styles.css` y `src/components/dashboard.js`; T263 se ejecuta al final.
 
 ### Ejemplo de paralelismo: US16
 
@@ -951,6 +1025,16 @@ T237 "Crear tests/integration/postventa-inline-panel.test.js ..."
 T240 "Crear tests/integration/postventa-inline-cancel.test.js ..."
 ```
 
+### Ejemplo de paralelismo: identidad visual y verificación FR-003/FR-009
+
+```bash
+T251 "Ampliar tests/integration/workspace-shell.test.js ..."
+T252 "Ampliar tests/unit/module-config.test.js ..."
+T256 "Ampliar tests/integration/dashboard.test.js ..."
+T259 "Ampliar tests/unit/storage.test.js ..."
+T261 "Adaptar tests/integration/edit-delete-entity.test.js ..."
+```
+
 ## Estrategia de implementación
 
 ### MVP primero
@@ -973,6 +1057,7 @@ T240 "Crear tests/integration/postventa-inline-cancel.test.js ..."
 9. Añadir Phase 27 (US25) sin renumerar T001-T194: primero las seis suites que fallan, luego configuración/utilidades, matriz, capa de datos, navegación, ruta, componente, cableado y ficha del cliente; T210 cierra el gate funcional y de calidad.
 10. Añadir Phase 28 sin renumerar T001-T210: primero las cinco suites que fallan, luego `ticket-form.js`, la ruta `ticket-form`, `window.open`, el listener `storage` y `.postventa-cards`; T222 cierra el gate funcional y de calidad de los ajustes, superados por el siguiente incremento.
 11. Aplicar T223-T250 sin renumerar ni desmarcar T001-T222: primero gestiones y etiquetas de creación, luego el panel de tres acciones y Marketing sin atajos de gestión, y finalmente el panel en línea de «Nuevo Ticket» con cancelación segura; T250 cierra el gate funcional y de calidad.
+12. Aplicar T251-T263 sin renumerar ni desmarcar T001-T250: primero las pruebas visuales y de baja, luego SVG/acento/tokens y jerarquía del panel, y finalmente la verificación de FR-003/FR-009 con las pruebas de cascada alineadas; T263 cierra el gate del incremento sin tocar funcionalidades ya implementadas.
 
 ### Estrategia con equipo paralelo
 
@@ -983,22 +1068,22 @@ T240 "Crear tests/integration/postventa-inline-cancel.test.js ..."
 
 ## Trazabilidad de requisitos a tareas
 
-La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, `T210` el gate de US25, `T222` el gate de los ajustes de pestaña/sincronización superados y `T250` el gate final del panel en línea y el panel simplificado.
+La tabla declara explícitamente la cobertura de los 149 requisitos buildables planificados (`FR-001`–`FR-102`, `FR-104`–`FR-109`, `SC-001`–`SC-037` y `SC-039`–`SC-040`). `FR-103` y `SC-038` (US24) permanecen sin tareas en este incremento. Las tareas marcadas `[X]`/`[x]` se conservan; `T185` es el gate final funcional de US5, US15, US16 y US23, `T186` el gate final de formato, `T187`-`T194` la cobertura adicional de I1, I2, U1, U2, U3, A1 y D1, `T210` el gate de US25, `T222` el gate de los ajustes de pestaña/sincronización superados y `T250` el gate final del panel en línea y el panel simplificado, y `T263` el gate del incremento de identidad visual y verificación de FR-003/FR-009.
 
 | Requirement Key | Task IDs                                                                                                                                                               | Notes                                                                                |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | FR-001          | `T015`, `T017`                                                                                                                                                         | Identidad y código único.                                                            |
 | FR-002          | `T005`, `T006`, `T020`, `T026`                                                                                                                                         | Edición base y desde gestión.                                                        |
-| FR-003          | `T026`, `T029`                                                                                                                                                         | Eliminación con recuento y cascada.                                                  |
+| FR-003          | `T026`, `T029`, `T259`, `T260`, `T261`, `T263`                                                                                                                        | Baja sin cascada: bloqueo, archivado y verificación del código actual.               |
 | FR-004          | `T063`, `T065`, `T076`, `T193`                                                                                                                                         | Lista canónica de campos buscables y anulaciones de perfil.                          |
 | FR-005          | `T019`, `T063`, `T066`, `T192`                                                                                                                                         | Lista, estado vacío y mensaje exacto en búsqueda/ficha.                              |
 | FR-006          | `T059`, `T075`, `T089`, `T192`                                                                                                                                         | Mensajes exactos de validación.                                                      |
 | FR-007          | `T005`, `T006`, `T016`                                                                                                                                                 | Consistencia CRUD.                                                                   |
 | FR-008          | `T025`, `T073`, `T074`                                                                                                                                                 | Altas, ediciones y bajas de documentos.                                              |
-| FR-009          | `T016`, `T018`, `T029`, `T074`                                                                                                                                         | Vínculo exacto y cascada.                                                            |
+| FR-009          | `T016`, `T018`, `T029`, `T074`, `T259`, `T261`, `T262`, `T263`                                                                                                         | Vínculo exacto por `entity_id` y protección referencial sin cascada.                 |
 | FR-010          | `T048`, `T050`, `T051`                                                                                                                                                 | Panel y acciones rápidas.                                                            |
 | FR-011          | `T043`, `T045`                                                                                                                                                         | Marco persistente.                                                                   |
-| FR-012          | `T043`, `T045`, `T159`, `T170`                                                                                                                                         | Barra lateral filtrada por rango.                                                    |
+| FR-012          | `T043`, `T045`, `T159`, `T170`, `T251`, `T253`, `T263`                                                                                                                 | Barra lateral filtrada por rango con iconos SVG uniformes.                           |
 | FR-013          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a entidades desde el panel.                                                   |
 | FR-014          | `T024`, `T027`, `T051`                                                                                                                                                 | Acceso a documentos desde el panel.                                                  |
 | FR-015          | `T047`, `T077`                                                                                                                                                         | Botón Panel y retorno al inicio.                                                     |
@@ -1019,13 +1104,13 @@ La tabla declara explícitamente la cobertura de los 149 requisitos buildables p
 | FR-030          | `T079`, `T081`                                                                                                                                                         | Transiciones configuradas por cualquier vía.                                         |
 | FR-031          | `T079`, `T081`                                                                                                                                                         | Estado como texto libre.                                                             |
 | FR-032          | `T064`, `T126`, `T191`                                                                                                                                                 | 500 entidades y 500 documentos con umbrales p95.                                     |
-| FR-033          | `T048`, `T051`, `T171`, `T223`, `T225`, `T226`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`                                                                 | Tres acciones rápidas filtradas por rango, solo en el panel.                         |
+| FR-033          | `T048`, `T051`, `T171`, `T223`, `T225`, `T226`, `T229`, `T232`, `T233`, `T234`, `T235`, `T236`, `T250`, `T256`, `T257`, `T258`, `T263`                                 | Tres acciones rápidas filtradas por rango, solo en el panel y con jerarquía visual.   |
 | FR-034          | `T028`, `T051`, `T223`, `T224`, `T225`, `T226`, `T228`, `T229`, `T232`, `T250`                                                                                         | Formulario vacío dentro de las gestiones.                                            |
-| FR-035          | `T049`, `T050`, `T052`, `T084`, `T133`                                                                                                                                 | Tarjetas y embudo canónicos.                                                         |
+| FR-035          | `T049`, `T050`, `T052`, `T084`, `T133`, `T254`, `T258`, `T263`                                                                                                         | Tarjetas y embudo canónicos sobre fondo `#F8FAFC` y tarjetas `#FFFFFF`.               |
 | FR-036          | `T043`, `T045`                                                                                                                                                         | Marca en barra superior.                                                             |
 | FR-037          | `T045`, `T047`                                                                                                                                                         | Módulo activo resaltado.                                                             |
-| FR-038          | `T008`, `T046`                                                                                                                                                         | Color de acento con fallback.                                                        |
-| FR-039          | `T043`, `T045`                                                                                                                                                         | Barra estrecha operable.                                                             |
+| FR-038          | `T008`, `T046`, `T252`, `T253`, `T254`, `T255`, `T256`, `T258`, `T263`                                                                                                 | Acento `#1D4ED8`, fondo `#F8FAFC`, tarjetas `#FFFFFF`, iconos SVG y fallback seguro.  |
+| FR-039          | `T043`, `T045`, `T251`, `T253`, `T254`, `T263`                                                                                                                         | Barra estrecha operable con iconos SVG accesibles.                                   |
 | FR-040          | `T039`, `T129`                                                                                                                                                         | Valores huérfanos conservados.                                                       |
 | FR-041          | `T019`, `T022`, `T023`                                                                                                                                                 | Ficha de entidad.                                                                    |
 | FR-042          | `T021`, `T022`                                                                                                                                                         | Historial ordenado por fecha.                                                        |
@@ -1162,3 +1247,7 @@ La tabla declara explícitamente la cobertura de los 149 requisitos buildables p
 - Los tickets son `Documento` con `ticket: true` y `entity_id` de un cliente existente: no hay clave `support_tickets`, resultados derivados persistidos ni cambio del `statusLifecycle` global.
 - Las acciones `postventa:*` son aditivas al catálogo canónico; N1 no recibe `document:edit_any` y N3 no recibe `postventa:view` aunque pueda leer documentos genéricos.
 - US24 (FR-103, SC-038) queda fuera de este incremento: sus tareas requieren primero artefactos de diseño propios y no deben inferirse de la implementación de Postventa.
+- Phase 34-36 y T263 añaden T251-T263 sin renumerar ni desmarcar T001-T250; cubren solo FR-038, US14b, US15a y la verificación de FR-003/FR-009.
+- Los iconos de `NAV_ITEMS` son SVG en línea con trazo uniforme: no cambian `key`, `id`, etiquetas accesibles, permisos ni `monogramSvg()`.
+- El color integrado del perfil CRM pasa a ser `#1D4ED8`; `--bg` pasa a `#F8FAFC` y `--surface` permanece `#FFFFFF`, sin nuevas claves de configuración.
+- La baja definitiva no elimina documentos en cascada: `deleteEntity()` rechaza con `EntityHasRecordsError` sin escribir y `deleteDocumentsForEntity()` sigue siendo una operación explícita separada.

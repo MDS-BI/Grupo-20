@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { initApp } from '../../src/app.js';
 
@@ -45,6 +47,25 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
       expect(button.querySelector('.sidebar-label')).toBeTruthy();
     }
     expect(document.querySelector('#nav-marketing').getAttribute('aria-label')).toBe('Marketing');
+  });
+
+  it('usa iconos SVG monocromáticos de trazo uniforme en los cinco botones laterales', () => {
+    const buttons = [...document.querySelectorAll('.sidebar-button')];
+    expect(buttons).toHaveLength(5);
+    for (const button of buttons) {
+      const icon = button.querySelector('.sidebar-icon svg');
+      expect(icon, `Falta SVG en ${button.dataset.view}`).toBeTruthy();
+      expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(icon.getAttribute('fill')).toBe('none');
+      expect(icon.getAttribute('stroke')).toBe('currentColor');
+      expect(icon.getAttribute('stroke-width')).toBe('1.75');
+      expect(button.querySelector('.sidebar-icon').textContent.trim()).toBe('');
+      expect(button.getAttribute('aria-label')).toBeTruthy();
+    }
+    expect(document.querySelector('.sidebar').textContent).not.toMatch(/[⌂🔍📊📣🎫]/u);
+
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    expect(css).toMatch(/@media \(max-width:\s*640px\)[\s\S]*\.sidebar-icon[\s\S]*svg/);
   });
 
   it('resalta visualmente el botón del módulo activo', () => {

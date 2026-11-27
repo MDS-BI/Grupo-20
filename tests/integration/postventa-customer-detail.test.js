@@ -7,7 +7,10 @@ import {
   addEntity,
   createTicketDocument,
   deleteDocumentsForEntity,
+  deleteEntity,
+  EntityHasRecordsError,
   loadDocuments,
+  loadEntities,
   setStorageAuthEnforced,
 } from '../../src/storage.js';
 
@@ -140,5 +143,21 @@ describe('Tickets en la ficha del cliente (T200)', () => {
 
     deleteDocumentsForEntity(entity.entity_id);
     expect(loadDocuments()).toHaveLength(0);
+  });
+
+  it('bloquea la eliminación definitiva del cliente cuando tiene tickets vinculados', () => {
+    setActiveConfig(DEFAULT_CONFIG);
+    const entity = addEntity({ name: 'Cliente Con Ticket', code: 'PV-BLOCK' });
+    createTicketDocument({
+      entity_id: entity.entity_id,
+      asunto: 'Ticket vinculado',
+      categoria: 'garantia',
+      prioridad: 'baja',
+      status: 'Abierto',
+    });
+
+    expect(() => deleteEntity(entity.id)).toThrow(EntityHasRecordsError);
+    expect(loadEntities().some((item) => item.id === entity.id)).toBe(true);
+    expect(loadDocuments().filter((doc) => doc.entity_id === entity.entity_id)).toHaveLength(1);
   });
 });

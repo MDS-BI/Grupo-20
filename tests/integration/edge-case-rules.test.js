@@ -115,6 +115,8 @@ describe('Fechas y relaciones', () => {
     addDocument({ entity_id: entity.entity_id, notes: 'Segunda' });
 
     expect(() => deleteEntity(entity.id)).toThrow(EntityHasRecordsError);
+    expect(loadEntities().some((item) => item.id === entity.id)).toBe(true);
+    expect(loadDocuments()).toHaveLength(2);
     expect(archiveEntity(entity.id).archivedAt).toBeTruthy();
     expect(loadDocuments().filter((doc) => doc.entity_id === entity.entity_id)).toHaveLength(2);
   });
