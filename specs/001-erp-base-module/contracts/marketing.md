@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones del apartado de Marketing y su integración con autenticación y permisos (FR-068 a FR-102, Historias de Usuario 16 a 23), incluida la cotización pública creada desde «Solicitar cotización» del Portal del Cliente (FR-115). Marketing reutiliza `Entidad` y `Documento` del módulo base: no crea un tipo de registro nuevo ni modifica el contrato descrito en [`entity-storage.md`](entity-storage.md).
+Definir la forma de los datos y las operaciones del apartado de Marketing y su integración con autenticación y permisos (FR-068 a FR-102, Historias de Usuario 16 a 23), incluida la cotización pública creada desde «Solicitar cotización» del Portal del Cliente (FR-115). Marketing reutiliza `Entidad` y `Documento` del módulo base: no crea un tipo de registro nuevo ni modifica el contrato descrito en [`entity-storage.md`](entity-storage.md). La presentación del embudo compartido sigue el contrato de [`dashboard-charts.md`](dashboard-charts.md) (FR-120).
 
 ## Forma de los Datos
 
@@ -15,6 +15,7 @@ Una entidad incluye los campos base más estos campos personalizados declarados 
 - `consentimiento_fecha`: marca de tiempo ISO de la aceptación.
 - `consentimiento_version`: copia de `marketing.privacyNoticeVersion` aceptada.
 - `campaña`: opcional; identificador/nombre de campaña para atribución. Sin valor, el registro pertenece al grupo «Sin campaña» (FR-088).
+- Los importes derivados para esta entidad —real mensual, objetivo mensual y total comprado— se expresan en USD sin conversión; cuando el perfil declara `moneda`, solo `USD` es aceptado (FR-125).
 
 ### Documento de Marketing
 
@@ -29,26 +30,27 @@ Un documento incluye los campos base de `Documento` más los campos personalizad
 - `tipo_interaccion`: tipo declarado para redes o «Dudas y consultas».
 - `enlace`: opcional en interacciones de redes.
 - `campaña`: opcional; sin valor, el documento se agrupa bajo «Sin campaña».
+- `importe` o `monto_estimado`: cuando el documento los declara, se capturan y calculan en USD. `moneda` es opcional y, si se declara, su único valor válido es `USD`; otro valor se rechaza con un error visible y no crea ni modifica el documento (FR-125).
 
 Un documento de campaña omitida por solapamiento conserva `campaignId`, entidad, fecha y `notes = 'omitida por solapamiento'` con el motivo (FR-090).
 
 ## Operaciones
 
-- `computeMarketingStats({ entities, documents })`: devuelve las cinco tarjetas del panel y el embudo por estados de documento, sin escribir en `localStorage` (FR-072 a FR-074).
-- `createProspectFromCapture(values, config)`: crea una entidad con `estado_comercial = 'prospecto'` y los datos de consentimiento; falla si `consentimiento` no es `true`. La pestaña «Solicitar cotización» del Portal del Cliente reutiliza esta operación y añade un `Documento` con `servicio_interes` y `monto_estimado`, sin otra ruta de captura (FR-115).
+- `computeMarketingStats({ entities, documents })`: devuelve las cinco tarjetas del panel y el embudo por estados de documento, sin escribir en `localStorage` (FR-072 a FR-074). Sus fórmulas son: `totalEntities` = conteo de entidades activas sin `archivedAt`; `totalDocuments` = conteo de documentos vinculados a entidades activas; `closedWon` = conteo, no importe, de documentos con `normalizeText(status) === 'cerrado ganado'`; `conversionRate` = `closedWon / totalEntities * 100`, con cero si no hay entidades activas; `pipeline` = suma de `importe` de esos documentos ganados, en USD; `funnel` = conteo y porcentajes por estado de documento de las entidades activas (FR-035, FR-103).
+- `createProspectFromCapture(values, config)`: crea una entidad con `estado_comercial = 'prospecto'` y los datos de consentimiento; falla si `consentimiento` no es `true`. La pestaña «Solicitar cotización» del Portal del Cliente reutiliza esta operación y añade un `Documento` con `servicio_interes` y `monto_estimado` en USD, sin otra ruta de captura (FR-115, FR-125).
 - `runAutomationRules(event, entity, config, documents, context)`: evalúa reglas y campañas aplicables; devuelve los documentos a persistir en el historial de la entidad. `context` aporta `from`/`to` en `stage_changed` y `campaignId` cuando aplica (FR-070, FR-086, FR-089, FR-090).
-- `computeSalesTeamMetrics(team, entities, documents, now)`: devuelve `realMensual` y `objetivoMensual` por integrante con las fórmulas de FR-078 y FR-079.
-- `answerFaq(question, config)`: normaliza la pregunta y devuelve la respuesta de `marketing.faq` o `null` cuando no hay coincidencia (FR-082).
+- `computeSalesTeamMetrics(team, entities, documents, now)`: devuelve por integrante `realMensual` = suma en USD de importes de documentos «Cerrado ganado» del mes atribuidos al `userId` vinculado (con `assignedUserIdAtSale` cuando exista y, en su defecto, `ejecutivo_asignado`), y `objetivoMensual` = `realMensual / díasTranscurridos * díasDelMes`, en USD, con cero sin ventas o sin días transcurridos (FR-078, FR-079, FR-125).
+- `answerFaq(question, config)`: normaliza la pregunta y devuelve la respuesta de `marketing.faq` o `null` cuando no hay coincidencia (FR-082). La respuesta no modifica el `Documento` de «Dudas y consultas».
 - `registerSocialInteraction(values, entity, config)`: crea el `Documento` de redes con plataforma, fecha, tipo, nota y enlace (FR-080, FR-081).
 - `registerChatMessage(values, entity, config)`: crea el `Documento` de «Dudas y consultas» con `canal = 'chat'`; exige consentimiento previo para el primer mensaje (FR-083, FR-085, FR-092).
-- `computeMarketingPerformance({ entities, documents, campaigns })`: devuelve indicadores globales y por campaña sin escribir en `localStorage` (FR-087, FR-088).
+- `computeMarketingPerformance({ entities, documents, campaigns })`: devuelve seis indicadores separados, globales y por campaña, sin escribir en `localStorage` (FR-087, FR-088): `prospectosCapturados` = entidades activas con `estado_comercial = 'prospecto'` o creadas desde la captura; `conversionesPorEtapa` = entidades activas por estado comercial objetivo de campaña; `tasaDeConversion` = documentos «Cerrado ganado» ÷ entidades activas × 100, con cero sin activas y con la misma fuente que FR-035 (proporción de documentos ganados sobre entidades activas, no de entidades `ganado`); `interaccionesRegistradas` = documentos de redes y otras interacciones de entidades activas, sin duplicar `id` ni contar tickets; `consultasRespondidas` = documentos `canal = 'chat'` con respuesta registrada, contados una sola vez; `ventasGanadas` = conteo de documentos «Cerrado ganado», igual que la tarjeta del panel. Sin filtro de campaña, `tasaDeConversion` y `ventasGanadas` coinciden con las tarjetas canónicas.
 
 ## Expectativas de Validación
 
 - Sin consentimiento explícito no se crea el prospecto ni se registra el primer mensaje de «Dudas y consultas»; se muestra una explicación clara con esa etiqueta visible y, cuando el motivo es información obligatoria, el mensaje exacto `Completa los campos obligatorios.` (FR-006, FR-071, FR-085, FR-092, SC-018, SC-024).
 - La fecha y la versión del aviso se guardan con la entidad y no se derivan del reloj al mostrar la ficha.
 - El prospecto creado desde el portal aparece en Marketing con su cotización al volver al CRM; la cotización usa el mismo `Documento` del historial y no crea un tipo de registro especial (FR-105, FR-115, SC-044).
-- Marketing muestra las mismas cinco tarjetas y el mismo embudo que el panel; no muestra la torta «Estado comercial de la cartera» ni el selector de etapas (FR-072 a FR-075, SC-020, SC-021).
+- Marketing muestra las mismas cinco tarjetas y el mismo embudo que el panel; el embudo aparece como tarjeta de `.chart-grid` con título «Embudo comercial por estado» y tooltip por fila, sin mostrar los tres gráficos del panel, la torta «Estado comercial de la cartera» ni el selector de etapas (FR-072 a FR-075, FR-120, SC-020, SC-021, SC-048).
 - Una transición a `ganado` conserva `id`, `entity_id`, documentos y campos personalizados de la entidad y produce «Cliente ganado» como resultado visible; no modifica el estado «Cerrado ganado» de los documentos (FR-068).
 - Las reglas y campañas activas se ejecutan una sola vez por evento; cada ejecución queda registrada en el historial de la entidad (FR-070, FR-086).
 - Las acciones internas se limitan a crear documento de seguimiento, asignar `ejecutivo_asignado` y actualizar `estado_comercial`; no hay envíos ni publicaciones externas (FR-089).
@@ -57,6 +59,8 @@ Un documento de campaña omitida por solapamiento conserva `campaignId`, entidad
 - El real mensual y el objetivo mensual del equipo son calculados por el sistema con las fórmulas de FR-078 y FR-079, sin captura manual (SC-022).
 - Las interacciones de redes se guardan como documentos vinculados, ordenados por fecha y visibles en la ficha (FR-080, FR-081, SC-023).
 - Una campaña sin registros muestra cero con la explicación clara `Sin registros para esta campaña.`; los indicadores se actualizan sin recarga (FR-087, SC-026).
+- «Rendimiento de campañas» muestra seis indicadores separados: prospectos capturados, conversiones por etapa, tasa de conversión, interacciones registradas, consultas respondidas y ventas «Cerrado ganado» (FR-087).
+- Un importe con `moneda` distinta de `USD` se rechaza con un error visible y no crea ni modifica el documento; no se aplica conversión (FR-125).
 - Configuración ausente o inválida de `marketing` retrocede a los valores predeterminados con advertencia visible, sin bloquear el módulo base (FR-024, FR-025).
 
 ## Contrato de Configuración `marketing`
@@ -111,6 +115,7 @@ marketing: {
 ## Integración con Autenticación y Permisos
 
 - El acceso a Marketing requiere una sesión vigente y `can(rank, 'marketing:view')`. Nivel 4 y Nivel 3 pueden entrar; Nivel 2, Nivel 1 y visitantes no.
+- Nivel 3 crea, edita y elimina solo interacciones de redes de cualquier prospecto o cliente con `document:create`, `document:edit_any` y `document:delete` bajo contexto `documentType = 'social'`, y responde «Dudas y consultas» con `chat:answer`. No crea, edita, elimina ni cambia el estado de documentos de venta, otros documentos comerciales ni tickets; cualquier intento recibe `No tienes permiso para realizar esta acción` en la capa de datos (FR-094, FR-095).
 - «Equipo de ventas y logros» usa `can(rank, 'team:view_all')`, `can(rank, 'team:view_own', { ownerId })` y `can(rank, 'team:manage')`: N4 edita equipos, N3 solo lee y N2 ve únicamente su propio real y objetivo. Cada integrante vincula `userId` de un usuario activo Nivel 2 o Nivel 4, y `computeSalesTeamMetrics()` filtra entidades por `ejecutivo_asignado = userId`.
 - Las campañas usan `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` y `campaign:stop_any` con `context.campaignOwnerId`: N3 crea, edita, detiene y consulta solo las suyas; N4 puede detener cualquier campaña.
 - Las reglas automáticas y las campañas ejecutan sus acciones internas como identidad «Sistema» con independencia del usuario conectado en ese momento (FR-101). El historial de cada campaña conserva además el `userId` de quien la creó, aunque cambie de rango o sea desactivado.

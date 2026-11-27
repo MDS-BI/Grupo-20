@@ -14,6 +14,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Reglas vigentes 2026-11-27**: acceso por botones sin usuario/contraseña/hash/bloqueo (FR-110); ficha rápida de solo lectura desde «Buscar» y «Clientes» (FR-111); «Abrir Ticket» y alertas naranja/azul en la tabla de clientes (FR-112); motivo obligatorio para `Cerrado perdido` solo en prospectos (FR-113); baja definitiva sin cascada con `EntityHasRecordsError` (FR-003, FR-009, FR-103); panel en línea de ticket sin `?view=ticket-form`, `window.open` ni listener `storage` (FR-104); dos pestañas públicas en `?view=client-portal` (FR-114); cotización con consentimiento que crea prospecto y documento (FR-115); búsqueda de cliente sin coincidencia sin mutar registros (FR-116); tarjeta de acceso con color de acento, fallback y enlace discreto al portal (FR-117, SC-044, SC-045).
 
+**Reglas vigentes del incremento actual (2026-11-27, panel visual, gráficos y ortografía)**: retirar solo cuatro KPI del «Panel visual» y conservar las cinco de FR-035 (FR-118, SC-046); corregir solo texto visible sin renombrar identificadores ni migrar valores (FR-119, SC-047); cuadrícula exacta `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))` con títulos y tooltips (FR-120, SC-048); gráficos derivados solo de registros almacenados, sin `src/mockData.js` (FR-121, FR-122, SC-049, SC-050); tema sin recarga con instancias preservadas y preferencia en `erp_theme` (FR-123, SC-051); estado vacío exacto `No hay registros para esta serie.` (FR-124, SC-052).
+
 ## Formato: `[ID] [P?] [Historia] Descripción`
 
 - El checkbox es siempre `- [ ]`; los ID son secuenciales T001, T002, ...
@@ -613,6 +615,79 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 ---
 
+## Phase 31: User Story 15b - Reorganizar el Panel visual con series reales (Priority: P1) (MVP del incremento)
+
+**Goal**: Sustituir las cuatro KPI de demostración del «Panel visual» por cuatro visualizaciones en tarjetas responsivas, alimentadas exclusivamente por entidades, documentos, tickets y campañas almacenados, compartiendo el embudo con Marketing.
+
+**Independent Test**: En `tests/unit/dashboard-chart-data.test.js`, `tests/integration/dashboard.test.js` y `tests/integration/marketing-dashboard.test.js`, verificar SC-046 a SC-050 y SC-052: ausencia de las cuatro KPI retiradas, permanencia de las cinco de FR-035, cuatro tarjetas con título en la cuadrícula exacta, series derivadas sin archivados ni simulaciones, embudo compartido y mensaje `No hay registros para esta serie.` por serie vacía.
+
+### Pruebas para User Story 15b
+
+> Escribir primero; deben fallar antes de la implementación.
+
+- [ ] T267 [P] [US15b] Crear `tests/unit/dashboard-chart-data.test.js` para `computeDashboardChartData({ entities, documents, config })`: verificar que `salesByMonth` use `normalizeText(status) === 'cerrado ganado'` con `ingresos = suma(importe)` y `negocios = conteo`, que `ticketsByStatus` cuente solo documentos `ticket: true` en «Abierto», «En revisión» y «Resuelto» sin duplicar `id`, que `leadsByCampaign` use entidades con `estado_comercial = 'prospecto'` y agrupe sin campaña como «Sin campaña», que `funnel` reutilice `computeDashboardStats().funnel`, que se excluyan entidades con `archivedAt` y documentos vinculados a ellas, y que la función no importe `src/mockData.js` ni mute los arreglos de entrada (FR-121, FR-122, SC-050).
+- [ ] T268 [P] [US15b] Actualizar `tests/integration/dashboard.test.js` para comprobar la ausencia de «Ingresos totales del mes», «Clientes activos», «Campañas activas» con su conversión promedio y «Tickets abiertos», la permanencia de las cinco tarjetas de FR-035, cuatro `.chart-card` con `h3` en `.chart-grid`, la regla exacta `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))`, el mensaje `No hay registros para esta serie.` y etiquetas `aria-label` sanitizadas (SC-046, SC-048, SC-052).
+- [ ] T269 [P] [US15b] Actualizar `tests/integration/marketing-dashboard.test.js` para verificar que Marketing conserva las cinco tarjetas y muestra solo la tarjeta «Embudo comercial por estado» dentro de `.chart-grid`, con `title` por fila y sin los tres gráficos del panel ni la torta eliminada (FR-074, FR-120, SC-048).
+- [ ] T270 [P] [US15b] Actualizar `tests/unit/dashboard-stats.test.js` para confirmar que `computeDashboardStats()` sigue siendo la única fuente de las cinco tarjetas y del embudo, que `statusLifecycle.labels` solo cambia la etiqueta visible de `'en negociacion'` a «En negociación» y que el valor persistido y `pendingStates` no se modifican (FR-035, FR-113, FR-119).
+
+### Implementación para User Story 15b
+
+- [ ] T271 [US15b] Crear `src/utils/dashboard-chart-data.js` con `computeDashboardChartData({ entities, documents, config })` que devuelva `salesByMonth`, `ticketsByStatus`, `leadsByCampaign` y `funnel`, aplicando literalmente `normalizeText(status) === 'cerrado ganado'`, `ticket: true`, `estado_comercial = 'prospecto'`, el grupo «Sin campaña» y la exclusión de `archivedAt`, sin importar `src/mockData.js` ni escribir en `localStorage` (FR-121, FR-122).
+- [ ] T272 [US15b] Añadir en `src/module-config.js` el mapa `statusLifecycle.labels` con la entrada `'en negociacion': 'En negociación'`, conservando `statusLifecycle.states` y los valores ya persistidos sin migración (FR-119, SC-047).
+- [ ] T273 [US15b] Ajustar `funnelFor()` en `src/utils/marketing-stats.js` para resolver primero la etiqueta desde `statusLifecycle.labels` y conservar el comportamiento anterior cuando el mapa falte, sin alterar ventas, pendientes ni `pendingStates` (FR-035, FR-113, FR-119).
+- [ ] T274 [P] [US15b] Refactorizar `renderDashboardHtml()` en `src/components/dashboard.js` para aceptar `chartData`, eliminar el bloque independiente `.commercial-funnel`, renderizar la tarjeta del embudo como parte de `.chart-grid` con `h3` «Embudo comercial por estado» y enviar `chartData` a `renderDashboardChartsHtml(chartData, { funnelHtml })` también en Marketing (FR-074, FR-118, FR-120).
+- [ ] T275 [P] [US15b] Refactorizar `renderDashboardChartsHtml()` en `src/components/dashboard-charts.js` para eliminar el `import` de `../mockData.js` y las cuatro KPI, aceptar `renderDashboardChartsHtml(chartData, { funnelHtml = '' } = {})`, dibujar tres `.chart-card` con `h3` más la tarjeta del embudo recibida, sustituir cada serie vacía por `No hay registros para esta serie.` con el mismo `aria-label` y sanitizar todo texto derivado con `escapeHtml()` (FR-118, FR-120, FR-124).
+- [ ] T276 [US15b] Calcular `state.dashboardChartData` una sola vez en `render()` de `src/app.js` con `computeDashboardChartData({ entities, documents, config })`, pasarlo a `renderDashboardHtml()` y a `mountDashboardCharts(rootEl, data)`, y volver a derivarlo tras cada mutación sin `StorageEvent`, sondeo ni clave nueva de `localStorage` (FR-121, SC-049).
+- [ ] T277 [US15b] Ampliar `renderMarketingHtml()` en `src/components/marketing.js` para aceptar y reenviar `chartData` a `renderDashboardHtml()`, de modo que Marketing reciba solo la tarjeta del embudo desde la misma fuente que el panel (FR-074, FR-120).
+- [ ] T278 [US15b] Eliminar el `import` de `../mockData.js` en `src/utils/dashboard-charts.js` y cambiar `configFor(type, colors)` y `mountDashboardCharts(root)` por `configFor(type, colors, data)` y `mountDashboardCharts(root, data)`, construyendo «Ventas por mes», «Tickets de soporte» y «Leads generados por campaña» exclusivamente desde `salesByMonth`, `ticketsByStatus` y `leadsByCampaign` (FR-121, SC-049).
+- [ ] T279 [US15b] Añadir `title` con estado y recuento a cada `.funnel-row` generada en `src/components/dashboard.js`, conservando `.funnel-rows`, `.funnel-state`, `.funnel-count`, `.funnel-bar` y la leyenda textual accesible (FR-120, SC-048).
+- [ ] T280 [P] [US15b] Sustituir en `src/styles.css` la regla de `.chart-grid` por `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))` y retirar los `override` de `@media (max-width: 720px)` que la reducen a `1fr`, conservando `.chart-card`, `.chart-card--wide` y los tokens de tema (FR-120, SC-048).
+
+**Checkpoint**: US15b queda funcional y verificable de forma aislada con panel y Marketing derivados de registros reales.
+
+---
+
+## Phase 32: User Story 14b - Adaptar los gráficos al cambio de tema sin recarga (Priority: P1)
+
+**Goal**: Mantener el botón accesible de la barra superior y actualizar en sitio textos, ejes, cuadrículas, leyendas, tooltips y colores de datasets sin perder instancias, series ni vista.
+
+**Independent Test**: En `tests/integration/workspace-shell.test.js`, verificar SC-051: pulsar `data-action="toggle-theme"` alterna claro/oscuro, conserva `erp_theme`, actualiza etiqueta/`aria-pressed`/`title`, cambia los colores de los gráficos sin recarga y no destruye ni vuelve a montar las instancias.
+
+### Pruebas para User Story 14b
+
+> Escribir primero; deben fallar antes de la implementación.
+
+- [ ] T281 [P] [US14b] Actualizar `tests/integration/workspace-shell.test.js` para cubrir `data-action="toggle-theme"` con `erp_theme`, etiqueta accesible, `aria-pressed` y `title` derivados del tema activo, colores de textos, ejes, cuadrículas, leyendas, tooltips y datasets adaptados, ausencia de recarga, series intactas y uso de `chart.update('none')` en lugar de `destroyDashboardCharts()` o `mountDashboardCharts()` (FR-123, SC-051).
+
+### Implementación para User Story 14b
+
+- [ ] T282 [US14b] Extender `readColors()` en `src/utils/dashboard-charts.js` con `--text-muted`, `--surface`, `--accent-color` y una paleta legible en claro/oscuro, y añadir `refreshDashboardChartTheme()` para reescribir leyenda, ticks, grid, borde de escalas, tooltips y colores de datasets, terminando con `chart.update('none')` (FR-120, FR-123).
+- [ ] T283 [US14b] Cambiar el manejador `toggle-theme` de `src/app.js` para invocar `refreshDashboardChartTheme()` después de `applyTheme()` y `saveTheme()`, conservar la preferencia en `erp_theme` y dejar `destroyDashboardCharts()` solo para el desmontaje de la aplicación (FR-123, SC-051).
+
+**Checkpoint**: US14b queda funcional de forma aislada con el tema aplicado a la interfaz y a los gráficos sin recarga ni pérdida de vista.
+
+---
+
+## Phase 33: Polish & Cross-Cutting Concerns (incremento actual)
+
+**Purpose**: Corregir ortografía visible sin tocar identificadores, alinear documentación, ejecutar quality gates y validar el incremento completo.
+
+- [ ] T284 [P] Corregir textos visibles en `index.html` y `src/components/login.js` —por ejemplo «Portal del cliente» y «Nivel 1 - Atención al cliente»— sin renombrar variables, funciones, clases CSS, rutas, IDs ni claves de objetos y sin migrar valores persistidos (FR-119, SC-047).
+- [ ] T285 [P] Corregir textos visibles en `src/components/dashboard.js`, `src/components/dashboard-charts.js` y `src/components/marketing.js` —«Embudo comercial por estado» y «Últimas interacciones / próximos seguimientos»— conservando `computeDashboardStats()`, `.chart-grid`, `.funnel-rows` y los mensajes exactos ya contractuales (FR-119, FR-120, SC-047).
+- [ ] T286 [P] Corregir textos visibles en `src/components/postventa.js`, `src/components/ticket-form.js`, `src/components/entity-list.js` y `src/components/client-quick-view.js` —«Nuevo ticket», «Abrir ticket», «Ejecutivo asignado» y «Canal de contacto»— sin cambiar selectores, acciones canónicas ni estados persistidos (FR-119, SC-047).
+- [ ] T287 [P] Corregir mensajes visibles en `src/components/document-form.js`, `src/components/entity-form.js` y `src/utils/entity-date.js` —`La fecha de inicio debe ser una fecha ISO.`, `La fecha de fin debe ser una fecha ISO.` y `La fecha de fin no puede ser anterior a la fecha de inicio.`— conservando los mensajes exactos de `Completa los campos obligatorios.`, `No se encontraron resultados.` y `No tienes permiso para realizar esta acción` (FR-119, SC-047).
+- [ ] T288 [P] Corregir datos de semilla y etiquetas en `src/seed.js` y `src/module-config.js`, manteniendo `en negociacion` como valor interno, `'en negociacion': 'En negociación'` como única etiqueta nueva y sin renombrar claves ni campos personalizados (FR-119, SC-047).
+- [ ] T289 Actualizar `tests/integration/exact-messages.test.js` y `tests/unit/module-config.test.js` para verificar los literales corregidos, los mensajes exactos inalterados, la etiqueta `'en negociacion': 'En negociación'` y la ausencia de cambios en identificadores, rutas, claves y valores persistidos (FR-119, SC-047).
+- [ ] T290 [P] Alinear `specs/001-erp-base-module/contracts/dashboard-charts.md`, `specs/001-erp-base-module/contracts/marketing.md`, `specs/001-erp-base-module/data-model.md`, `specs/001-erp-base-module/plan.md` y `specs/001-erp-base-module/quickstart.md` con cualquier desviación detectada en series, cuadrícula, tooltips, tema, estados vacíos u ortografía (FR-118 a FR-124).
+- [ ] T291 Ejecutar `npm test` y corregir fallos en `tests/unit/dashboard-chart-data.test.js`, `tests/unit/dashboard-stats.test.js`, `tests/integration/dashboard.test.js`, `tests/integration/marketing-dashboard.test.js`, `tests/integration/workspace-shell.test.js`, `tests/integration/exact-messages.test.js` y el resto de `tests/`.
+- [ ] T292 Ejecutar `npm run lint` y corregir avisos en `src/utils/dashboard-chart-data.js`, `src/utils/dashboard-charts.js`, `src/components/dashboard-charts.js`, `src/components/dashboard.js`, `src/components/marketing.js`, `src/app.js`, `src/styles.css`, `src/module-config.js` y `tests/`.
+- [ ] T293 Ejecutar `npm run format:check` y aplicar formato a `src/`, `tests/` y `specs/001-erp-base-module/` sin cambiar el comportamiento validado.
+- [ ] T294 Ejecutar `npm run build`, validar en `specs/001-erp-base-module/quickstart.md` los diez escenarios del Panel visual, gráficos y ortografía, y marcar como completadas las tareas de `specs/001-erp-base-module/tasks.md`.
+
+**Checkpoint**: El incremento queda verificable de extremo a extremo con pruebas, lint, formato, build y validación manual documentada.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -621,8 +696,11 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **Foundational (Phase 2)**: Depende de Setup; bloquea todas las historias de usuario.
 - **User Stories (Phase 3+)**: Dependen de Foundational; pueden ejecutarse en paralelo si hay capacidad.
 - **Polish anterior (Phase 28)**: Depende de las historias entregadas en el incremento previo; ya está completado.
-- **User Story 22d (Phase 29)**: Depende de Foundational y de las convenciones de `US22`, `US23`, `US5`, `US16` y `US25`; puede ejecutarse en paralelo con otras historias ya completadas.
-- **Polish actual (Phase 30)**: Depende de Phase 29 y de la verificación de regresión de todo el módulo.
+- **User Story 22d (Phase 29)**: Depende de Foundational y de las convenciones de `US22`, `US23`, `US5`, `US16` y `US25`; ya está completada.
+- **Polish previo (Phase 30)**: Depende de Phase 29 y de la verificación de regresión de todo el módulo; ya está completado.
+- **User Story 15b (Phase 31)**: Depende de Foundational y de las convenciones ya completas de `US15`, `US16d` y `US25`; es el MVP del incremento y bloquea Phase 32 porque T282 reutiliza `src/utils/dashboard-charts.js` tras T278.
+- **User Story 14b (Phase 32)**: Depende de Phase 31, especialmente de T278, para actualizar el tema sobre datos e instancias ya montadas con registros reales.
+- **Polish del incremento actual (Phase 33)**: Depende de Phase 31 y Phase 32; incluye ortografía visible, documentación y quality gates.
 
 ### User Story Dependencies
 
@@ -637,6 +715,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - **US2, US6, US9, US10, US11, US12, US13 (P2)**: Pueden iniciar tras P1; US11 depende de US5 y US13.
 - **US16–US21 (P2)**: Dependen de configuración Marketing y permisos; US21 depende de US20 y US16.
 - **US25 (P2)**: Depende de US4, US11 y US23 para tickets, permisos y preselección.
+- **US15b (P1, incremento actual)**: Depende de US15 para las cinco tarjetas canónicas, de US16d para el embudo compartido y de US25 para el discriminador `ticket: true`; introduce `dashboard-chart-data.js` sin nuevos permisos ni persistencia.
+- **US14b (P1, incremento actual)**: Depende de US15b porque el cambio de tema debe mutar gráficos montados con datos reales; conserva `erp_theme` y el botón accesible ya existentes.
 
 ### Within Each User Story
 
@@ -644,6 +724,8 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 2. Implementar utilidades puras y modelos antes de componentes.
 3. Integrar componentes y cablear acciones en `src/app.js`.
 4. Verificar el criterio independiente antes de pasar a la siguiente prioridad.
+5. En Phase 31, ejecutar T267 a T270 antes de T271; T272, T273, T274, T275 y T280 pueden avanzar en paralelo; T276 y T278 esperan a T271, y T279 espera a T274.
+6. En Phase 32, escribir T281 antes de T282 y encadenar T282 → T283 para no desmontar instancias creadas en Phase 31.
 
 ### Parallel Opportunities
 
@@ -653,6 +735,9 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 - Las utilidades puras (`lost-reason.js`, `postventa.js`, `marketing-stats.js`, `sales-team-metrics.js`, `customer-portal.js`) pueden implementarse en paralelo.
 - Los contratos y documentación de Phase 28 y Phase 30 pueden actualizarse en paralelo.
 - En Phase 29, T247, T248, T249, T251 y T255 pueden ejecutarse en paralelo; T252 depende de T251, T253 de T247 y T256 de T250/T253/T255.
+- En Phase 31, T267, T268, T269 y T270 pueden escribirse en paralelo; T274 y T275 pueden implementarse en paralelo porque comparten solo la firma `renderDashboardChartsHtml(chartData, { funnelHtml = '' } = {})`; T280 es independiente en `src/styles.css`.
+- En Phase 32, T281 puede prepararse en paralelo con T282 si la prueba mocked `chart.update('none')`, pero la implementación de T283 espera a T282.
+- En Phase 33, T284 a T288 tocan archivos distintos y pueden ejecutarse en paralelo; T290 actualiza documentación sin depender de T289.
 
 ---
 
@@ -687,6 +772,29 @@ Task: "T253 [US22d] Crear src/utils/customer-portal.js"
 
 ---
 
+## Parallel Example: User Story 15b
+
+```bash
+# Escribir juntas las pruebas del Panel visual:
+Task: "T267 [P] [US15b] Crear tests/unit/dashboard-chart-data.test.js"
+Task: "T268 [P] [US15b] Actualizar tests/integration/dashboard.test.js"
+Task: "T269 [P] [US15b] Actualizar tests/integration/marketing-dashboard.test.js"
+Task: "T270 [P] [US15b] Actualizar tests/unit/dashboard-stats.test.js"
+
+# Implementar en paralelo marcado, cuadrícula y configuración:
+Task: "T272 [US15b] Añadir statusLifecycle.labels en src/module-config.js"
+Task: "T274 [P] [US15b] Refactorizar renderDashboardHtml() en src/components/dashboard.js"
+Task: "T275 [P] [US15b] Refactorizar renderDashboardChartsHtml() en src/components/dashboard-charts.js"
+Task: "T280 [P] [US15b] Ajustar .chart-grid en src/styles.css"
+
+# Encadenar la fuente de datos y el cableado:
+Task: "T271 [US15b] Crear src/utils/dashboard-chart-data.js"
+Task: "T276 [US15b] Calcular state.dashboardChartData en src/app.js"
+Task: "T278 [US15b] Montar Chart.js con datos reales en src/utils/dashboard-charts.js"
+```
+
+---
+
 ## Implementation Strategy
 
 ### MVP First (User Story 1 Only)
@@ -696,6 +804,7 @@ Task: "T253 [US22d] Crear src/utils/customer-portal.js"
 3. Completar Phase 3: US1.
 4. **DETENER Y VALIDAR** con `tests/integration/entity-document.test.js`.
 5. Mostrar la relación entidad-documento y la baja bloqueada como primer incremento demostrable.
+6. Para el incremento 2026-11-27, el MVP equivalente es Phase 31 (US15b): completar T267 a T280, detener y validar con las tres suites del Panel visual antes de Phase 32.
 
 ### Incremental Delivery
 
@@ -706,7 +815,9 @@ Task: "T253 [US22d] Crear src/utils/customer-portal.js"
 5. US22 + US23 + US24 → acceso, permisos y ciclo de vida del cliente.
 6. Historias P2 en orden, con US11 y US25 como cierres funcionales del CRM y Postventa.
 7. US22d → acceso rediseñado, portal público, cotizaciones y tickets sin permisos nuevos.
-8. Polish → documentación, quality gates y despliegue.
+8. US15b → Panel visual con cuatro visualizaciones desde registros reales, embudo compartido y estados vacíos (MVP del incremento actual).
+9. US14b → cambio de tema en sitio sin destruir gráficos ni perder la vista.
+10. Polish del incremento actual → ortografía visible, documentación, quality gates y despliegue.
 
 ### Parallel Team Strategy
 
@@ -733,3 +844,6 @@ Task: "T253 [US22d] Crear src/utils/customer-portal.js"
 - Las cotizaciones no son tickets y los tickets públicos no crean permisos, usuarios ni `createdByUserId` interno.
 - No reintroducir contraseñas, hash, bloqueo por intentos ni borrado en cascada.
 - Verificar siempre mensajes exactos y opciones exactas de `spec.md` y `contracts/`.
+- No reintroducir `src/mockData.js` como fuente de los gráficos ni series de ejemplo en estados vacíos.
+- No renombrar variables, funciones, clases CSS, rutas, IDs ni claves de objetos al corregir ortografía visible; `en negociacion` sigue siendo el valor persistido.
+- El cambio de tema usa `chart.update('none')` y conserva `erp_theme`; no destruye ni vuelve a montar los gráficos en `toggle-theme`.

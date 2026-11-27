@@ -19,7 +19,7 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - `createTicketDocument(values)`: valida cliente existente y campos obligatorios, comprueba `postventa:create` y crea el `Documento`.
 - `createPortalTicketDocument(values)`: ruta pública separada para «Soporte Postventa»; valida `correo`, `categoria` y `descripcion`, exige un cliente encontrado por correo o teléfono y crea el mismo `Documento` de ticket con `status = 'Abierto'` y `prioridad = 'media'`. No comprueba `postventa:create` porque el actor es `visitor`, pero no modifica la matriz ni habilita la vista interna (FR-106, FR-114, FR-116).
 - `changeTicketStatus(documentId, nextStatus, resolutionNote)`: comprueba `postventa:transition`, acepta cualquier par de estados y actualiza `nota_resolucion` y `updatedAt`.
-- `deleteEntity()` no elimina tickets en cascada: si el cliente tiene tickets u otros documentos vinculados, la baja se rechaza con `EntityHasRecordsError` y se ofrece archivarlo. `deleteDocumentsForEntity()` solo actúa si se invoca explícitamente; en la vista de Postventa no existe borrado independiente.
+- `deleteEntity()` no elimina tickets en cascada: si el cliente tiene tickets u otros documentos vinculados, la baja se bloquea con `EntityHasRecordsError`, no muta `erp_entities` ni `erp_documents` y se ofrece archivarlo para conservar el historial. La confirmación simple queda solo para clientes sin registros. `deleteDocumentsForEntity()` solo actúa si se invoca explícitamente; en la vista de Postventa no existe borrado independiente (FR-003, FR-103).
 - La acción «Abrir Ticket» de la tabla «Clientes» no llama directamente a `createTicketDocument()`: navega a `?view=postventa`, abre el panel y precarga el cliente. La creación sigue pasando por `createTicketDocument()` y su comprobación de `postventa:create`.
 
 ## Validación
@@ -46,7 +46,7 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 | N3 Ejecutivo de Marketing | No                | No                           | No                                  |
 | Visitante                 | No                | No (sí en el portal, FR-114) | No (solo N1/N4 en la vista interna) |
 
-- Las acciones canónicas son `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, definidas en [`auth.md`](auth.md).
+- Las acciones canónicas son `postventa:view`, `postventa:view_own`, `postventa:create` y `postventa:transition`, definidas en [`auth.md`](auth.md). Nivel 3 no puede crear, cambiar el estado ni editar tickets: no tiene `postventa:*` ni `document:edit_any` sobre tickets, y `document:transition_own` sigue denegado. Tampoco ve el botón «Nuevo Ticket» ni el control de estado; cualquier llamada directa recibe `No tienes permiso para realizar esta acción` sin modificar `erp_documents`.
 - La pertenencia de N2 se resuelve con `Entidad.ejecutivo_asignado === user.id`; cambiar el asignado cambia la visibilidad sin mutar los tickets.
 - La denegación exacta es `No tienes permiso para realizar esta acción` y se aplica en la capa de datos, no solo ocultando botones.
 - La creación pública del portal es la única excepción de actor sin sesión y se limita a `createPortalTicketDocument()`: no otorga `postventa:view`, `postventa:view_own`, `postventa:create` ni `postventa:transition`, y un visitante sigue recibiendo «Acceso denegado» al abrir `?view=postventa` o al llamar a `createTicketDocument()` (FR-094, FR-106, FR-114).
@@ -77,7 +77,8 @@ Definir el comportamiento observable del apartado «Postventa» (US25, FR-104 a 
 - Crear un ticket con nota vacía en «Resuelto» o sin prioridad muestra el mensaje exacto y no persiste el documento.
 - Crear un ticket para un cliente existente lo añade a la ficha de ese cliente y aumenta solo la tarjeta correspondiente.
 - Cambiar de `Resuelto` a `Abierto` actualiza tabla y tarjetas sin borrar la nota histórica del documento.
-- N1 y N4 crean y cambian cualquier estado; N2 solo ve sus clientes y no ve el botón ni el control de estado; N3 y visitante no acceden ni por enlace profundo, consola o llamada directa a `src/storage.js`.
+- N1 y N4 crean y cambian cualquier estado; N2 solo ve sus clientes y no ve el botón ni el control de estado; N3 y visitante no acceden ni por enlace profundo, consola o llamada directa a `src/storage.js`. N3 no puede crear, editar ni cambiar estados de tickets aunque manipule el estado local.
+- Al intentar la baja definitiva de un cliente con tickets u otros documentos, `deleteEntity()` muestra `EntityHasRecordsError`, no elimina ni archiva nada automáticamente y ofrece archivar; sin registros, la confirmación explícita elimina solo la entidad (FR-003, FR-103).
 - Al pulsar «Nuevo Ticket» se comprueba que aparece el panel dentro de `?view=postventa`, que la tabla queda sustituida temporalmente, que las tres tarjetas siguen visibles y que no se llama a `window.open` ni se registra `?view=ticket-form`.
 - Con N2 no se muestra el botón «Nuevo Ticket»; con N3 o visitante la vista `?view=postventa` muestra la denegación o el inicio de sesión, sin panel utilizable ni escritura directa.
 - Guardar un ticket cierra el panel, vuelve a la tabla y recalcula las tres tarjetas sin recarga; cancelar sin cambios cierra el panel, y cancelar con cambios sin guardar muestra la confirmación antes de descartarlos. No se despacha ni se requiere `StorageEvent`.

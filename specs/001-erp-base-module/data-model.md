@@ -137,14 +137,16 @@ Marketing ya no usa `estado_comercial` para sus tarjetas ni muestra la torta «E
 
 `computeMarketingStats({ entities, documents })` calcula en memoria, sin escribir en `localStorage`:
 
-| Salida           | Definición                                                                   |
-| ---------------- | ---------------------------------------------------------------------------- |
-| `totalEntities`  | Total de entidades almacenadas.                                              |
-| `totalDocuments` | Total de documentos almacenados.                                             |
-| `closedWon`      | Importe de los documentos en estado «Cerrado ganado».                        |
-| `conversionRate` | Tasa de conversión calculada con la misma fórmula del panel.                 |
-| `pipeline`       | Importe del pipeline calculado con la misma fórmula del panel.               |
-| `funnel`         | Conteo y porcentajes por estado de documento, idénticos al embudo del panel. |
+| Salida           | Definición                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `totalEntities`  | Conteo de entidades activas, sin `archivedAt` (FR-035, FR-103).                                                                                                                                 |
+| `totalDocuments` | Conteo de documentos vinculados a entidades activas; se excluyen los de entidades archivadas (FR-035, FR-103).                                                                                 |
+| `closedWon`      | Conteo de documentos con `normalizeText(status) === 'cerrado ganado'` vinculados a entidades activas; no es un importe (FR-035).                                                              |
+| `conversionRate` | `closedWon / totalEntities * 100`; cero cuando `totalEntities = 0`. Es la proporción de documentos ganados sobre entidades activas, igual que en el panel (FR-035).                             |
+| `pipeline`       | Suma de `importe` de los documentos «Cerrado ganado» vinculados a entidades activas, expresada en USD; un importe ausente cuenta como cero (FR-035, FR-125).                                   |
+| `funnel`         | Conteo y porcentajes por estado de documento de las entidades activas, idénticos al embudo del panel (FR-035, FR-074, FR-103).                                                                 |
+
+Todos los importes de estas tarjetas y de cualquier agregación de Marketing se expresan en USD. Si la configuración declara un campo «Moneda», solo se acepta `USD`: otro valor se rechaza con un error visible y no crea ni modifica el documento; no se aplica conversión entre monedas (FR-125).
 
 Al derivarse de los registros almacenados, cualquier creación, edición o eliminación se refleja al volver a consultar la vista sin recarga (FR-074).
 
@@ -179,10 +181,10 @@ Marketing no renderiza los botones de acción rápida del panel: solo ofrece cin
 | Integrante            | `role`            | string         | Cargo editable del integrante (FR-077).                                                                                                       |
 | Integrante            | `active`          | boolean        | Estado «Activo»/«Inactivo» editable (FR-077).                                                                                                 |
 | Integrante            | `userId`          | string \| null | Usuario activo vinculado de rango Nivel 2 o Nivel 4; obligatorio desde la octava tanda (FR-099, FR-100).                                      |
-| Integrante (derivado) | `realMensual`     | number         | Suma de importes de documentos «Cerrado ganado» del mes cuyo cliente tenga `ejecutivo_asignado` igual al `userId` vinculado (FR-078, FR-100). |
-| Integrante (derivado) | `objetivoMensual` | number         | `ventasAcumuladas / díasTranscurridos * díasDelMes`; cero sin ventas o sin días transcurridos (FR-079).                                       |
+| Integrante (derivado) | `realMensual`     | number         | Suma de importes en USD de documentos «Cerrado ganado» del mes vinculados a entidades activas atribuidas al `userId` (FR-078, FR-100, FR-125). |
+| Integrante (derivado) | `objetivoMensual` | number         | `realMensual / díasTranscurridos * díasDelMes`, en USD; cero sin ventas o sin días transcurridos (FR-079, FR-125).                            |
 
-La relación se resuelve por el `userId` del usuario activo vinculado, no por el texto visible del integrante; el campo `ejecutivo_asignado` de las entidades guarda ese mismo identificador. No se crea una entidad separada para el ejecutivo. Un equipo sin integrantes muestra un estado vacío.
+La relación se resuelve por el `userId` del usuario activo vinculado, no por el texto visible del integrante; el campo `ejecutivo_asignado` de las entidades guarda ese mismo identificador. Cuando el documento conserva `assignedUserIdAtSale`, la atribución usa ese valor y, en su defecto, el «Ejecutivo Asignado» vigente (FR-078, FR-079). No se crea una entidad separada para el ejecutivo. Un equipo sin integrantes muestra un estado vacío. Los dos importes derivados son USD sin conversión: si una configuración declara «Moneda», solo `USD` es válido y otro valor se rechaza antes de crear o modificar el documento (FR-125).
 
 ## 5. Redes sociales y «Dudas y consultas»
 
@@ -214,16 +216,16 @@ Acciones internas permitidas (FR-089): crear un `Documento` de seguimiento, asig
 
 `computeMarketingPerformance({ entities, documents, campaigns })` deriva indicadores sin persistirlos:
 
-| Indicador                  | Definición                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `prospectosCapturados`     | Entidades con `estado_comercial = prospecto` o creadas desde la captura.            |
-| `conversionesPorEtapa`     | Conteo de entidades por estado comercial objetivo de campaña.                       |
-| `tasaDeConversion`         | Proporción de entidades que alcanzaron `ganado`.                                    |
-| `interaccionesRegistradas` | Documentos de redes y otras interacciones vinculados a entidades.                   |
-| `consultasRespondidas`     | Mensajes de «Dudas y consultas» (`canal = 'chat'`) que recibieron respuesta rápida. |
-| `ventasGanadas`            | Cantidad de documentos «Cerrado ganado», coincidente con la tarjeta del panel.      |
+| Indicador                  | Definición                                                                                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prospectosCapturados`     | Conteo de entidades activas con `estado_comercial = 'prospecto'` o creadas desde la captura; sin `archivedAt` (FR-087, FR-103).                                                                   |
+| `conversionesPorEtapa`     | Conteo de entidades activas por cada estado comercial objetivo de campaña; una entidad se cuenta una sola vez por estado (FR-087, FR-088).                                                        |
+| `tasaDeConversion`         | `documentos «Cerrado ganado» / entidades activas * 100`, con cero si no hay activas. Usa la misma fuente que FR-035: es proporción de documentos ganados sobre entidades activas, no de entidades con `estado_comercial = 'ganado'` (FR-035, FR-087). |
+| `interaccionesRegistradas` | Conteo de documentos de redes y otras interacciones (incluidas ejecuciones de reglas y campañas) vinculados a entidades activas, sin duplicar `id` y sin incluir tickets (FR-087, FR-103).         |
+| `consultasRespondidas`     | Conteo de documentos de «Dudas y consultas» (`canal = 'chat'`) con respuesta registrada, contados una sola vez aunque se ejecuten varias veces las respuestas rápidas (FR-082, FR-087).           |
+| `ventasGanadas`            | Conteo de documentos «Cerrado ganado» de entidades activas, coincidente con la tarjeta «Cerrado ganado» del panel (FR-035, FR-087).                                                               |
 
-Cuando se selecciona una campaña, los indicadores se filtran por el campo `campaña` o `campaignId`. Los registros sin campaña aparecen bajo el grupo «Sin campaña» (FR-088). Una campaña sin registros muestra cero con una explicación clara (SC-026).
+Los seis indicadores se muestran separadamente. Cuando se selecciona una campaña, los indicadores se filtran por el campo `campaña` o `campaignId`; `tasaDeConversion` aplica la misma fórmula al conjunto filtrado y, sin filtro, coincide con la tarjeta del panel. Los registros sin campaña aparecen bajo el grupo «Sin campaña» (FR-088). Una campaña sin registros muestra cero con una explicación clara (SC-026). Cualquier importe usado en estos indicadores se expresa en USD sin conversión (FR-125).
 
 ## 8. Autenticación, sesión y permisos
 
@@ -262,7 +264,7 @@ La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven d
 | Visitante (sin sesión)           | Ninguna acción interna; solo `chat:create_query` en la ruta pública con consentimiento                                                                                                                                            | Sin `panel:view`, `search:view`, `summary:*`, `marketing:*`, `postventa:*`, `team:*` ni `users:manage`. La captura pública se rige por FR-069 y no es una acción de la matriz interactiva. |
 | Nivel 1 - Atención al cliente    | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `document:create`, `chat:answer`, `postventa:view`, `postventa:create`, `postventa:transition`                                                                   | No crea ni edita entidades; no elimina; no cambia estados de documento ajenos a Postventa; sin `summary:*`, `marketing:*`, `team:*` ni `users:manage`.                                     |
 | Nivel 2 - Ejecutivo de Ventas    | `panel:view`, `search:view`, `entity:view_any`, `entity:create`, `entity:edit_own`, `document:create`, `document:read`, `document:edit_own`, `document:transition_own`, `summary:view_own`, `team:view_own`, `postventa:view_own` | No elimina entidades ni documentos; edita solo donde `ownerId` coincida con su `id`; ve solo tickets de sus clientes; sin `marketing:*` ni `users:manage`.                                 |
-| Nivel 3 - Ejecutivo de Marketing | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `marketing:view`, `marketing:manage`, `team:view_all`, `chat:view`, `chat:answer`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own`  | No elimina entidades; sin `summary:*`, `postventa:*` ni `users:manage`; no detiene campañas de otro usuario (`campaign:stop_any`).                                                         |
+| Nivel 3 - Ejecutivo de Marketing | `panel:view`, `search:view`, `entity:view_any`, `document:read`, `document:create`, `document:edit_any`, `document:delete`, `marketing:view`, `marketing:manage`, `team:view_all`, `chat:view`, `chat:answer`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | `document:create`, `document:edit_any` y `document:delete` solo con contexto `documentType = 'social'` (interacciones de redes de cualquier prospecto o cliente) y `chat:answer` para responder «Dudas y consultas»; no elimina entidades ni toca otros documentos, ventas ni tickets. Sin `document:transition_own`, `summary:*`, `postventa:*` ni `users:manage`; no detiene campañas de otro usuario (`campaign:stop_any`). |
 | Nivel 4 - Gerente comercial      | Todas las acciones canónicas excepto `permissions:edit`                                                                                                                                                                           | `permissions:view` solo consulta la matriz; `permissions:edit` se deniega a todos y la matriz no se edita desde la interfaz.                                                               |
 
 `ownerId` identifica al usuario asignado, al creador de la campaña o al integrante vinculado según la acción; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. `Sistema` es una identidad de auditoría para automatizaciones, no un rango de la matriz ni una opción de inicio de sesión.
@@ -456,3 +458,82 @@ El ticket se agrega al mismo `erp_documents` y aparece en el historial de la ent
 ### 11.5 Actualización inmediata y relaciones
 
 Toda mutación del portal pasa por `storage.js` y el siguiente `render()` lee los arreglos ya cargados en `state`; por eso, al volver al CRM, Marketing muestra el prospecto y su cotización, y Postventa, sus tarjetas y la ficha del cliente muestran el ticket sin recarga ni `StorageEvent`. Ninguna vista persiste un contador derivado. Las relaciones siguen siendo `Documento.entity_id → Entidad.entity_id` y `Ticket → ficha de entidad`, sin nueva estructura de almacenamiento (FR-032, FR-104, FR-114, SC-004, SC-044).
+
+## 12. Panel visual, gráficos y ortografía visible (2026-11-27)
+
+### 12.1 Sin entidades ni claves nuevas
+
+El incremento no añade `localStorage`, permisos canónicos ni tipos de registro. `Entidad`, `Documento`, tickets, campañas y `erp_theme` conservan su forma. Las cuatro visualizaciones y las cinco tarjetas de FR-035 son vistas derivadas calculadas en cada `render()`; los resultados se guardan solo en memoria como `state.dashboardChartData` para reutilizarlos en el marcado y en Chart.js, nunca en `erp_entities`, `erp_documents` ni otra clave (FR-032, FR-118, FR-121).
+
+### 12.2 KPI canónicas frente a KPI retiradas
+
+| Grupo                         | Elementos                                                                                                 | Regla observable                                                                                                                                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cinco KPI canónicas           | Entidades, documentos, «Cerrado ganado», «Tasa de conversión», «Pipeline (USD)»                           | Siguen en `src/components/dashboard.js`, las consume también Marketing y se recalculan con `computeDashboardStats()` tras cada mutación (FR-035, FR-072, FR-074, SC-046). |
+| Cuatro KPI del «Panel visual» | «Ingresos totales del mes», «Clientes activos», «Campañas activas» con su conversión y «Tickets abiertos» | Desaparecen del marcado y de `aria-label`; no se ocultan con CSS ni se sustituyen por otros valores calculados (FR-118).                                                  |
+
+Las cinco tarjetas canónicas se calculan así sobre entidades activas (sin `archivedAt`) y sus documentos, excluidos los archivados por FR-103: entidades = conteo de entidades activas; documentos = conteo de documentos vinculados a esas entidades; «Cerrado ganado» = conteo de documentos en ese estado; «Tasa de conversión» = documentos ganados ÷ entidades activas × 100, con cero si no hay entidades activas; «Pipeline (USD)» = suma de importes de los documentos ganados. Todos los importes son USD sin conversión; si se declara «Moneda», solo `USD` se acepta y cualquier otro valor se rechaza con un error visible sin crear ni modificar el documento (FR-035, FR-125).
+### 12.3 Series derivadas
+
+| Serie             | Entradas                                                                               | Regla de agregación                                                                                                                                                                                      | Estado vacío                                              |
+| ----------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `salesByMonth`    | Documentos con `normalizeText(status) === 'cerrado ganado'` y fecha `startDate` válida | Agrupa por mes calendario; para cada mes guarda `ingresos = suma(importe)` y `negocios = conteo`; ordena de menor a mayor fecha (FR-122, SC-050).                                                        | `No hay registros para esta serie.`                       |
+| `ticketsByStatus` | Documentos con `ticket: true` y `entity_id` de entidad activa                          | Cuenta una sola vez por `id` en «Abierto», «En revisión» y «Resuelto», con los tres estados presentes aunque tengan cero; usa `isTicket()` y no `notes` para discriminar (FR-122, SC-050).               | `No hay registros para esta serie.`                       |
+| `leadsByCampaign` | Entidades activas con `estado_comercial = 'prospecto'`                                 | Agrupa por el campo personalizado `campaña`; los valores vacíos se normalizan al grupo visible «Sin campaña»; no se inventan campañas ausentes de los registros (FR-088, FR-122, SC-050).                | `No hay registros para esta serie.`                       |
+| `funnel`          | Documentos activos                                                                     | Reutiliza `computeDashboardStats().funnel` con los estados de `statusLifecycle.states` y su conteo; `cerrado perdido` aparece como estado sin contarse como venta ni pendiente (FR-035, FR-074, FR-113). | Cero por estado, sin ocultar la tarjeta ni sus etiquetas. |
+
+Toda serie excluye entidades con `archivedAt` y documentos vinculados a esas entidades; ninguna usa `src/mockData.js`, valores capturados específicamente para el gráfico ni registros archivados (FR-121, FR-122, FR-103). Las etiquetas visibles se sanitizan con `escapeHtml()` tanto en `aria-label` como en el `title` del embudo.
+
+### 12.4 Estado local de tema y de cuadrícula
+
+| Elemento                      | Persistencia   | Regla observable                                                                                                                                                                                                        |
+| ----------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `erp_theme`                   | `localStorage` | Clave ya existente; conserva `light` u `dark` y se aplica en el arranque. El botón `toggle-theme` actualiza etiqueta, `aria-pressed` y `title` sin recargar (FR-123, SC-051).                                           |
+| `state.dashboardChartData`    | Ninguna        | Resultado en memoria de `computeDashboardChartData()`; se recalcula en `render()` y se reutiliza en `mountDashboardCharts()`. El cambio de tema no lo recalcula ni lo reemplaza por datos de ejemplo (FR-121, SC-049).  |
+| Instancias de Chart.js        | Ninguna        | `refreshDashboardChartTheme()` muta opciones y datasets y llama a `chart.update('none')`; conserva gráficos, series y vista actual. `destroyDashboardCharts()` sigue usándose solo al desmontar la aplicación (FR-123). |
+| `.chart-grid` / `.chart-card` | Ninguna        | CSS con `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))`; panel muestra tres gráficos más el embudo y Marketing solo el embudo, cada uno con `h3` visible (FR-120, SC-048).                                |
+
+### 12.5 Configuración de presentación de estados
+
+`statusLifecycle.labels` es un mapa opcional de valor interno a texto visible. Se añade solo la entrada `'en negociacion': 'En negociación'`; el valor de `statusLifecycle.states`, los documentos ya persistidos y la normalización de búsquedas no cambian. `funnelFor()` y cualquier otro renderizador de estados consultan primero este mapa y, si falta, conservan el comportamiento anterior de derivar la etiqueta del valor (FR-119, SC-047).
+
+### 12.6 Relaciones y validation rules
+
+- `salesByMonth ← Documento.status + Documento.startDate + Documento.importe`, con importes numéricos y fechas ISO válidas; un importe ausente cuenta como cero pero el documento se cuenta como negocio cerrado (FR-122).
+- `ticketsByStatus ← Documento.ticket + Documento.status + Entidad.archivedAt`, sin duplicar ids ni incluir tickets de entidades archivadas (FR-103, FR-122).
+- `leadsByCampaign ← Entidad.estado_comercial + Entidad.campaña + Entidad.archivedAt`, con «Sin campaña» como grupo derivado y no como valor escrito en la entidad (FR-088, FR-122).
+- `funnel ← Documento.status`, calculado por la utilidad ya existente; no se agrega un estado nuevo ni se modifica `pendingStates` (FR-035, FR-113).
+- Un estado vacío se sustituye por la serie real en el siguiente `render()` tras una mutación válida; no hay recarga, evento entre pestañas ni contador persistido (FR-124, SC-052).
+- La ortografía se aplica solo a literales visibles: no se renombran variables, funciones, clases CSS, rutas, IDs ni claves de objetos, y no se migran valores almacenados (FR-119).
+
+La forma observable de tarjetas, tooltips, estados vacíos y cambio de tema está en [`contracts/dashboard-charts.md`](contracts/dashboard-charts.md); el embudo compartido con Marketing se describe en [`contracts/marketing.md`](contracts/marketing.md).
+
+## 13. Precisión de permisos, KPIs, moneda, baja y campañas (2026-11-27)
+
+### 13.1 Reglas de permisos
+
+- Nivel 3 (`n3_marketing`) usa los identificadores canónicos `document:create`, `document:edit_any` y `document:delete` únicamente con contexto `documentType = 'social'`, derivado de los documentos declarados como interacciones de redes (por `plataforma`/`tipo_interaccion`) y no persistido como campo nuevo. Puede crear, editar y eliminar esas interacciones de cualquier prospecto o cliente.
+- La restricción se comprueba en `src/storage.js` con `assertPermission()`: si el documento no es una interacción de redes, o si se intenta una entidad, un documento de venta, otro documento comercial o un ticket, la operación se rechaza con `No tienes permiso para realizar esta acción` y no escribe en `localStorage`. No se crean acciones ni rangos adicionales.
+- Nivel 3 responde «Dudas y consultas» con `chat:answer`; esa acción no concede `document:edit_any` sobre el mensaje ni permite cambiar su estado. Sigue sin `document:transition_own`, `postventa:*`, `summary:*` ni `users:manage`, y no crea, edita ni elimina tickets.
+
+### 13.2 KPIs y moneda
+
+- Las cinco tarjetas canónicas y sus equivalentes en Marketing usan: entidades activas (sin `archivedAt`), documentos vinculados a entidades activas, `closedWon` como conteo de documentos «Cerrado ganado», `conversionRate = closedWon / entidades activas * 100` (cero sin activas) y `pipeline` como suma de importes de esos documentos. Los archivados quedan excluidos por FR-103.
+- Panel, Marketing, real mensual, objetivo mensual, ventas por mes, pipeline y total comprado usan USD sin conversión. Si la configuración declara «Moneda», el único valor aceptado es `USD`; cualquier otro valor produce un error visible y no crea ni modifica el documento (FR-125).
+
+### 13.3 Baja protegida de entidades
+
+- `deleteEntity()` solo elimina la entidad cuando no tiene documentos, tickets ni registros vinculados por `entity_id`, y solo tras confirmación explícita. Con registros vinculados, muestra `EntityHasRecordsError`, no muta `erp_entities` ni `erp_documents` (tampoco añade `archivedAt`) y ofrece archivar la entidad para conservar el historial. No existe borrado en cascada; `deleteDocumentsForEntity()` sigue siendo una operación explícita y distinta (FR-003, FR-009, FR-103).
+
+### 13.4 Seis indicadores de rendimiento de campañas
+
+| Indicador                  | Definición                                                                                                                                     |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prospectosCapturados`     | Entidades activas con `estado_comercial = 'prospecto'` o creadas desde la captura.                                                             |
+| `conversionesPorEtapa`     | Entidades activas contadas por el estado comercial objetivo de la campaña.                                                                    |
+| `tasaDeConversion`         | Documentos «Cerrado ganado» ÷ entidades activas × 100, con cero sin activas; misma fuente que FR-035.                                          |
+| `interaccionesRegistradas` | Documentos de redes y otras interacciones de entidades activas, sin duplicar `id` y sin contar tickets.                                        |
+| `consultasRespondidas`     | Documentos `canal = 'chat'` con respuesta registrada, contados una sola vez.                                                                  |
+| `ventasGanadas`            | Cantidad de documentos «Cerrado ganado» de entidades activas, igual que la tarjeta del panel.                                                  |
+
+Los seis se filtran por `campaña`/`campaignId` cuando se selecciona una campaña; sin valor se agrupan bajo «Sin campaña» y sin registros muestran cero con `Sin registros para esta campaña.` (FR-087, FR-088).

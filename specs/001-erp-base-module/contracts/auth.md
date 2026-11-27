@@ -51,8 +51,9 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 | `panel:view`, `search:view`, `entity:view_any`, `document:read`              | Sí  | Sí  | Sí                 | Sí  | No                                      |
 | `entity:create`                                                              | Sí  | No  | Sí                 | No  | No                                      |
 | `entity:edit_own`, `document:edit_own`, `document:transition_own`            | Sí  | No  | Solo con `ownerId` | No  | No                                      |
-| `entity:edit_any`, `entity:delete`, `document:edit_any`, `document:delete`   | Sí  | No  | No                 | No  | No                                      |
-| `document:create`                                                            | Sí  | Sí  | Sí                 | Sí  | No                                      |
+| `entity:edit_any`, `entity:delete`                                           | Sí  | No  | No                 | No  | No                                      |
+| `document:edit_any`, `document:delete`                                       | Sí  | Solo documentos de interacciones de redes | No                 | No  | No                                      |
+| `document:create`                                                            | Sí  | Sí, solo interacciones de redes | Sí                 | Sí  | No                                      |
 | `summary:view_all`                                                           | Sí  | No  | No                 | No  | No                                      |
 | `summary:view_own`                                                           | Sí  | No  | Solo con `ownerId` | No  | No                                      |
 | `marketing:view`, `marketing:manage`                                         | Sí  | Sí  | No                 | No  | No                                      |
@@ -66,6 +67,8 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 | `postventa:view_own`                                                         | Sí  | No  | Solo con `ownerId` | No  | No                                      |
 | `users:manage`, `permissions:view`                                           | Sí  | No  | No                 | No  | No                                      |
 | `permissions:edit`                                                           | No  | No  | No                 | No  | No                                      |
+
+Nota inmediata (2026-11-27): Nivel 3 crea, edita y elimina solo interacciones de redes de cualquier prospecto o cliente, y responde «Dudas y consultas» con `chat:answer`. No crea, edita, elimina ni cambia el estado de documentos de venta, otros documentos comerciales ni tickets. La restricción se aplica con `context.documentType = 'social'`, derivado del tipo de documento declarado y no de un permiso nuevo. `entity:edit_any` y `entity:delete` siguen denegados para N3.
 
 `ownerId` identifica al usuario asignado, al creador de la campaña, al integrante vinculado o al ejecutivo a cargo del cliente en `postventa:view_own`; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. La captura pública de FR-069, los mensajes del chat de FR-084 y las dos pestañas del Portal del Cliente de FR-114 son rutas públicas con validación propia, no acciones de la matriz interactiva; el visitante no recibe `postventa:create` por crear tickets desde el portal.
 
@@ -109,6 +112,8 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 - `?view=postventa` se resuelve solo para N1, N2 y N4; N3 y visitante reciben «Acceso denegado» o redirección a login según corresponda.
 - N2 ve únicamente tickets cuyo cliente tiene `ejecutivo_asignado` igual a su `id`; si cambia el asignado, la vista y `listTicketDocuments()` dejan de mostrarlos sin mutar los tickets.
 - N1 y N4 pueden crear tickets y cambiar cualquier estado, incluida la reapertura; N2 no puede crear ni cambiar estados y N3 no puede verlos aunque conozca el `entity_id`.
+- N3 que intente crear, editar o eliminar una entidad, un documento de venta, otro documento comercial o un ticket recibe exactamente `No tienes permiso para realizar esta acción`, incluso desde `storage.js`, consola o enlace profundo; no se escribe en `localStorage`.
+- N3 que intente cambiar estados de documentos recibe `No tienes permiso para realizar esta acción`: `document:transition_own`, `postventa:*` y `summary:*` siguen denegados, y `chat:answer` solo permite responder consultas sin mutar el documento.
 - No se guardan contraseñas, hashes ni sales, y no existe campo de contraseña en login ni en administración de usuarios.
 
 ## Integración

@@ -14,9 +14,9 @@ Definir el comportamiento observable del botón «Portal del Cliente» de la pan
 
 ## Pestaña «Solicitar cotización»
 
-- Campos obligatorios, en este orden visible: «Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto estimado y una casilla de consentimiento explícito (FR-115).
+- Campos obligatorios, en este orden visible: «Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto estimado en USD y una casilla de consentimiento explícito (FR-115, FR-125).
 - Con cualquier casilla vacía o sin consentimiento se muestra `Completa los campos obligatorios.` y no se crea ningún registro (FR-006, FR-115).
-- Con datos válidos se llama a `createProspectFromCapture()` para crear una `Entidad` con `estado_comercial = 'prospecto'`, `consentimiento = true`, `consentimiento_fecha` y `consentimiento_version`, y se llama a `addDocument()` para crear un `Documento` vinculado con `servicio_interes` y `monto_estimado` (FR-071, FR-115).
+- Con datos válidos se llama a `createProspectFromCapture()` para crear una `Entidad` con `estado_comercial = 'prospecto'`, `consentimiento = true`, `consentimiento_fecha` y `consentimiento_version`, y se llama a `addDocument()` para crear un `Documento` vinculado con `servicio_interes` y `monto_estimado` en USD (FR-071, FR-115). Si se declara `moneda`, solo `USD` es válido: otro valor se rechaza con un error visible, sin crear ni modificar la cotización y sin conversión (FR-125).
 - La confirmación visible es `Solicitud registrada correctamente.` y el prospecto con su cotización queda disponible en Marketing al volver al CRM (SC-044).
 - El envío no concede sesión, no cambia `estado_comercial` a `ganado` y no registra la cotización como ticket.
 
@@ -51,7 +51,7 @@ Definir el comportamiento observable del botón «Portal del Cliente» de la pan
 ## Expectativas de verificación
 
 - Sin sesión, el botón abre dos pestañas exactas y no muestra vistas internas ni campos de usuario/contraseña (SC-044, SC-045).
-- «Solicitar cotización» rechaza envíos incompletos o sin consentimiento y crea prospecto más documento con servicio y monto ante datos válidos (SC-044).
+- «Solicitar cotización» rechaza envíos incompletos o sin consentimiento y crea prospecto más documento con servicio y monto en USD ante datos válidos; un valor de `moneda` distinto de `USD` se rechaza sin mutar registros (FR-125, SC-044).
 - «Soporte Postventa» localiza clientes por correo y por teléfono, crea un ticket `Abierto`/`Media` y rechaza sin mutar cuando no hay coincidencia (SC-044).
 - Al volver al CRM, Marketing y Postventa muestran los nuevos registros de inmediato, sin recarga ni pérdida de datos (SC-044).
 - La tarjeta de inicio conserva botones centrados en dos columnas, paleta azul/gris oscuro, enlace discreto al portal y fallback del color de acento con advertencia (SC-045).

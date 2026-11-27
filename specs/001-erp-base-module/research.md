@@ -44,11 +44,13 @@
 
 **Alternativas consideradas**: Eliminar los valores huérfanos (pérdida irreversible); mostrarlos en solo lectura (expone campos que el módulo ya no define).
 
-### Decisión: Confirmación con recuento antes de eliminar una entidad
+### Decisión: Bloquear la baja definitiva con registros vinculados y ofrecer archivar
 
-**Justificación**: La eliminación definitiva es irreversible; indicar cuántos documentos se conservarán y por qué se rechaza la baja hace explícito el impacto y reduce pérdidas accidentales.
+**Decisión**: Cuando la entidad tiene documentos o registros vinculados, la baja definitiva se bloquea con `EntityHasRecordsError`, no se borra nada y no se muta `erp_entities` ni `erp_documents`; la interfaz ofrece archivar para conservar el historial. La confirmación explícita simple se mantiene solo cuando la entidad no tiene registros vinculados. No existe borrado en cascada de documentos al eliminar entidades.
 
-**Alternativas consideradas**: Confirmación simple sin recuento (menos informativa); eliminación inmediata (riesgo alto de pérdida de datos).
+**Justificación**: Preserva la integridad referencial y el historial comercial, evita pérdidas accidentales y hace explícita la alternativa segura de archivado cuando la entidad ya tiene trazabilidad.
+
+**Alternativas consideradas**: Eliminar en cascada documentos y registros vinculados (pérdida irreversible y riesgo operativo alto); permitir borrado con confirmación simple aunque haya registros (insuficiente para proteger historial); conservar la entidad eliminada como "huérfana" sin bloqueo (deja el modelo inconsistente).
 
 ## Decisiones de aclaración (sesión 2026-11-23)
 
@@ -485,3 +487,101 @@
 - **Decisión**: Se añaden pruebas unitarias para `customer-portal.js` y pruebas de integración para la tarjeta de acceso, el enlace al portal, las dos pestañas, el consentimiento, la búsqueda por correo/teléfono, el rechazo sin coincidencia, la creación de prospecto/cotización/ticket, la actualización al volver al CRM y el fallback del color de acento. Se usan Vitest/jsdom y los comandos `npm test`, `npm run lint` y `npm run format:check` (SC-044, SC-045).
 - **Justificación**: Los criterios SC-044 y SC-045 son verificables y el Principio II exige cobertura automática de los flujos visibles antes de completar el incremento; reutilizar el entorno actual evita nuevas dependencias.
 - **Alternativas consideradas**: Solo revisión visual (no cubre reglas de negocio); snapshots completos de HTML (frágiles ante cambios de estilo); introducir un marco E2E nuevo (dependencia no aprobada).
+
+## Decisiones de diseño (panel visual, gráficos y ortografía visible, sesión 2026-11-27)
+
+### Decisión: Conservar cinco KPI canónicas y retirar solo las cuatro del «Panel visual»
+
+- **Decisión**: `src/components/dashboard.js` sigue renderizando las cinco tarjetas de FR-035 —entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— con los cálculos de `computeDashboardStats()`. `src/components/dashboard-charts.js` elimina «Ingresos totales del mes», «Clientes activos», «Campañas activas» con su conversión y «Tickets abiertos», junto con su importación de `mockData.js`.
+- **Justificación**: La aclaración distingue entre las cifras canónicas compartidas con Marketing y las tarjetas de demostración del bloque visual. Quitar solo estas últimas evita duplicar fuentes y preserva FR-035, FR-072 y FR-074 (SC-046).
+- **Alternativas consideradas**: Quitar también las cinco tarjetas canónicas (rompe FR-035 y Marketing); dejar las cuatro con datos reales (no cumple la eliminación solicitada); ocultarlas con CSS (deja marcado y texto accesible).
+
+### Decisión: Derivar las series en una utilidad pura compartida por marcado y Chart.js
+
+- **Decisión**: Crear `src/utils/dashboard-chart-data.js` con una función que reciba `{ entities, documents, config }` y devuelva `salesByMonth`, `ticketsByStatus`, `leadsByCampaign` y `funnel`. Ventas agrupa documentos `Cerrado ganado` por `startDate` con importe y conteo; tickets usa `isTicket()` y los estados `Abierto`, `En revisión`, `Resuelto`; leads filtra entidades `estado_comercial = prospecto` y agrupa por `campaña` con «Sin campaña»; el embudo reutiliza `computeDashboardStats().funnel`. `render()` calcula el resultado una vez en `state.dashboardChartData` y lo pasa a `renderDashboardHtml()` y a `mountDashboardCharts()`.
+- **Justificación**: `src/mockData.js` alimentaba simultáneamente el HTML y los gráficos, por lo que eliminarlo exige una sola fuente real. Una utilidad pura mantiene el mismo criterio para `aria-label`, tooltips y series, excluye archivados con el conjunto activo ya usado por las agregaciones y permite pruebas unitarias sin DOM (FR-121, FR-122, SC-049, SC-050).
+- **Alternativas consideradas**: Calcular dentro de cada componente (dos fuentes de verdad y riesgo de divergencia); persistir series en `localStorage` (pueden desincronizarse y contradicen FR-032); ampliar `computeDashboardStats()` (rompe la forma verificada por `tests/unit/marketing-stats.test.js`).
+
+### Decisión: Mantener el embudo como marcado accesible dentro de la cuadrícula compartida
+
+- **Decisión**: El embudo conserva sus filas y leyenda textual, pero se renderiza como una tarjeta de `.chart-grid` con título «Embudo comercial por estado» y un `title` por fila con estado y recuento. El panel muestra las tres series Chart.js más el embudo; Marketing muestra solo la tarjeta del embudo, reutilizando el mismo componente y el mismo cálculo.
+- **Justificación**: FR-120 incluye el embudo entre las visualizaciones de la cuadrícula y exige tooltips; conservar el marcado existente mantiene la accesibilidad y los selectores de `tests/unit/dashboard-stats.test.js` y `tests/integration/marketing-dashboard.test.js` sin migrar datos (SC-048).
+- **Alternativas consideradas**: Convertir el embudo en otro gráfico Chart.js (añade configuración y rompe la leyenda textual existente); dejarlo fuera de la tarjeta en Marketing (contradice FR-120); duplicar el cálculo por vista (dos fuentes de verdad).
+
+### Decisión: Cuadrícula responsiva exacta y tarjetas con título
+
+- **Decisión**: `src/styles.css` usa `grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))` en `.chart-grid` y elimina los `override` de `@media` que forzaban dos o una columna. Cada visualización queda en `.chart-card` con `h3`; los estilos de fondo, borde y sombra siguen viniendo de `--surface`, `--border`, `--shadow` y `--radius`.
+- **Justificación**: El usuario fijó la regla CSS literal. `auto-fit` permite que el panel pase de una a varias columnas según ancho sin duplicar reglas por vista, y los tokens existentes preservan el marco ERP y el tema (FR-120, FR-038).
+- **Alternativas consideradas**: Mantener `repeat(2, minmax(0, 1fr))` con media queries (no cumple la regla exacta); crear clases por vista (duplica estilos); usar `minmax(280px, 1fr)` (contradice el valor acordado).
+
+### Decisión: Actualizar tema sin desmontar los gráficos
+
+- **Decisión**: `src/utils/dashboard-charts.js` amplía `readColors()` con `--surface`, `--text-muted`, `--border`, `--accent-color` y una paleta de series legible según `documentElement.dataset.theme`, y exporta `refreshDashboardChartTheme()` para mutar leyenda, escalas, tooltips y colores de datasets antes de `chart.update('none')`. `app.js` conserva `erp_theme`, `applyTheme()` y el botón `toggle-theme`, pero sustituye `mountDashboardCharts()` por esa función en el manejador.
+- **Justificación**: Chart.js no observa variables CSS; el remontaje actual repinta pero descarta instancias y estado de leyenda. La actualización en sitio cumple «sin recarga ni pérdida de la vista» con la API de Chart.js 4.6.2 ya instalada, sin nuevas dependencias (FR-123, SC-051).
+- **Alternativas consideradas**: Seguir destruyendo y recreando charts (pierde estado); usar solo `Chart.defaults` (no cubre opciones por gráfico ni datasets); añadir librería de temas (dependencia innecesaria).
+
+### Decisión: Estado vacío explícito por serie
+
+- **Decisión**: Si una serie no contiene registros, `renderDashboardChartsHtml()` sustituye el `canvas` por `No hay registros para esta serie.` dentro de la tarjeta y usa el mismo texto en `aria-label`; `mountDashboardCharts()` solo crea instancias para canvases presentes. En cuanto aparece un registro válido, el siguiente `render()` genera la serie sin recarga.
+- **Justificación**: FR-124 exige ausencia de series de ejemplo y sustitución inmediata; un estado por tarjeta evita que una serie vacía oculte las demás y mantiene el patrón de estados vacíos del marco ERP (SC-052).
+- **Alternativas consideradas**: Mostrar ceros en un gráfico vacío (no distingue ausencia de datos); usar datos de ejemplo (prohibido); ocultar toda la tarjeta (rompe la cuadrícula acordada).
+
+### Decisión: Tooltips con tokens del tema y contenido real
+
+- **Decisión**: Los tres gráficos definen `plugins.tooltip` con `backgroundColor: --surface`, `titleColor`/`bodyColor: --text` y `borderColor: --border`, mostrando etiqueta y valores reales; ventas incluye importe USD y conteo de negocios. El embudo usa un `title` nativo por fila con el estado y su recuento. El comportamiento táctil y de teclado queda fuera del incremento por decisión del usuario.
+- **Justificación**: FR-120 pide tooltips interactivos y colores adaptados; reutilizar tokens evita colores fijos ilegibles en tema oscuro, y el `title` del embudo mantiene la información sin convertirlo en un gráfico nuevo.
+- **Alternativas consideradas**: Tooltips por defecto de Chart.js (no siguen el tema); tooltip HTML externo (más plugins y superficie de pruebas); añadir soporte táctil completo (amplía alcance no solicitado).
+
+### Decisión: Corrección ortográfica limitada a texto visible
+
+- **Decisión**: Se revisan literales de HTML, componentes, botones, etiquetas, placeholders, mensajes y datos de semilla/demo. Se corrigen formas como «Nivel 1 - Atención al cliente», «Portal del cliente», «Soporte postventa», «Embudo comercial por estado», «Últimas interacciones / próximos seguimientos», «Nuevo ticket», «Abrir ticket», «Ejecutivo asignado» y «La fecha de inicio debe ser una fecha ISO.». Los identificadores, rutas, clases CSS, IDs y claves de objetos no cambian; el valor persistido `en negociacion` se mantiene y `statusLifecycle.labels` aporta la etiqueta «En negociación».
+- **Justificación**: FR-119 exige ortografía correcta sin migración de código ni datos. Un mapa de etiquetas de presentación evita convertir un valor almacenado en un cambio de esquema y mantiene la normalización existente en `marketing-stats.js` y `search.js` (SC-047).
+- **Alternativas consideradas**: Renombrar valores y claves (rompe registros y selectores); corregir solo el panel (contradice «todos los textos visibles»); usar `String.replace` global en render (puede alterar identificadores y datos).
+
+### Decisión: Verificación con las suites existentes y una nueva utilidad unitaria
+
+- **Decisión**: Se añaden pruebas unitarias para `dashboard-chart-data.js` y se ajustan `tests/integration/dashboard.test.js`, `tests/unit/dashboard-stats.test.js`, `tests/integration/marketing-dashboard.test.js` y `tests/integration/workspace-shell.test.js`. Se comprueban KPI retiradas/canónicas, mapeos de series, archivados, «Sin campaña», estado vacío, cuadrícula CSS, tooltips, cambio de tema sin recarga y textos corregidos. Chart.js se simula solo donde sea necesario porque jsdom no expone `CanvasRenderingContext2D`.
+- **Justificación**: SC-046 a SC-052 son observables y el Principio II exige cobertura automatizada. Reutilizar Vitest/jsdom evita nueva dependencia; verificar marcado real evita que los cambios se queden solo en constantes (FR-119, FR-120).
+- **Alternativas consideradas**: Solo revisión manual (no verificable en CI); snapshots completos (frágiles ante cambios de estilo); introducir Playwright (dependencia y configuración nuevas).
+
+## Decisiones de diseño (precisión de permisos, KPIs, moneda, baja y campañas, sesión 2026-11-27)
+
+### Decisión: Acotar N3 a interacciones de redes sociales y «Dudas y consultas»
+
+**Decisión**: `src/auth/permissions.js` define para Nivel 3 (`n3_marketing`) solo permisos de crear, editar y eliminar documentos declarados como interacciones de redes sociales de cualquier prospecto/cliente, además de responder «Dudas y consultas». `src/storage.js` y `assertPermission()` rechazan cualquier creación, edición, eliminación o cambio de estado de otros documentos comerciales, ventas o tickets, aunque la llamada provenga de la consola con sesión íntegra.
+
+**Justificación**: Limita el alcance de N3 al dominio de Marketing sin abrir rutas a operaciones comerciales o de postventa. Mantener la comprobación en la capa de datos evita que la UI sea la única barrera y conserva una única matriz canónica de permisos (FR-094, FR-095, FR-106).
+
+**Alternativas consideradas**: Permitir a N3 editar cualquier documento no-ticket (excede el alcance solicitado); confiar solo en ocultar botones (insuficiente ante llamadas directas); crear un rol nuevo específico para redes sociales (amplía la matriz y el modelo de usuarios sin necesidad).
+
+### Decisión: Unificar definiciones canónicas de KPI con exclusión de archivados
+
+**Decisión**: «Cerrado ganado» es el conteo de documentos en ese estado; «Tasa de conversión» es `documentos ganados ÷ entidades activas × 100`, con resultado `0` cuando no hay entidades activas; «Pipeline (USD)» es la suma de importes de documentos ganados. Todas las métricas excluyen entidades/documentos archivados por FR-103. Las utilidades puras `src/utils/marketing-stats.js` y `src/utils/sales-team-metrics.js` son la fuente única consumida por `src/components/dashboard.js` y las vistas relacionadas.
+
+**Justificación**: Evita que panel, resumen y Marketing muestren cifras divergentes. Centralizar la fórmula en utilidades puras hace verificables los cálculos y reduce regresiones cuando cambian filtros o estados (FR-032, FR-035, FR-073).
+
+**Alternativas consideradas**: Mantener fórmulas por componente (riesgo de divergencia); incluir archivados en algunos indicadores (inconsistente con FR-103); persistir KPI derivados en `localStorage` (pueden desincronizarse).
+
+### Decisión: Exigir USD único sin conversión automática
+
+**Decisión**: Todos los importes monetarios se registran y muestran en USD. Si existe un campo «Moneda», su único valor permitido es `USD`; cualquier otro valor se rechaza con error visible y no crea ni modifica el documento. `src/storage.js` valida antes de escribir y las utilidades `marketing-stats.js`, `sales-team-metrics.js` y `dashboard-chart-data.js` tratan los importes como USD sin conversión.
+
+**Justificación**: Elimina ambigüedad en panel, Marketing, ventas y totales comprados. Rechazar antes de persistir evita datos mixtos difíciles de corregir y mantiene los cálculos deterministas sin dependencias de tasas de cambio (FR-032, FR-125).
+
+**Alternativas consideradas**: Convertir automáticamente con una tasa fija o externa (añade dependencia y falsos supuestos); aceptar varias monedas y mostrar un aviso (contamina KPI y totales); normalizar silenciosamente a USD (oculta un error de captura).
+
+### Decisión: Bloquear baja definitiva con registros vinculados y ofrecer archivar
+
+**Decisión**: Si la entidad tiene documentos o registros vinculados, `src/storage.js` rechaza la baja definitiva con `EntityHasRecordsError`, no muta `erp_entities` ni `erp_documents` y la UI ofrece archivar. La confirmación simple se aplica solo cuando la entidad no tiene registros vinculados. No existe borrado en cascada.
+
+**Justificación**: Protege la integridad referencial y la trazabilidad comercial. El bloqueo en la capa de datos garantiza el mismo comportamiento ante UI, enlaces profundos o llamadas directas, y archivar conserva el historial sin exponer la entidad en operaciones activas (FR-003, FR-009, FR-103).
+
+**Alternativas consideradas**: Borrado en cascada de documentos (pérdida irreversible); confirmación simple aunque haya registros (no protege historial); permitir eliminar y dejar referencias huérfanas (rompe integridad).
+
+### Decisión: Separar «Rendimiento de campañas» en seis indicadores
+
+**Decisión**: `src/utils/marketing-performance.js` calcula por separado prospectos capturados, conversiones por etapa, tasa de conversión, interacciones registradas, consultas respondidas y ventas «Cerrado ganado», derivados de registros ya almacenados. Los componentes de Marketing presentan cada indicador con su propia etiqueta y valor, sin combinarlos en un total único.
+
+**Justificación**: Hace comparable el rendimiento de campañas sin ocultar qué parte del embudo cambió. Mantener los indicadores como agregaciones puras sobre datos existentes evita contadores manuales y facilita la verificación (FR-087, SC-004).
+
+**Alternativas consideradas**: Mostrar un único puntaje compuesto (pierde trazabilidad); capturar indicadores manualmente (desincroniza con los registros); calcular algunos indicadores en la vista y otros en utilidades (duplica lógica).

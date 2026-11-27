@@ -9,8 +9,8 @@ Definir el comportamiento observable de la consulta rápida del cliente, las acc
 - El nombre del cliente es un control con `data-action="open-client-quick-view"` y `data-entity-id` en dos superficies: resultados de «Buscar» y tabla «Clientes» de gestión (`entity-list.js`).
 - `src/app.js` guarda `state.quickViewEntityId`; el mismo componente `src/components/client-quick-view.js` renderiza la ventana para ambas superficies.
 - La ventana es de solo lectura y contiene únicamente dos acciones: `data-action="close-quick-view"` («Cerrar») y `data-action="view-entity-full"` («Ver ficha completa»). No hay formularios de edición ni creación.
-- Muestra en un solo lugar: datos de contacto visibles según `fieldRules`, compras «Cerrado ganado» con importe en USD y `startDate`, total de esas compras, historial cronológico y tickets vinculados por `entity_id` que el usuario pueda consultar.
-- Las interacciones y los tickets se filtran con `can()` antes de renderizarse; N2 ve solo los registros de sus clientes, N1/N4 los permitidos por su rango y N3 ningún ticket. «Ver ficha completa» abre la ficha existente aplicando la matriz vigente.
+- Muestra en un solo lugar: datos de contacto visibles según `fieldRules`, compras «Cerrado ganado» con importe en USD y `startDate`, total de esas compras en USD sin conversión, historial cronológico y tickets vinculados por `entity_id` que el usuario pueda consultar.
+- Las interacciones y los tickets se filtran con `can()` antes de renderizarse; N2 ve solo los registros de sus clientes, N1/N4 los permitidos por su rango y N3 ningún ticket, sin botón «Abrir Ticket» ni alertas de ticket. «Ver ficha completa» abre la ficha existente aplicando la matriz vigente.
 - Todo texto persistido se sanitiza con `escapeHtml()`; sin compras o sin tickets se muestran estados vacíos explícitos.
 - No se guarda ningún dato derivado ni se modifica `erp_entities` o `erp_documents`.
 
@@ -41,6 +41,8 @@ Definir el comportamiento observable de la consulta rápida del cliente, las acc
 | «Abrir Ticket»              | Sí  | No  | No                  | Sí  | No        |
 | Alerta de ticket en tabla   | Sí  | No  | Solo sus clientes   | Sí  | No        |
 | Cambiar documento a perdido | Sí  | No  | Solo sus documentos | No  | No        |
+
+Nivel 3 no ve el botón «Abrir Ticket» ni las alertas «Ticket abierto» o «Ticket en revisión», y no puede editar documentos de venta desde Marketing: solo crea, edita y elimina interacciones de redes y responde «Dudas y consultas». La interfaz oculta los controles y la capa de datos deniega cualquier intento con `No tienes permiso para realizar esta acción`.
 
 - La denegación exacta es `No tienes permiso para realizar esta acción` y también se aplica en la capa de datos, no solo ocultando controles.
 - Mensajes exactos: `Completa los campos obligatorios.`, `No se encontraron resultados.` y `No tienes permiso para realizar esta acción`.
