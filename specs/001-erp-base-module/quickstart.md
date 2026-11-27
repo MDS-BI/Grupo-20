@@ -149,19 +149,37 @@ Los módulos ERP personalizados adaptan la base mediante un único archivo de co
 4. Opcionalmente declare `entityDate` (etiqueta, `min`, `max` o `localToday`) para renombrar y restringir la fecha base de la entidad.
 5. Opcionalmente establezca `theme.accentColor` para remarcar los resaltados y controles principales de todo el espacio de trabajo.
 6. Añada reglas de validación específicas del módulo junto a las reglas base donde sea necesario.
-7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional. Si ofrece Postventa, declare el bloque `postventa` con `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates`; sin él, la ruta no se registra.
+7. Si el módulo ofrece Marketing, declare `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns` en el bloque `marketing`; las campañas solo pueden usar acciones internas y la atribución por `campaña` es opcional. Si ofrece Postventa, declare el bloque `postventa` con `states`, `categoryOptions`, `priorityOptions`, `cardMapping` y `resolutionNoteStates`; sin él, la ruta no se registra. Si necesita un motivo obligatorio en cierres perdidos, declare `documentRules.lostReason` y su campo personalizado; sin él, la validación no existe.
 
-La generación de identidad, marcas de tiempo, integridad referencial entre entidades y documentos, eliminación en cascada, navegación y búsqueda siguen siendo gestionadas por el módulo base. Sin archivo de configuración, la aplicación se ejecuta con el comportamiento predeterminado Entidad/Documento. Consulte `specs/001-erp-base-module/` para la especificación completa.
+La generación de identidad, marcas de tiempo, integridad referencial entre entidades y documentos, bloqueo de baja con registros vinculados, navegación y búsqueda siguen siendo gestionadas por el módulo base. Sin archivo de configuración, la aplicación se ejecuta con el comportamiento predeterminado Entidad/Documento. Consulte `specs/001-erp-base-module/` para la especificación completa.
 
 ## Validación de Inicio de Sesión y Sesión
 
-1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: debe mostrarse solo el formulario con «Usuario» y «Contraseña», sin Panel, Buscar, Resumen, Marketing ni Postventa; el formulario público de `?view=capture` y el chat deben seguir disponibles.
-2. Ingrese `gerente`, `marketing`, `ventas` y `atencion`, cada uno con una contraseña cualquiera (por ejemplo, `demo`): los cuatro deben iniciar sesión; se admiten mayúsculas y espacios al inicio o al final del usuario. `gerente` debe mostrar «Nivel 4 - Gerente Comercial» y el menú con «Gestionar usuarios» y «Cerrar sesión».
-3. Deje vacío el campo «Contraseña» e intente ingresar como `gerente`: no debe crearse sesión y debe aparecer exactamente `Ingresa una contraseña`.
-4. Ingrese un usuario que no sea uno de los cuatro, por ejemplo `desconocido`: no debe crearse sesión y debe aparecer exactamente `Usuario no encontrado`.
-5. Recargue la página y luego cierre y vuelva a abrir el navegador: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
-6. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras autenticarse como `gerente`, debe abrirse el resumen solicitado.
-7. Pulse «Cerrar sesión»: la barra superior desaparece y vuelve a mostrarse solo el login. No hay bloqueo por intentos fallidos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
+1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: deben aparecer solo los botones «Gerente», «Marketing», «Ventas» y «Atención al Cliente», centrados en dos columnas, sin Panel, Buscar, Resumen, Marketing ni Postventa; el formulario público de `?view=capture` y «Dudas y consultas» deben seguir disponibles.
+2. No debe existir campo «Usuario» ni «Contraseña», y no deben aparecer `Ingresa una contraseña` ni `Usuario no encontrado` en ningún estado del inicio de sesión.
+3. Pulse «Gerente»: debe iniciarse sesión directamente, mostrar «Nivel 4 - Gerente Comercial» y ofrecer «Gestionar usuarios» y «Cerrar sesión» en el menú. Repita con los otros tres botones para comprobar los rangos N3, N2 y N1.
+4. Como `gerente`, cree un usuario `ana.munoz` con rango Nivel 2: debe aparecer un quinto botón con ese nombre detrás de los cuatro iniciales. Recargue y confirme que el orden no cambia.
+5. Desactive `ana.munoz`: su botón debe desaparecer y, si tenía sesión, la siguiente acción o recarga debe redirigir a login.
+6. Recargue la página y luego cierre y vuelva a abrir el navegador con un usuario activo: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
+7. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras pulsar «Gerente», debe abrirse el resumen solicitado.
+8. Pulse «Cerrar sesión»: la barra superior desaparece y vuelven a mostrarse los botones. No hay bloqueo por intentos fallidos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
+
+## Validación de Consulta Rápida, Tickets en Clientes y Cierre Perdido
+
+1. Con cualquier rango con acceso a búsqueda, pulse el nombre de un cliente en los resultados de «Buscar»: debe abrirse una ventana de solo lectura con datos de contacto, compras «Cerrado ganado» en USD con sus fechas de inicio, total comprado, historial cronológico y tickets permitidos. Solo debe ofrecer «Cerrar» y «Ver ficha completa».
+2. Repita la apertura desde el nombre de un cliente en la tabla «Clientes» de gestión: debe mostrarse la misma información del mismo cliente, sin formularios de edición ni creación.
+3. Compare el total comprado con la suma de importes de los documentos «Cerrado ganado» de todas las fechas: debe coincidir y expresarse en USD; cada compra incluida debe mostrar su `startDate`.
+4. Inicie como `ventas` (N2) y compruebe que la ventana solo muestra sus documentos y tickets permitidos; pulse «Ver ficha completa» y confirme que se abre la ficha existente con los mismos permisos.
+5. En la tabla «Clientes», compruebe que «Abrir Ticket» solo aparece para `atencion` (N1) y `gerente` (N4), y que `marketing` (N3) no ve botón ni alertas.
+6. Para un cliente con ticket «Abierto», confirme la etiqueta naranja «Ticket abierto»; para otro con ticket «En revisión», confirme la etiqueta azul «Ticket en revisión»; si tiene ambos, deben verse las dos etiquetas.
+7. Pulse «Abrir Ticket» en una fila: debe abrirse el panel «Nuevo Ticket» dentro de `?view=postventa` con ese cliente preseleccionado. Cancelar sin guardar no debe crear ticket.
+8. Cree una entidad prospecto con `estado_comercial = prospecto` y abra su formulario de interacción. Seleccione el estado «Cerrado perdido»: debe aparecer el desplegable de motivo con exactamente «Precio alto», «Eligió competencia», «Sin presupuesto» y «No responde», sin selección previa.
+9. Guarde sin elegir motivo: debe mostrarse `Completa los campos obligatorios.`, el documento debe conservar su estado anterior y no debe escribirse en `erp_documents`.
+10. Guarde con «Eligió competencia»: el documento debe pasar a «Cerrado perdido» y el motivo debe aparecer en el historial de la entidad.
+11. Repita en un cliente convertido (`estado_comercial = ganado`): el motivo no debe exigirse.
+12. Compare panel y Marketing antes y después del cierre perdido: el embudo debe incluir el nuevo estado, pero «Cerrado ganado», «Pipeline (USD)», pendientes y real mensual no deben cambiar por ese documento.
+
+La forma de estas reglas está en [`contracts/client-ui.md`](contracts/client-ui.md), [`contracts/auth.md`](contracts/auth.md), [`contracts/postventa.md`](contracts/postventa.md) y [`contracts/entity-storage.md`](contracts/entity-storage.md), y su efecto en el modelo en [`data-model.md`](data-model.md#10-acceso-consulta-rápida-tickets-en-clientes-y-cierre-perdido).
 
 ## Validación de Mensajes Exactos y Rutas
 
