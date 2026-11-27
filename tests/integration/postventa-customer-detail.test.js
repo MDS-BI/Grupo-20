@@ -83,10 +83,12 @@ describe('Tickets en la ficha del cliente (T200)', () => {
     logout();
     await signIn('atencion');
 
-    setSearch('?view=ticket-form');
+    setSearch('?view=postventa');
     document.body.innerHTML = '<div id="app"></div>';
     app = initApp(document.getElementById('app'), { rawConfig: null, enableAuth: true });
-    expect(app.getState().view).toBe('ticket-form');
+    expect(app.getState().view).toBe('postventa');
+    document.querySelector('[data-action="ticket-form"]').click();
+    expect(app.getState().ticketFormOpen).toBe(true);
 
     setField('entity_id', entity.entity_id);
     setField('asunto', '<script>alert(1)</script>');

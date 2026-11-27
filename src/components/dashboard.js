@@ -21,8 +21,6 @@ export function renderDashboardHtml(
   stats,
   { title, sectionClass = 'dashboard', showQuickActions = true } = {}
 ) {
-  const entityLabel = stats.entityLabel || getLabel(config, 'entity');
-  const documentLabel = stats.documentLabel || getLabel(config, 'document');
   const entityPlural = stats.entityPlural || getLabel(config, 'entityPlural');
   const documentPlural = stats.documentPlural || getLabel(config, 'documentPlural');
   const documents = Array.isArray(stats.documents) ? stats.documents : [];
@@ -32,11 +30,9 @@ export function renderDashboardHtml(
   const quickActions = showQuickActions
     ? `
       <div class="quick-actions">
-        <button type="button" data-action="quick-new-entity">Nuevo ${escapeHtml(entityLabel)}</button>
-        <button type="button" data-action="quick-new-document">Nueva ${escapeHtml(documentLabel.toLowerCase())}</button>
         <button type="button" data-action="quick-manage">Gestionar ${escapeHtml(entityPlural.toLowerCase())} (editar, archivar, eliminar)</button>
-        <button type="button" data-action="quick-search">Buscar registros</button>
         <button type="button" data-action="navigate" data-view="manage-document">Gestionar ${escapeHtml(documentPlural.toLowerCase())}</button>
+        <button type="button" data-action="quick-search">Buscar registros</button>
       </div>`
     : '';
 

@@ -21,64 +21,48 @@ function createClient() {
   });
 }
 
-describe('Panel de inicio con acciones rápidas y estadísticas (T048/T050/T051/T134)', () => {
+describe('Panel de inicio con tres acciones rápidas (T229/T232)', () => {
   beforeEach(() => mount());
 
-  it('ofrece exactamente cinco acciones rápidas sin «Abrir Marketing» ni datos demo', () => {
+  it('ofrece exactamente tres acciones rápidas en el orden acordado', () => {
     const quickActions = document.querySelector('.dashboard .quick-actions');
     expect(quickActions).toBeTruthy();
     const actions = [...quickActions.querySelectorAll('button')];
-    expect(actions).toHaveLength(5);
-    expect(document.body.textContent).not.toContain('Abrir Marketing');
-    expect(document.querySelector('.demo-note')).toBeNull();
+    expect(actions).toHaveLength(3);
     expect(
       actions.map((button) =>
         button.dataset.action === 'navigate'
           ? `navigate:${button.dataset.view}`
           : button.dataset.action
       )
-    ).toEqual([
-      'quick-new-entity',
-      'quick-new-document',
-      'quick-manage',
-      'quick-search',
-      'navigate:manage-document',
-    ]);
+    ).toEqual(['quick-manage', 'navigate:manage-document', 'quick-search']);
+    expect(document.body.textContent).not.toContain('Abrir Marketing');
+    expect(document.body.textContent).not.toContain('Nuevo Cliente');
+    expect(document.body.textContent).not.toContain('Nueva interacción');
+    expect(document.querySelector('.demo-note')).toBeNull();
   });
 
-  it('abre cada destino con el formulario vacío o la búsqueda enfocada', () => {
-    document.querySelector('[data-action="quick-new-entity"]').click();
-    expect(document.querySelector('.manage-view')).toBeTruthy();
-    expect(document.getElementById('field-name').value).toBe('');
-
+  it('abre cada acción en su gestión o enfoca la búsqueda', () => {
+    createClient();
     app.navigate('dashboard');
     document.querySelector('[data-action="quick-manage"]').click();
+    expect(document.querySelector('.manage-view')).toBeTruthy();
     expect(document.querySelector('[data-tab="entity"]').getAttribute('aria-selected')).toBe(
       'true'
     );
+    expect(document.getElementById('field-name').value).toBe('');
 
     app.navigate('dashboard');
-    document.querySelector('[data-action="quick-search"]').click();
-    expect(document.activeElement.id).toBe('search-input');
-
-    app.navigate('dashboard');
-    const client = createClient();
-    document.querySelector('[data-action="quick-new-document"]').click();
-    expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe(
-      'true'
-    );
-    const entitySelect = document.getElementById('document-entity-select');
-    entitySelect.value = client.entity_id;
-    entitySelect.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(document.getElementById('document-form')).toBeTruthy();
-    expect(document.getElementById('field-notes').value).toBe('');
-  });
-
-  it('la acción «Gestionar documentos» abre la pestaña de documentos', () => {
     document.querySelector('[data-action="navigate"][data-view="manage-document"]').click();
     expect(document.querySelector('[data-tab="document"]').getAttribute('aria-selected')).toBe(
       'true'
     );
+    expect(document.getElementById('document-form')).toBeTruthy();
+    expect(document.getElementById('field-notes').value).toBe('');
+
+    app.navigate('dashboard');
+    document.querySelector('[data-action="quick-search"]').click();
+    expect(document.activeElement.id).toBe('search-input');
   });
 
   it('muestra los recuentos en cero y los actualiza tras crear registros', () => {

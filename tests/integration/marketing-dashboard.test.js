@@ -147,13 +147,22 @@ describe('Panel y Marketing comparten tarjetas y embudo (T086/T133)', () => {
     expect(documents).toHaveLength(4);
   });
 
-  it('reserva las acciones rápidas del panel para el panel (T135)', () => {
+  it('reserva las tres acciones rápidas del panel para el panel (T234)', () => {
     app.navigate('dashboard');
-    expect(document.querySelectorAll('.dashboard .quick-actions button')).toHaveLength(5);
+    const actions = [...document.querySelectorAll('.dashboard .quick-actions button')];
+    expect(actions.map((button) => button.textContent.trim())).toEqual([
+      'Gestionar clientes (editar, archivar, eliminar)',
+      'Gestionar interacciones',
+      'Buscar registros',
+    ]);
 
     app.navigate('marketing');
     expect(document.querySelector('.marketing-view .quick-actions')).toBeNull();
     expect(document.querySelectorAll('.marketing-view [data-action^="quick-"]')).toHaveLength(0);
+    const marketingText = document.querySelector('.marketing-view').textContent;
+    expect(marketingText).not.toContain('Gestionar clientes');
+    expect(marketingText).not.toContain('Gestionar interacciones');
+    expect(marketingText).not.toContain('Buscar registros');
     expect(document.querySelectorAll('.marketing-view .summary-cards .stat-value')).toHaveLength(5);
   });
 });

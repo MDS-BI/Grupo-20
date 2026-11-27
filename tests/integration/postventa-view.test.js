@@ -17,6 +17,22 @@ function mount() {
   return app;
 }
 
+function setField(name, value) {
+  const field = document.querySelector(`#ticket-form [name="${name}"]`);
+  expect(field, `No se encontró ${name}`).toBeTruthy();
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  field.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function cardSnapshot() {
+  const cards = document.querySelector('.postventa-cards');
+  return {
+    labels: [...cards.querySelectorAll('.stat-label')].map((element) => element.textContent),
+    values: [...cards.querySelectorAll('.stat-value')].map((element) => element.textContent),
+  };
+}
+
 afterEach(() => {
   app?.destroy();
   app = null;
@@ -91,8 +107,9 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
     addEntity({ name: 'Beta S.A.', code: 'PV-B' });
     const archived = addEntity({ name: 'Archivada', code: 'PV-C' });
     archiveEntity(archived.id);
-    setSearch('?view=ticket-form');
+    setSearch('?view=postventa');
     mount();
+    document.querySelector('[data-action="ticket-form"]').click();
 
     const initial = [...document.querySelectorAll('#ticket-client option')].map(
       (option) => option.textContent
@@ -136,5 +153,38 @@ describe('Vista de Postventa y ruta relativa (T198)', () => {
       'stat-label',
       'stat-value',
     ]);
+  });
+
+  it('conserva tarjetas y tabla al abrir, guardar y cerrar el panel (T242)', () => {
+    const entity = addEntity({ name: 'Cliente del panel en línea', code: 'PV-INLINE' });
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    setSearch('?view=postventa');
+    mount();
+
+    const before = cardSnapshot();
+    document.querySelector('[data-action="ticket-form"]').click();
+    const during = cardSnapshot();
+    expect(during).toEqual(before);
+    expect(document.querySelector('.client-management-table')).toBeNull();
+
+    setField('entity_id', entity.entity_id);
+    setField('asunto', 'Ticket creado en línea');
+    setField('categoria', 'garantia');
+    setField('prioridad', 'media');
+    document
+      .getElementById('ticket-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(document.querySelector('#ticket-form')).toBeNull();
+    expect(document.querySelector('.client-management-table').textContent).toContain(
+      'Ticket creado en línea'
+    );
+    expect(document.querySelector('[data-action="ticket-form"]')).toBeTruthy();
+    const after = cardSnapshot();
+    expect(after.labels).toEqual(before.labels);
+    expect(after.values).toEqual(['1', '0', '0']);
+    expect(dispatchSpy.mock.calls.some(([event]) => event instanceof StorageEvent)).toBe(false);
+    expect(app.getState().view).toBe('postventa');
+    expect(window.location.search).toBe('?view=postventa');
   });
 });

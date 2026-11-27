@@ -46,14 +46,11 @@ describe('Presentación del formulario de clientes (T064)', () => {
     app = initApp(document.getElementById('app'));
   });
 
-  it('muestra «Nuevo Cliente» en el formulario y en la acción rápida', () => {
-    expect(document.querySelector('[data-action="quick-new-entity"]').textContent).toContain(
-      'Nuevo Cliente'
-    );
+  it('muestra «Nuevo Cliente» solo en el formulario de gestión', () => {
+    expect(document.querySelector('[data-action="quick-new-entity"]')).toBeNull();
+    expect(document.body.textContent).not.toContain('Nuevo Cliente');
     openForm();
-    expect(document.querySelector('.client-form-section h2').textContent).toContain(
-      'Nuevo Cliente'
-    );
+    expect(document.querySelector('.client-form-section h2').textContent).toBe('Nuevo Cliente');
     expect(document.querySelector('.client-form-section h2').textContent).not.toContain(
       'Nueva cliente'
     );

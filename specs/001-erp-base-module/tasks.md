@@ -690,13 +690,13 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 > **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
 
-- [ ] T223 [P] [US4a] Adaptar `tests/integration/manage-screen.test.js` para verificar que `?view=manage-entity` muestra `.client-management-table`, `.client-form-section` con el encabezado «Nuevo Cliente» y `#entity-form` vacío, sin `.entity-list`, sin entradas de gestión en `.sidebar` y sin cambios en `erp_entities` al volver al panel.
-- [ ] T224 [P] [US4a] Adaptar `tests/integration/manage-document.test.js` para verificar que `?view=manage-document` muestra `#document-form`, el encabezado «Nueva interacción» y `#field-notes` vacío, sin entradas de gestión en `.sidebar` y sin cambios en `erp_documents` al volver al panel.
+- [x] T223 [P] [US4a] Adaptar `tests/integration/manage-screen.test.js` para verificar que `?view=manage-entity` muestra `.client-management-table`, `.client-form-section` con el encabezado «Nuevo Cliente» y `#entity-form` vacío, sin `.entity-list`, sin entradas de gestión en `.sidebar` y sin cambios en `erp_entities` al volver al panel.
+- [x] T224 [P] [US4a] Adaptar `tests/integration/manage-document.test.js` para verificar que `?view=manage-document` muestra `#document-form`, el encabezado «Nueva interacción» y `#field-notes` vacío, sin entradas de gestión en `.sidebar` y sin cambios en `erp_documents` al volver al panel.
 
 ### Implementación de US4a
 
-- [ ] T225 [US4a] Ajustar `renderManageView()` en `src/app.js` para que las acciones de gestión abren `manage-entity` o `manage-document` con el formulario vacío, sin reutilizar borradores ni identificadores de edición, y conservan los enlaces profundos `?view=manage-entity` y `?view=manage-document`.
-- [ ] T226 [US4a] Eliminar de `handleClick()` en `src/app.js` los casos `quick-new-entity` y `quick-new-document`, conservando únicamente `quick-manage`, `navigate` a `manage-document` y `quick-search` como entradas del panel hacia gestión/búsqueda.
+- [x] T225 [US4a] Ajustar `renderManageView()` en `src/app.js` para que las acciones de gestión abren `manage-entity` o `manage-document` con el formulario vacío, sin reutilizar borradores ni identificadores de edición, y conservan los enlaces profundos `?view=manage-entity` y `?view=manage-document`.
+- [x] T226 [US4a] Eliminar de `handleClick()` en `src/app.js` los casos `quick-new-entity` y `quick-new-document`, conservando únicamente `quick-manage`, `navigate` a `manage-document` y `quick-search` como entradas del panel hacia gestión/búsqueda.
 
 **Punto de control**: Las gestiones son el único lugar de alta de clientes e interacciones y los formularios aparecen vacíos T223-T226.
 
@@ -712,11 +712,11 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 > **Nota**: Esta suite se escribe primero y debe fallar antes de la implementación.
 
-- [ ] T227 [P] [US7] Adaptar `tests/integration/relabeling.test.js` para exigir que Panel, Buscar, Resumen, Marketing y gestión usen «Cliente» e «Interacción» —y «Fecha de nacimiento»—, que «Nuevo Cliente» aparezca solo en la gestión y que no aparezcan «Nueva cliente», «Nuevo Cliente» en `.quick-actions`, «Entidad» ni «Documento» en texto visible.
+- [x] T227 [P] [US7] Adaptar `tests/integration/relabeling.test.js` para exigir que Panel, Buscar, Resumen, Marketing y gestión usen «Cliente» e «Interacción» —y «Fecha de nacimiento»—, que «Nuevo Cliente» aparezca solo en la gestión y que no aparezcan «Nueva cliente», «Nuevo Cliente» en `.quick-actions`, «Entidad» ni «Documento» en texto visible.
 
 ### Implementación de US7
 
-- [ ] T228 [US7] Ajustar los encabezados de creación en `renderManageView()` de `src/app.js` para derivarlos de `getLabel()`: `Nuevo ${entityLabel}` para clientes, `Nueva interacción` con el perfil CRM y `Nuevo documento` con la configuración base, sin texto «Nueva cliente» ni género codificado en `src/components/`.
+- [x] T228 [US7] Ajustar los encabezados de creación en `renderManageView()` de `src/app.js` para derivarlos de `getLabel()`: `Nuevo ${entityLabel}` para clientes, `Nueva interacción` con el perfil CRM y `Nuevo documento` con la configuración base, sin texto «Nueva cliente» ni género codificado en `src/components/`.
 
 **Punto de control**: La terminología de alta es consistente en todas las vistas y no depende de constantes de género T227-T228.
 
@@ -732,14 +732,14 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 > **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
 
-- [ ] T229 [P] [US15a] Adaptar `tests/integration/dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— en ese orden, sin `quick-new-*`, sin «Nuevo Cliente», sin «Nueva interacción» ni «Abrir Marketing», y verificando que cada botón abre su gestión o enfoca `#search-input`.
-- [ ] T230 [P] [US15a] Adaptar `tests/integration/client-form-presentation.test.js` para exigir «Nuevo Cliente» solo en `.client-form-section h2` tras abrir la gestión y para eliminar la aserción sobre la acción rápida retirada del panel.
-- [ ] T231 [P] [US15a] Adaptar `tests/integration/navigation-by-rank.test.js` para exigir que N4/N2 ven las tres acciones, N1 solo `quick-search`, N3 no ve acciones de gestión y los enlaces profundos de gestión siguen denegados conforme a la matriz.
+- [x] T229 [P] [US15a] Adaptar `tests/integration/dashboard.test.js` para exigir exactamente tres botones en `.dashboard .quick-actions` —`quick-manage`, `navigate:manage-document` y `quick-search`— en ese orden, sin `quick-new-*`, sin «Nuevo Cliente», sin «Nueva interacción» ni «Abrir Marketing», y verificando que cada botón abre su gestión o enfoca `#search-input`.
+- [x] T230 [P] [US15a] Adaptar `tests/integration/client-form-presentation.test.js` para exigir «Nuevo Cliente» solo en `.client-form-section h2` tras abrir la gestión y para eliminar la aserción sobre la acción rápida retirada del panel.
+- [x] T231 [P] [US15a] Adaptar `tests/integration/navigation-by-rank.test.js` para exigir que N4/N2 ven las tres acciones, N1 solo `quick-search`, N3 no ve acciones de gestión y los enlaces profundos de gestión siguen denegados conforme a la matriz.
 
 ### Implementación de US15a
 
-- [ ] T232 [US15a] Modificar `renderDashboardHtml()` en `src/components/dashboard.js` para renderizar solo `Gestionar ${entityPlural}`, `Gestionar ${documentPlural}` y `Buscar registros`, con `data-action="quick-manage"`, `data-action="navigate" data-view="manage-document"` y `data-action="quick-search"`, sin botones `quick-new-entity` ni `quick-new-document`.
-- [ ] T233 [US15a] Simplificar `applyPermissionFilters()` en `src/app.js` para filtrar únicamente esas tres acciones con `entity:create`/`entity:edit_*`, `document:create` y `search:view`, retirando las ramas de `quick-new-entity` y `quick-new-document`.
+- [x] T232 [US15a] Modificar `renderDashboardHtml()` en `src/components/dashboard.js` para renderizar solo `Gestionar ${entityPlural}`, `Gestionar ${documentPlural}` y `Buscar registros`, con `data-action="quick-manage"`, `data-action="navigate" data-view="manage-document"` y `data-action="quick-search"`, sin botones `quick-new-entity` ni `quick-new-document`.
+- [x] T233 [US15a] Simplificar `applyPermissionFilters()` en `src/app.js` para filtrar únicamente esas tres acciones con `entity:create`/`entity:edit_*`, `document:create` y `search:view`, retirando las ramas de `quick-new-entity` y `quick-new-document`.
 
 **Punto de control**: El panel ofrece solo tres entradas permitidas y la búsqueda y las gestiones siguen alcanzables T229-T233.
 
@@ -755,12 +755,12 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 > **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
 
-- [ ] T234 [P] [US16d] Adaptar `tests/integration/marketing-dashboard.test.js` para exigir tres acciones en el panel, ninguna `.quick-actions` en `.marketing-view` y las mismas cinco tarjetas, embudo y últimas interacciones en ambas vistas.
-- [ ] T235 [P] [US16d] Adaptar `tests/integration/marketing-navigation.test.js` para exigir que Marketing conserve los cinco atajos en el orden acordado y que no aparezcan en Marketing las tres etiquetas de acciones rápidas del panel ni los botones de creación retirados.
+- [x] T234 [P] [US16d] Adaptar `tests/integration/marketing-dashboard.test.js` para exigir tres acciones en el panel, ninguna `.quick-actions` en `.marketing-view` y las mismas cinco tarjetas, embudo y últimas interacciones en ambas vistas.
+- [x] T235 [P] [US16d] Adaptar `tests/integration/marketing-navigation.test.js` para exigir que Marketing conserve los cinco atajos en el orden acordado y que no aparezcan en Marketing las tres etiquetas de acciones rápidas del panel ni los botones de creación retirados.
 
 ### Implementación de US16d
 
-- [ ] T236 [US16d] Verificar y ajustar `renderMarketingView()` en `src/app.js` para invocar `renderDashboardHtml()` con `showQuickActions: false`, sin reintroducir acciones del panel y conservando `team`, `campaigns`, `performance`, `chat` y `social` como claves internas de los cinco atajos.
+- [x] T236 [US16d] Verificar y ajustar `renderMarketingView()` en `src/app.js` para invocar `renderDashboardHtml()` con `showQuickActions: false`, sin reintroducir acciones del panel y conservando `team`, `campaigns`, `performance`, `chat` y `social` como claves internas de los cinco atajos.
 
 **Punto de control**: Marketing comparte cifras pero no controles de gestión T234-T236.
 
@@ -776,22 +776,22 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 > **Nota**: Estas suites se escriben primero y deben fallar antes de la implementación.
 
-- [ ] T237 [P] [US25] Crear `tests/integration/postventa-inline-panel.test.js` para exigir que `[data-action="ticket-form"]` active `state.ticketFormOpen`, no llame a `window.open`, no cambie `?view=postventa`, sustituya `.client-management-table` por `#ticket-form` con `.postventa-cards` visible, conserve «Nuevo Ticket» al cerrar y muestre los campos `entity_id`, `asunto`, `categoria`, `prioridad`, `status`, `nota_resolucion` en ese orden con categorías «Soporte técnico», «Facturación», «Garantía» y «Consulta», prioridades sin preselección «Baja», «Media» y «Alta» y pistas grises.
-- [ ] T238 [P] [US25] Adaptar `tests/integration/postventa-permissions.test.js` para verificar que N1/N4 abren y guardan el panel en línea, que N2 no ve «Nuevo Ticket» y recibe `No tienes permiso para realizar esta acción` si se fuerza el estado sin mutar `erp_documents`, que N3/visitante reciben «Acceso denegado» o login y que `?view=ticket-form` ya no resuelve como vista.
-- [ ] T239 [P] [US25] Adaptar `tests/integration/postventa-customer-detail.test.js` para crear el ticket desde el panel en línea de Postventa y confirmar que la ficha del cliente muestra «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con texto sanitizado y vínculo `entity_id`.
-- [ ] T240 [P] [US25] Crear `tests/integration/postventa-inline-cancel.test.js` para exigir que `[data-action="cancel-ticket-form"]` cierra sin confirmar cuando no hay cambios, confirma cuando los hay, conserva el formulario al rechazar el descarte, cierra sin crear ticket al aceptarlo y no persiste borradores en `localStorage`.
-- [ ] T241 [P] [US25] Eliminar `tests/integration/postventa-ticket-tab.test.js` y `tests/integration/postventa-cross-tab.test.js` porque sus expectativas de `window.open`, `?view=ticket-form` y eventos `storage` quedan reemplazadas por T237-T240.
-- [ ] T242 [P] [US25] Ampliar `tests/integration/postventa-view.test.js` para exigir que las tres tarjetas conserven etiquetas, valores y orden antes, durante y después del panel, y que la tabla vuelva con la fila nueva tras guardar sin recarga ni eventos `storage`.
+- [x] T237 [P] [US25] Crear `tests/integration/postventa-inline-panel.test.js` para exigir que `[data-action="ticket-form"]` active `state.ticketFormOpen`, no llame a `window.open`, no cambie `?view=postventa`, sustituya `.client-management-table` por `#ticket-form` con `.postventa-cards` visible, conserve «Nuevo Ticket» al cerrar y muestre los campos `entity_id`, `asunto`, `categoria`, `prioridad`, `status`, `nota_resolucion` en ese orden con categorías «Soporte técnico», «Facturación», «Garantía» y «Consulta», prioridades sin preselección «Baja», «Media» y «Alta» y pistas grises.
+- [x] T238 [P] [US25] Adaptar `tests/integration/postventa-permissions.test.js` para verificar que N1/N4 abren y guardan el panel en línea, que N2 no ve «Nuevo Ticket» y recibe `No tienes permiso para realizar esta acción` si se fuerza el estado sin mutar `erp_documents`, que N3/visitante reciben «Acceso denegado» o login y que `?view=ticket-form` ya no resuelve como vista.
+- [x] T239 [P] [US25] Adaptar `tests/integration/postventa-customer-detail.test.js` para crear el ticket desde el panel en línea de Postventa y confirmar que la ficha del cliente muestra «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución» con texto sanitizado y vínculo `entity_id`.
+- [x] T240 [P] [US25] Crear `tests/integration/postventa-inline-cancel.test.js` para exigir que `[data-action="cancel-ticket-form"]` cierra sin confirmar cuando no hay cambios, confirma cuando los hay, conserva el formulario al rechazar el descarte, cierra sin crear ticket al aceptarlo y no persiste borradores en `localStorage`.
+- [x] T241 [P] [US25] Eliminar `tests/integration/postventa-ticket-tab.test.js` y `tests/integration/postventa-cross-tab.test.js` porque sus expectativas de `window.open`, `?view=ticket-form` y eventos `storage` quedan reemplazadas por T237-T240.
+- [x] T242 [P] [US25] Ampliar `tests/integration/postventa-view.test.js` para exigir que las tres tarjetas conserven etiquetas, valores y orden antes, durante y después del panel, y que la tabla vuelva con la fila nueva tras guardar sin recarga ni eventos `storage`.
 
 ### Implementación de US25
 
-- [ ] T243 [US25] Modificar `renderPostventaHtml()` en `src/components/postventa.js` para renderizar el markup de `renderTicketFormHtml()` dentro de `.postventa-view` cuando esté abierto el panel, manteniendo visibles las tres tarjetas, reemplazando solo la tabla y mostrando de nuevo «Nuevo Ticket» al cerrar.
-- [ ] T244 [US25] Modificar `renderTicketFormHtml()` en `src/components/ticket-form.js` para usar `.form-field`, `.client-form-section` y `.form-actions` como «Nuevo Cliente», conservar el orden y las opciones declaradas, los mensajes exactos y añadir un botón `[data-action="cancel-ticket-form"]` sin incorporar campos ni reglas de entidades.
-- [ ] T245 [US25] Eliminar de `src/app.js` el registro de `ticket-form` en `ROUTE_VIEWS`, `VIEW_ROUTES`, `routeFromKey()` y `routeForState()`, la vista `renderTicketFormView()`, el `window.open(routeUrl('ticket-form'), '_blank', 'noopener')`, el listener `storage` y su retirada en `destroy()`, conservando `postventa:create` en `createTicketDocument()`.
-- [ ] T246 [US25] Cablear en `src/app.js` las acciones `ticket-form` y `cancel-ticket-form` con `state.ticketFormOpen`, preservando `state.ticketValues`, `state.ticketClientSearch` y `state.ticketErrors` durante los `render()` necesarios para actualizar el buscador y los errores en la misma pestaña.
-- [ ] T247 [US25] Implementar en `src/app.js` la comprobación de cambios sin guardar del panel de ticket y la confirmación de descarte reutilizando la semántica de `confirmDiscardChanges()`, sin nueva clave de `localStorage`, sin navegación y sin cerrar el panel si el usuario decide quedarse.
-- [ ] T248 [US25] Ajustar `onTicketFormSubmit()` en `src/app.js` para guardar con `createTicketDocument()`, limpiar errores y borradores, cerrar el panel, permanecer en `?view=postventa` y recalcular tabla y tarjetas con un solo `render()` y sin `StorageEvent`, `postMessage`, sondeo ni `visibilitychange`.
-- [ ] T249 [US25] Retirar `ticket-form` de `VIEW_ACTIONS` en `src/auth/permissions.js` para que el catálogo de vistas ya no exponga una ruta eliminada, conservando `postventa:view`, `postventa:create` y `postventa:transition` y el mensaje exacto `No tienes permiso para realizar esta acción`.
+- [x] T243 [US25] Modificar `renderPostventaHtml()` en `src/components/postventa.js` para renderizar el markup de `renderTicketFormHtml()` dentro de `.postventa-view` cuando esté abierto el panel, manteniendo visibles las tres tarjetas, reemplazando solo la tabla y mostrando de nuevo «Nuevo Ticket» al cerrar.
+- [x] T244 [US25] Modificar `renderTicketFormHtml()` en `src/components/ticket-form.js` para usar `.form-field`, `.client-form-section` y `.form-actions` como «Nuevo Cliente», conservar el orden y las opciones declaradas, los mensajes exactos y añadir un botón `[data-action="cancel-ticket-form"]` sin incorporar campos ni reglas de entidades.
+- [x] T245 [US25] Eliminar de `src/app.js` el registro de `ticket-form` en `ROUTE_VIEWS`, `VIEW_ROUTES`, `routeFromKey()` y `routeForState()`, la vista `renderTicketFormView()`, el `window.open(routeUrl('ticket-form'), '_blank', 'noopener')`, el listener `storage` y su retirada en `destroy()`, conservando `postventa:create` en `createTicketDocument()`.
+- [x] T246 [US25] Cablear en `src/app.js` las acciones `ticket-form` y `cancel-ticket-form` con `state.ticketFormOpen`, preservando `state.ticketValues`, `state.ticketClientSearch` y `state.ticketErrors` durante los `render()` necesarios para actualizar el buscador y los errores en la misma pestaña.
+- [x] T247 [US25] Implementar en `src/app.js` la comprobación de cambios sin guardar del panel de ticket y la confirmación de descarte reutilizando la semántica de `confirmDiscardChanges()`, sin nueva clave de `localStorage`, sin navegación y sin cerrar el panel si el usuario decide quedarse.
+- [x] T248 [US25] Ajustar `onTicketFormSubmit()` en `src/app.js` para guardar con `createTicketDocument()`, limpiar errores y borradores, cerrar el panel, permanecer en `?view=postventa` y recalcular tabla y tarjetas con un solo `render()` y sin `StorageEvent`, `postMessage`, sondeo ni `visibilitychange`.
+- [x] T249 [US25] Retirar `ticket-form` de `VIEW_ACTIONS` en `src/auth/permissions.js` para que el catálogo de vistas ya no exponga una ruta eliminada, conservando `postventa:view`, `postventa:create` y `postventa:transition` y el mensaje exacto `No tienes permiso para realizar esta acción`.
 
 ---
 
@@ -799,7 +799,7 @@ description: 'Lista de tareas para la implementación del módulo base ERP'
 
 **Objetivo**: Cerrar la remediación sin renumerar T001-T222 ni alterar sus marcadores completados.
 
-- [ ] T250 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T223-T249, corregir fallos en `src/` y `tests/`, verificar que T001-T222 siguen marcados `[x]` y confirmar que no quedan referencias a `quick-new-entity`, `quick-new-document`, `?view=ticket-form`, `window.open` ni listener `storage` en el flujo de Postventa.
+- [X] T250 Ejecutar `npm test`, `npm run lint` y `npm run format:check` tras T223-T249, corregir fallos en `src/` y `tests/`, verificar que T001-T222 siguen marcados `[x]` y confirmar que no quedan referencias a `quick-new-entity`, `quick-new-document`, `?view=ticket-form`, `window.open` ni listener `storage` en el flujo de Postventa.
 
 ---
 

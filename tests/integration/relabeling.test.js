@@ -120,4 +120,36 @@ describe('Reetiquetar pantallas desde la configuración (H7)', () => {
     app.navigate('manage-entity');
     expect(document.getElementById('field-code')).toBeNull();
   });
+
+  it('usa Cliente e Interacción en todas las vistas y reserva las acciones de alta (T227)', () => {
+    mount(MODULE_CONFIG);
+    const views = [
+      'dashboard',
+      'search',
+      'summary',
+      'marketing',
+      'manage-entity',
+      'manage-document',
+    ];
+
+    for (const view of views) {
+      app.navigate(view);
+      const text = document.querySelector('#view-root').textContent.toLowerCase();
+      expect(text, view).toContain('cliente');
+      expect(text, view).not.toContain('entidad');
+      expect(text, view).not.toContain('documento');
+      expect(text, view).not.toContain('nueva cliente');
+      if (view !== 'manage-entity') expect(text, view).not.toContain('nuevo cliente');
+      if (view !== 'manage-document') expect(text, view).not.toContain('nueva interacción');
+    }
+
+    app.navigate('manage-entity');
+    expect(document.querySelector('.client-form-section h2').textContent).toBe('Nuevo Cliente');
+    expect(document.querySelector('#entity-form').textContent).toContain('Fecha de nacimiento');
+
+    app.navigate('search');
+    expect(document.querySelector('#search-input').getAttribute('placeholder')).toContain(
+      'Fecha de nacimiento'
+    );
+  });
 });

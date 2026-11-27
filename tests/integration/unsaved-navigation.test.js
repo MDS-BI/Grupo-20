@@ -44,7 +44,8 @@ describe('Navegación con cambios sin guardar (US4)', () => {
 
     const quickAction = document.createElement('button');
     quickAction.type = 'button';
-    quickAction.dataset.action = 'quick-new-document';
+    quickAction.dataset.action = 'navigate';
+    quickAction.dataset.view = 'manage-document';
     document.getElementById('app').appendChild(quickAction);
     quickAction.click();
     expect(app.getState().manageTab).toBe('document');

@@ -86,7 +86,6 @@ const ROUTE_VIEWS = new Set([
   'capture',
   'marketing',
   'postventa',
-  'ticket-form',
   'summary',
   'search',
   'users-admin',
@@ -96,7 +95,6 @@ const VIEW_ROUTES = {
   capture: 'capture',
   marketing: 'marketing',
   postventa: 'postventa',
-  'ticket-form': 'ticket-form',
   summary: 'summary',
   search: 'search',
   'users-admin': 'users-admin',
@@ -112,6 +110,7 @@ function routeFromSearch(search) {
       view: 'manage',
       manageTab: route === 'manage-document' ? 'document' : 'entity',
       route,
+      fromUrl: true,
     };
   }
   if (route && ROUTE_VIEWS.has(route)) {
@@ -166,7 +165,7 @@ const RANK_LABELS = {
   n1_support: 'Nivel 1 - Atencion al Cliente',
 };
 
-function canViewRoute(role, view, manageTab = 'entity') {
+function canViewRoute(role, view, manageTab = 'entity', fromUrl = false) {
   if (view === 'capture') return true;
   if (role === 'visitor') return false;
   if (view === 'detail')
@@ -181,10 +180,18 @@ function canViewRoute(role, view, manageTab = 'entity') {
     view = 'manage';
   }
   if (view === 'manage') {
+    if (fromUrl) {
+      return (
+        can(role, 'entity:create') ||
+        can(role, 'entity:edit_any') ||
+        can(role, 'entity:edit_own', activePermissionContext)
+      );
+    }
     return manageTab === 'document'
       ? can(role, 'document:create') ||
           can(role, 'document:edit_any') ||
-          can(role, 'document:edit_own', activePermissionContext)
+          can(role, 'document:edit_own', activePermissionContext) ||
+          can(role, 'document:read')
       : can(role, 'entity:create') ||
           can(role, 'entity:edit_any') ||
           can(role, 'entity:edit_own', activePermissionContext);
@@ -303,6 +310,7 @@ export function initApp(rootEl = null, options = {}) {
     ticketClientSearch: '',
     ticketValues: {},
     ticketErrors: {},
+    ticketBaseline: {},
     focusSearchOnRender: false,
   };
 
@@ -379,6 +387,7 @@ export function initApp(rootEl = null, options = {}) {
     }
     discardDrafts();
     const target = { ...route };
+    if (state.ticketFormOpen && target.view !== 'postventa') resetTicketForm();
     if (!config.marketing && target.view === 'marketing') {
       target.view = 'dashboard';
       target.route = null;
@@ -394,7 +403,7 @@ export function initApp(rootEl = null, options = {}) {
       render();
       return true;
     }
-    const allowed = canViewRoute(state.role, target.view, target.manageTab);
+    const allowed = canViewRoute(state.role, target.view, target.manageTab, target.fromUrl);
     if (state.authEnabled && state.currentUser && !allowed) {
       state.pendingRoute = null;
       state.routeNotice = MESSAGES.accessDenied;
@@ -434,6 +443,18 @@ export function initApp(rootEl = null, options = {}) {
   function uiCan(action, context = activePermissionContext) {
     if (!state.authEnabled) return true;
     return can(state.role, action, context);
+  }
+
+  function canManageRecords() {
+    if (!state.authEnabled || !state.currentUser) return true;
+    return (
+      can(state.role, 'entity:create') ||
+      can(state.role, 'entity:edit_any') ||
+      can(state.role, 'entity:edit_own', {
+        userId: state.currentUser.id,
+        ownerId: state.currentUser.id,
+      })
+    );
   }
 
   function activeNavKey() {
@@ -479,27 +500,15 @@ export function initApp(rootEl = null, options = {}) {
     if (!state.authEnabled || !state.currentUser) return;
     rootEl.querySelectorAll('[data-action="navigate"][data-view]').forEach((button) => {
       const view = button.dataset.view;
-      if (!canViewRoute(state.role, view)) {
+      if (!canViewRoute(state.role, view, 'entity', view === 'manage-document')) {
         button.remove();
         return;
       }
       if (view === 'summary' && state.role === 'n2_sales') button.remove();
       if (view === 'marketing' && state.role === 'n1_support') button.remove();
     });
-    rootEl.querySelectorAll('[data-action="quick-new-entity"]').forEach((button) => {
-      if (!can(state.role, 'entity:create')) button.remove();
-    });
-    rootEl.querySelectorAll('[data-action="quick-new-document"]').forEach((button) => {
-      if (!can(state.role, 'document:create') || state.role === 'n1_support') button.remove();
-    });
     rootEl.querySelectorAll('[data-action="quick-manage"]').forEach((button) => {
-      if (!(
-        can(state.role, 'entity:create') ||
-        can(state.role, 'entity:edit_any') ||
-        can(state.role, 'entity:edit_own')
-      )) {
-        button.remove();
-      }
+      if (!canManageRecords()) button.remove();
     });
     rootEl.querySelectorAll('[data-action="quick-search"]').forEach((button) => {
       if (!canViewRoute(state.role, 'search')) button.remove();
@@ -647,7 +656,7 @@ export function initApp(rootEl = null, options = {}) {
         ? getEntityDocuments(state.documentEntityId, state.documents)
         : [];
       content = `
-        <h2>${editingDoc ? 'Editar' : 'Nuevo'} ${escapeHtml(documentLabel.toLowerCase())}</h2>
+        <h2>${editingDoc ? `Editar ${escapeHtml(documentLabel.toLowerCase())}` : escapeHtml(getLabel(state.config, 'documentCreate'))}</h2>
         <div class="form-field">
           <label for="document-entity-select">${escapeHtml(entityLabel)}</label>
           <select id="document-entity-select" ${availableEntities.length === 0 ? 'disabled' : ''}>
@@ -822,16 +831,16 @@ export function initApp(rootEl = null, options = {}) {
       clients: activeEntities(),
       canCreate: uiCan('postventa:create'),
       canTransition: uiCan('postventa:transition'),
+      ticketFormOpen: state.ticketFormOpen,
+      ticketFormHtml: state.ticketFormOpen
+        ? renderTicketFormHtml(state.config, {
+            clients: activeEntities(),
+            formValues: state.ticketValues,
+            formErrors: state.ticketErrors,
+            ticketClientSearch: state.ticketClientSearch,
+          })
+        : '',
     });
-  }
-
-  function renderTicketFormView() {
-    return `<h1>Nuevo Ticket</h1>${renderTicketFormHtml(state.config, {
-      clients: activeEntities(),
-      formValues: state.ticketValues,
-      formErrors: state.ticketErrors,
-      ticketClientSearch: state.ticketClientSearch,
-    })}`;
   }
 
   function renderUsersAdminView() {
@@ -852,8 +861,6 @@ export function initApp(rootEl = null, options = {}) {
         return renderMarketingView();
       case 'postventa':
         return renderPostventaView();
-      case 'ticket-form':
-        return renderTicketFormView();
       case 'capture':
         return `${renderCaptureFormHtml(state.config, state.captureValues, state.captureErrors, state.captureSubmitted)}${
           state.config.marketing
@@ -903,6 +910,14 @@ export function initApp(rootEl = null, options = {}) {
         ...executiveUsers.map((user) => ({ value: user.id, label: user.username })),
       ];
     }
+    if (
+      state.view === 'manage' &&
+      state.manageTab === 'document' &&
+      !state.documentEntityId &&
+      !state.editingDocumentId
+    ) {
+      state.documentEntityId = activeEntities()[0]?.entity_id || null;
+    }
     const warningHtml = `<div id="config-warning" class="config-warning" role="alert" ${state.warning ? '' : 'hidden'}>${state.warning ? escapeHtml(state.warning) : ''}</div>`;
     const noticeHtml = state.routeNotice
       ? `<div id="route-notice" class="config-warning" role="alert">${escapeHtml(state.routeNotice)}</div>`
@@ -911,8 +926,7 @@ export function initApp(rootEl = null, options = {}) {
       state.authEnabled && state.currentUser
         ? `<div class="user-meta"><span id="current-user">${escapeHtml(state.currentUser.username)}</span><span id="current-rank">${escapeHtml(RANK_LABELS[state.currentUser.rank] || state.currentUser.rank || '')}</span>${canViewRoute(state.role, 'users-admin') ? '<button type="button" data-action="navigate" data-view="users-admin">Gestionar usuarios</button>' : ''}<button type="button" data-action="logout">Cerrar sesión</button></div>`
         : '';
-    const bareStandalone =
-      state.view === 'login' || state.view === 'capture' || state.view === 'ticket-form';
+    const bareStandalone = state.view === 'login' || state.view === 'capture';
     const wrappedStandalone = bareStandalone && enableAuth;
     rootEl.innerHTML = bareStandalone
       ? `${warningHtml}${noticeHtml}${wrappedStandalone ? `<main id="view-root">${renderCurrentView()}</main>` : renderCurrentView()}`
@@ -959,6 +973,7 @@ export function initApp(rootEl = null, options = {}) {
   // -- Navigation ----------------------------------------------------------
 
   function hasUnsavedChanges() {
+    if (state.ticketFormOpen) return isTicketFormDirty();
     if (state.view !== 'manage') return false;
     if (state.manageTab === 'entity') {
       const editing = state.editingEntityId
@@ -985,10 +1000,50 @@ export function initApp(rootEl = null, options = {}) {
     );
   }
 
+  function buildTicketFormBaseline(values = {}) {
+    return {
+      entity_id: '',
+      asunto: '',
+      categoria: '',
+      prioridad: '',
+      status: state.config.postventa?.states?.[0] || 'Abierto',
+      nota_resolucion: '',
+      ...values,
+    };
+  }
+
+  function isTicketFormDirty() {
+    const baseline = state.ticketBaseline || buildTicketFormBaseline();
+    return Object.keys(baseline).some(
+      (key) => String(state.ticketValues?.[key] ?? '') !== String(baseline[key] ?? '')
+    );
+  }
+
+  function resetTicketForm() {
+    state.ticketFormOpen = false;
+    state.ticketBaseline = buildTicketFormBaseline();
+    state.ticketValues = { ...state.ticketBaseline };
+    state.ticketErrors = {};
+    state.ticketClientSearch = '';
+  }
+
   function discardDrafts() {
     state.entityFormDraft = null;
     state.documentFormDraft = null;
     state.entityFormErrors = {};
+    state.documentFormErrors = {};
+  }
+
+  function resetEntityCreation() {
+    state.editingEntityId = null;
+    state.entityFormDraft = null;
+    state.entityFormErrors = {};
+  }
+
+  function resetDocumentCreation() {
+    state.editingDocumentId = null;
+    state.documentEntityId = null;
+    state.documentFormDraft = null;
     state.documentFormErrors = {};
   }
 
@@ -1108,16 +1163,10 @@ export function initApp(rootEl = null, options = {}) {
     state.ticketValues = values;
     try {
       createTicketDocument(values);
-      state.ticketErrors = {};
-      state.ticketValues = {};
-      state.ticketFormOpen = false;
-      state.ticketClientSearch = '';
+      resetTicketForm();
+      state.routeNotice = null;
       refreshData();
-      if (state.view === 'ticket-form') {
-        applyRoute(routeFromKey('postventa'), { skipDirtyCheck: true, replace: true });
-      } else {
-        render();
-      }
+      render();
     } catch (err) {
       if (err?.message === MESSAGES.permissionDenied) return showPermissionDenied();
       state.ticketErrors = err?.errors || { _form: MESSAGES.required };
@@ -1365,6 +1414,9 @@ export function initApp(rootEl = null, options = {}) {
     const { action } = target.dataset;
     switch (action) {
       case 'navigate':
+        if (target.dataset.view === 'manage-document' && state.view !== 'manage') {
+          resetDocumentCreation();
+        }
         navigate(target.dataset.view);
         break;
       case 'ticket-form':
@@ -1372,26 +1424,21 @@ export function initApp(rootEl = null, options = {}) {
           showPermissionDenied();
           break;
         }
-        window.open(routeUrl('ticket-form'), '_blank', 'noopener');
-        break;
-      case 'cancel-ticket-form':
-        state.ticketFormOpen = false;
+        if (state.ticketFormOpen) break;
+        state.ticketFormOpen = true;
+        state.ticketBaseline = buildTicketFormBaseline();
+        state.ticketValues = { ...state.ticketBaseline };
         state.ticketErrors = {};
+        state.ticketClientSearch = '';
         render();
         break;
-      case 'quick-new-entity':
-        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
-        discardDrafts();
-        state.editingEntityId = null;
-        navigate('manage-entity', { skipDirtyCheck: true });
-        break;
-      case 'quick-new-document':
-        if (hasUnsavedChanges() && !confirmDiscardChanges()) break;
-        discardDrafts();
-        state.editingDocumentId = null;
-        navigate('manage-document', { skipDirtyCheck: true });
+      case 'cancel-ticket-form':
+        if (isTicketFormDirty() && !confirmDiscardChanges()) break;
+        resetTicketForm();
+        render();
         break;
       case 'quick-manage':
+        resetEntityCreation();
         navigate('manage-entity');
         break;
       case 'quick-search':
@@ -1686,11 +1733,30 @@ export function initApp(rootEl = null, options = {}) {
       updateSearchResults();
     }
     if (event.target.id === 'ticket-client-search') onTicketClientSearch(event.target);
+    const ticketForm = event.target.closest?.('#ticket-form');
+    if (ticketForm && event.target.name) {
+      state.ticketValues = {
+        ...state.ticketValues,
+        ...formValues(ticketForm),
+        [event.target.name]: event.target.value,
+      };
+      state.ticketErrors = {};
+    }
   }
 
   function handleChange(event) {
     if (event.target.dataset?.action === 'ticket-status-change') {
       onTicketStatusChange(event.target);
+      return;
+    }
+    const ticketForm = event.target.closest?.('#ticket-form');
+    if (ticketForm && event.target.name) {
+      state.ticketValues = {
+        ...state.ticketValues,
+        ...formValues(ticketForm),
+        [event.target.name]: event.target.value,
+      };
+      state.ticketErrors = {};
       return;
     }
     if (event.target.id === 'performance-campaign') {
@@ -1746,25 +1812,12 @@ export function initApp(rootEl = null, options = {}) {
     applyRoute(routeFromSearch(), { fromPopState: true });
   }
 
-  function handleStorage(event) {
-    if (
-      !event ||
-      (event.key !== 'erp_documents' && event.key !== 'erp_entities' && event.key !== null)
-    ) {
-      return;
-    }
-    const formEl = rootEl.querySelector('#ticket-form');
-    if (formEl) state.ticketValues = { ...state.ticketValues, ...formValues(formEl) };
-    render();
-  }
-
   rootEl.addEventListener('click', handleClick);
   rootEl.addEventListener('submit', handleSubmit);
   rootEl.addEventListener('input', handleInput);
   rootEl.addEventListener('change', handleChange);
   if (typeof window !== 'undefined') {
     window.addEventListener('popstate', handlePopState);
-    window.addEventListener('storage', handleStorage);
   }
 
   const stopEntityDateWatcher = config.entityDate
@@ -1805,7 +1858,6 @@ export function initApp(rootEl = null, options = {}) {
       rootEl.removeEventListener('change', handleChange);
       if (typeof window !== 'undefined') {
         window.removeEventListener('popstate', handlePopState);
-        window.removeEventListener('storage', handleStorage);
       }
       if (typeof storageApi.setStorageAuthEnforced === 'function') {
         storageApi.setStorageAuthEnforced(false);

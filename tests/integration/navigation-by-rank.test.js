@@ -32,10 +32,12 @@ function navViews() {
 }
 
 function actionKeys() {
-  return [...document.querySelectorAll('[data-action]')].map((button) => button.dataset.action);
+  return [...document.querySelectorAll('.dashboard .quick-actions button')].map((button) =>
+    button.dataset.action === 'navigate' ? `navigate:${button.dataset.view}` : button.dataset.action
+  );
 }
 
-describe('Navegación filtrada por rango', () => {
+describe('Navegación filtrada por rango (T231)', () => {
   beforeEach(() => {
     seedAuth();
     setSearch('');
@@ -47,7 +49,7 @@ describe('Navegación filtrada por rango', () => {
     setSearch('');
   });
 
-  it('NAV_ITEMS declara las vistas base y N4 ve todas las acciones', async () => {
+  it('NAV_ITEMS declara las vistas base y N4 ve las tres acciones rápidas', async () => {
     expect(NAV_ITEMS.map((item) => item.key)).toEqual([
       'dashboard',
       'search',
@@ -59,30 +61,23 @@ describe('Navegación filtrada por rango', () => {
     await mountAs('gerente');
 
     expect(navViews()).toEqual(['dashboard', 'search', 'summary', 'marketing', 'postventa']);
-    const actions = actionKeys();
-    expect(actions).toContain('quick-new-entity');
-    expect(actions).toContain('quick-new-document');
-    expect(actions).toContain('quick-manage');
-    expect(actions).toContain('quick-search');
+    expect(actionKeys()).toEqual(['quick-manage', 'navigate:manage-document', 'quick-search']);
     expect(
       document.querySelector('[data-action="navigate"][data-view="users-admin"]')
     ).toBeTruthy();
   });
 
-  it('N3 no ve Resumen, Gestionar usuarios ni acciones rápidas de gestión de clientes', async () => {
+  it('N3 no ve Resumen ni acciones rápidas de gestión', async () => {
     await mountAs('marketing');
 
     expect(navViews()).not.toContain('summary');
     expect(navViews()).toContain('marketing');
     expect(navViews()).not.toContain('postventa');
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
-    const actions = actionKeys();
-    expect(actions).not.toContain('quick-new-entity');
-    expect(actions).not.toContain('quick-manage');
-    expect(actions).toContain('quick-search');
+    expect(actionKeys()).toEqual(['quick-search']);
   });
 
-  it('N2 no ve Resumen, Marketing ni Gestionar usuarios', async () => {
+  it('N2 ve las tres acciones rápidas pero no Resumen ni Marketing', async () => {
     await mountAs('ventas');
 
     expect(navViews()).toContain('dashboard');
@@ -91,19 +86,30 @@ describe('Navegación filtrada por rango', () => {
     expect(navViews()).not.toContain('marketing');
     expect(navViews()).toContain('postventa');
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
+    expect(actionKeys()).toEqual(['quick-manage', 'navigate:manage-document', 'quick-search']);
   });
 
-  it('N1 solo ve Panel, Buscar y Postventa, sin acciones rápidas de edición', async () => {
+  it('N1 solo ve Buscar registros como acción rápida', async () => {
     await mountAs('atencion');
 
     expect(navViews()).toEqual(['dashboard', 'search', 'postventa']);
     expect(navViews()).not.toContain('summary');
     expect(navViews()).not.toContain('marketing');
-    const actions = actionKeys();
-    expect(actions).not.toContain('quick-new-entity');
-    expect(actions).not.toContain('quick-new-document');
-    expect(actions).not.toContain('quick-manage');
+    expect(actionKeys()).toEqual(['quick-search']);
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
+  });
+
+  it('enlaces directos de gestión siguen denegados para N1', async () => {
+    for (const view of ['manage-entity', 'manage-document']) {
+      app?.destroy();
+      setSearch(`?view=${view}`);
+      await mountAs('atencion');
+
+      expect(document.querySelector('#route-notice')?.textContent, `?view=${view}`).toBe(
+        MESSAGES.accessDenied
+      );
+      expect(document.querySelector('.manage-view')).toBeNull();
+    }
   });
 
   it('enlaces directos sin permiso muestran Acceso denegado y vuelven al Panel', async () => {
@@ -131,8 +137,7 @@ describe('Navegación filtrada por rango', () => {
       expect(document.querySelector('.login-view'), `?view=${view}`).toBeTruthy();
       expect(document.body.textContent).not.toContain(MESSAGES.accessDenied);
       expect(navViews()).toEqual([]);
-      expect(actionKeys()).not.toContain('quick-new-entity');
-      expect(actionKeys()).not.toContain('quick-manage');
+      expect(actionKeys()).toEqual([]);
     }
   });
 });

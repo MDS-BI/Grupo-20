@@ -3,7 +3,14 @@ import { DEFAULT_POSTVENTA_CONFIG, computeTicketStats } from '../utils/postventa
 import { ticketOptionsHtml } from './ticket-form.js';
 
 export function renderPostventaHtml(config, options = {}) {
-  const { tickets = [], clients = [], canCreate = true, canTransition = true } = options;
+  const {
+    tickets = [],
+    clients = [],
+    canCreate = true,
+    canTransition = true,
+    ticketFormOpen = false,
+    ticketFormHtml = '',
+  } = options;
   const postventa = config?.postventa || DEFAULT_POSTVENTA_CONFIG;
   const stats = computeTicketStats({ documents: tickets, config: postventa });
   const rows = tickets.length
@@ -34,7 +41,7 @@ export function renderPostventaHtml(config, options = {}) {
   return `<h1>Postventa</h1>
     <section class="postventa-view">
       ${
-        canCreate
+        canCreate && !ticketFormOpen
           ? '<button type="button" class="primary" data-action="ticket-form">Nuevo Ticket</button>'
           : ''
       }
@@ -43,9 +50,13 @@ export function renderPostventaHtml(config, options = {}) {
         <article class="stat-card"><span class="stat-label">En proceso</span><span class="stat-value">${stats.enProceso}</span></article>
         <article class="stat-card"><span class="stat-label">Resueltos</span><span class="stat-value">${stats.resueltos}</span></article>
       </div>
-      <table class="client-management-table">
+      ${
+        ticketFormOpen
+          ? ticketFormHtml
+          : `<table class="client-management-table">
         <thead><tr><th>Cliente</th><th>Asunto</th><th>Categoría</th><th>Prioridad</th><th>Estado</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>
+      </table>`
+      }
     </section>`;
 }

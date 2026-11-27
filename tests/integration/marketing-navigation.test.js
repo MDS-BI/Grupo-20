@@ -96,15 +96,26 @@ describe('Navegación a Marketing desde la barra lateral (T044/T131)', () => {
     ]);
   });
 
-  it('reserva las acciones rápidas al panel y elimina etiquetas obsoletas (T144)', () => {
+  it('reserva las tres acciones rápidas al panel y elimina etiquetas obsoletas (T235)', () => {
     app.navigate('dashboard');
-    expect(document.querySelectorAll('.dashboard .quick-actions button')).toHaveLength(5);
+    expect(
+      [...document.querySelectorAll('.dashboard .quick-actions button')].map((button) =>
+        button.dataset.action === 'navigate'
+          ? `navigate:${button.dataset.view}`
+          : button.dataset.action
+      )
+    ).toEqual(['quick-manage', 'navigate:manage-document', 'quick-search']);
     expect(document.body.textContent).not.toContain('Abrir Marketing');
 
     app.navigate('marketing');
     const marketingView = document.querySelector('.marketing-view');
     const marketingText = document.getElementById('app').textContent;
     expect(marketingView.querySelector('.quick-actions')).toBeNull();
+    expect(marketingText).not.toContain('Gestionar clientes');
+    expect(marketingText).not.toContain('Gestionar interacciones');
+    expect(marketingText).not.toContain('Buscar registros');
+    expect(marketingText).not.toContain('Nuevo Cliente');
+    expect(marketingText).not.toContain('Nueva interacción');
     expect(marketingText).toContain('Equipos de ventas y logros');
     expect(marketingText).toContain('Dudas y consultas');
     expect(marketingText).not.toContain('Equipo de ventas y logros');
