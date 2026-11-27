@@ -231,20 +231,16 @@ La autenticación es local y simulada (FR-094 a FR-102, US22, US23). No introduc
 
 ### 8.1 `Usuario`
 
-| Campo                     | Tipo           | Obligatorio | Notas                                                                                                                   |
-| ------------------------- | -------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `id`                      | string         | Sí          | Identificador interno único, autogenerado.                                                                              |
-| `username`                | string         | Sí          | Nombre visible de inicio de sesión, p. ej. `camila.ramirez`.                                                            |
-| `usernameKey`             | string         | Sí          | `username` recortado y en minúsculas; garantiza unicidad sin distinguir mayúsculas ni espacios (aclaración 2026-11-24). |
-| `passwordHash`            | string         | Sí          | Digest PBKDF2-SHA-256 en hexadecimal; nunca se guarda la contraseña en texto plano.                                     |
-| `salt`                    | string         | Sí          | Sal aleatoria de 16 bytes en hexadecimal, distinta por usuario.                                                         |
-| `rank`                    | string         | Sí          | Uno de `n4_manager`, `n3_marketing`, `n2_sales`, `n1_support`; equivale a los rangos de la matriz (FR-094).             |
-| `active`                  | boolean        | Sí          | `true` permite iniciar sesión; `false` revoca la sesión existente (FR-098, FR-102).                                     |
-| `failedAttempts`          | number         | Sí          | Número de intentos fallidos dentro de la ventana de bloqueo; se reinicia con un login correcto.                         |
-| `lockedUntil`             | string \| null | No          | Marca ISO que indica hasta cuándo está bloqueado el usuario.                                                            |
-| `createdAt` / `updatedAt` | string         | Sí          | Marcas de tiempo ISO de auditoría.                                                                                      |
+| Campo                     | Tipo   | Obligatorio | Notas                                                                                                                                      |
+| ------------------------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                      | string | Sí          | Identificador interno único, autogenerado.                                                                                                 |
+| `username`                | string | Sí          | Nombre visible de inicio de sesión y etiqueta del botón, p. ej. `gerente`.                                                                 |
+| `usernameKey`             | string | Sí          | `username` recortado y en minúsculas; garantiza unicidad sin distinguir mayúsculas ni espacios (aclaración 2026-11-24, FR-110).           |
+| `rank`                    | string | Sí          | Uno de `n4_manager`, `n3_marketing`, `n2_sales`, `n1_support`; equivale a los rangos de la matriz (FR-094).                               |
+| `active`                  | boolean| Sí          | `true` ofrece botón y permite iniciar sesión; `false` retira el botón y revoca la sesión existente (FR-098, FR-102, FR-110).                |
+| `createdAt` / `updatedAt` | string | Sí          | Marcas de tiempo ISO de auditoría; `createdAt` también fija el orden de los botones creados por Gerencia detrás de los cuatro semilla.     |
 
-Usuarios semilla demostrativos: `camila.ramirez` (Nivel 4), `lucia.fernandez` (Nivel 3), `pedro.soto` (Nivel 2) y `sofia.torres` (Nivel 1). Solo se crean cuando `erp_users` no existe.
+No se persisten `passwordHash`, `salt`, `failedAttempts` ni `lockedUntil`: el inicio de sesión por botones no verifica credenciales ni bloquea por intentos (FR-110). Usuarios semilla demostrativos: `gerente` (Nivel 4), `marketing` (Nivel 3), `ventas` (Nivel 2) y `atencion` (Nivel 1), con etiquetas fijas «Gerente», «Marketing», «Ventas» y «Atención al Cliente». Solo se crean cuando `erp_users` no existe.
 
 ### 8.2 `Sesión`
 
@@ -273,14 +269,13 @@ La sesión no guarda `rank`, `username` ni `active`: esos valores se resuelven d
 
 ### 8.4 Validaciones y transiciones
 
-- `usernameKey` debe ser único entre todos los usuarios; «Pedro.Soto», `pedro.soto` y `pedro.soto` colisionan.
+- `usernameKey` debe ser único entre todos los usuarios; `GERENTE`, `gerente` y ` gerente ` colisionan.
 - `rank` debe pertenecer a la enumeración; un valor desconocido se deniega por defecto.
-- `active: false` elimina `erp_session` y bloquea nuevos inicios de sesión; las entidades e interacciones históricas se conservan.
+- `active: false` retira el botón de inicio de sesión, elimina `erp_session` y bloquea nuevos accesos; las entidades e interacciones históricas se conservan.
 - Cambiar `rank` no invalida la sesión, pero la siguiente resolución usa el nuevo rango y actualiza la barra superior.
-- `failedAttempts >= 5` fija `lockedUntil = ahora + 15 minutos`; mientras `lockedUntil > ahora` se rechaza el login aunque la contraseña sea correcta.
-- Un login correcto reinicia `failedAttempts` y `lockedUntil`, y crea una sesión nueva.
+- Pulsar un botón con `active: true` crea una sesión nueva sin verificar contraseña, sin contadores de intentos y sin mensajes «Ingresa una contraseña» ni «Usuario no encontrado».
 - Una sesión con `expiresAt <= ahora` se elimina y se trata como «sin sesión».
-- «Cerrar sesión», la desactivación, el bloqueo activo y la expiración son las únicas vías de finalización de sesión.
+- «Cerrar sesión», la desactivación y la expiración son las únicas vías de finalización de sesión.
 - `assertPermission()` devuelve o lanza el mensaje exacto `No tienes permiso para realizar esta acción`; una vista no permitida muestra «Acceso denegado» y vuelve al Panel, mientras que un visitante sin sesión es redirigido a login.
 
 ### 8.5 Relaciones con el resto del modelo
