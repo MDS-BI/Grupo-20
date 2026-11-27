@@ -415,3 +415,35 @@
 - **Decisión**: `.postventa-cards` recibe la misma regla de contenedor que `.summary-cards` (`display: flex`, `flex-wrap: wrap`, `gap: var(--space-3)`, `margin: var(--space-3) 0`). El tamaño de cada tarjeta proviene de la regla global existente `.stat-card` (`padding: var(--space-3)`, `min-width: 120px`, tipografía de `.stat-value`/`.stat-label`). No se modifica `.stat-card`, no se reordena el par etiqueta/valor y no se toca `computeTicketStats()` ni los textos.
 - **Justificación**: El ajuste de tamaño solicitado se mantiene aunque el formulario vuelva a estar en línea; aplicar la misma regla al contenedor conserva la proporción de «Resumen» sin afectar a panel, Marketing ni al cálculo (FR-109, Principio III).
 - **Alternativas consideradas**: Cambiar `.stat-card` global (altera todas las vistas); duplicar CSS con valores literales (se desincroniza de los tokens); modificar el orden DOM (excede «solo modifica la proporción» y cambiaría pruebas existentes).
+
+## Decisiones de diseño (acceso, consulta rápida, tickets y cierre perdido, sesión 2026-11-27)
+
+### Decisión: El login se convierte en una grilla de botones de usuario activo
+
+- **Decisión**: `src/components/login.js` sustituye `#login-form`, `#login-username` y `#login-password` por botones `data-action="login-user"` con `data-user-id`. Los cuatro usuarios semilla conservan las etiquetas exactas «Gerente», «Marketing», «Ventas» y «Atención al Cliente»; los demás usuarios activos aparecen detrás con su `username`, ordenados por `createdAt` y con los semilla primero. `src/auth.js` expone `login(userId)` y ya no exige contraseña ni produce «Ingresa una contraseña» o «Usuario no encontrado».
+- **Justificación**: La clarificación FR-110 elimina los campos y sus mensajes, pero conserva la sesión persistente, la expiración, la desactivación y la unicidad de usuario. Derivar los botones de `erp_users` evita una lista paralela: los usuarios creados por Gerencia aparecen sin intervención adicional y los desactivados dejan de ofrecerse (FR-098, FR-102).
+- **Alternativas consideradas**: Mantener el formulario y precargar usuarios (contradice la eliminación de campos); conservar contraseña oculta (deja mensajes y reglas sin sentido);codificar rígidamente cuatro botones (no cubre usuarios nuevos ni desactivaciones).
+
+### Decisión: La consulta rápida es un componente de solo lectura con estado local
+
+- **Decisión**: `src/components/client-quick-view.js` recibe la entidad, sus documentos visibles y sus tickets visibles, y renderiza una ventana superpuesta con datos de contacto, compras «Cerrado ganado» en USD con `startDate`, historial cronológico y tickets filtrados por permisos. `app.js` mantiene `state.quickViewEntityId`; el nombre en `entity-list.js` abre la vista y los botones «Cerrar» y «Ver ficha completa» son las únicas acciones.
+- **Justificación**: FR-111 exige la misma información en dos superficies —«Buscar» y «Clientes»— sin duplicar reglas. Un renderizador puro reutiliza `formatCurrencyUsd()`, `isFieldVisible()`, `isTicket()`, el orden del historial y la matriz de permisos, de modo que la ficha completa siga siendo la única vista editable (Principio III).
+- **Alternativas consideradas**: Abrir directamente la ficha existente (contradice la vista intermedia); duplicar el markup en búsqueda y gestión (dos fuentes de verdad); permitir edición en la ventana (contradice «solo lectura»).
+
+### Decisión: Las alertas y la acción de tickets se derivan en la tabla de clientes
+
+- **Decisión**: `renderManageEntitiesHtml()` acepta tickets visibles agrupados por `entity_id` y calcula por fila si hay tickets «Abierto» o «En revisión». Muestra «Ticket abierto» en naranja y «Ticket en revisión» en azul, ambas etiquetas cuando coexistan. «Abrir Ticket» aparece solo con `postventa:create`, navega a `?view=postventa`, abre `state.ticketFormOpen` y precarga `#ticket-client` con `entity_id`; `createTicketDocument()` vuelve a validar el permiso.
+- **Justificación**: FR-112 quiere acción y alerta sin crear otra vista ni permiso. Reutilizar `listTicketDocuments()` garantiza que N2 solo vea alertas de sus clientes y que Marketing no vea ninguna, mientras que el panel en línea de Postventa ya existente sirve para la preselección (FR-104, FR-106).
+- **Alternativas consideradas**: Crear una ruta `?view=ticket-form` (contradice el panel en línea); guardar un indicador por cliente (puede desincronizarse); mostrar solo una alerta cuando coexisten estados (pierde información solicitada).
+
+### Decisión: «Cerrado perdido» usa una regla declarativa de documento y no cambia métricas
+
+- **Decisión**: `module-config.js` conserva `statusLifecycle.states` con `cerrado perdido` y declara `customFields.document.motivo_perdida` más `documentRules.lostReason = { status: 'cerrado perdido', entityStateField: 'estado_comercial', entityState: 'prospecto', customField: 'motivo_perdida', options: [...] }`. `src/utils/lost-reason.js` expone funciones puras para detectar la condición y validar la opción; `validateDocumentData()` las invoca y `document-form.js` muestra el selector con las mismas opciones. El estado no entra en `pendingStates`, en `ACTIVE_STATES` de `marketing-stats.js` ni en `WON_STATUS` de `sales-team-metrics.js`.
+- **Justificación**: FR-113 exige que una llamada directa a `storage.js` tampoco guarde el cambio sin motivo, por lo que la validación debe vivir en la capa de datos, no solo en la interfaz. La regla declarativa evita ramas específicas por cliente en el núcleo y mantiene un punto de verdad para opciones, etiquetas y errores. Las agregaciones ya cuentan solo «Cerrado ganado», el conjunto activo y los pendientes, así que el estado nuevo aparece en el embudo sin alterar cifras (SC-043).
+- **Alternativas consideradas**: Validar solo en el formulario (falla SC-035); crear un tipo de documento «Perdido» (rompe XR-001); reutilizar `estado_comercial = perdido` (contradice la aclaración de que es un estado de documento); añadir el estado a pendientes o ventas (altera FR-035, FR-078 y FR-113).
+
+### Decisión: Verificación específica sin nuevos marcos de prueba
+
+- **Decisión**: Se añaden suites de integración para login por botones, consulta rápida, alertas de ticket y cierre perdido, y pruebas unitarias para la utilidad `lost-reason.js` y el orden de usuarios. Se actualizan las pruebas existentes que esperaban `#login-form`, contraseñas o los mensajes retirados, usando el mismo patrón Vitest/jsdom y `npm test`.
+- **Justificación**: Los cambios son visibles y afectan a reglas de negocio; el Principio II exige cobertura automática antes de dar por completado el incremento. Reutilizar el entorno actual evita Playwright u otra dependencia no aprobada.
+- **Alternativas consideradas**: Solo pruebas manuales (no verificables en CI); snapshots completos de HTML (frágiles ante cambios de estilo); introducir Cypress/Playwright (dependencia y configuración nuevas).
