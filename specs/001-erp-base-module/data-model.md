@@ -1,6 +1,6 @@
 # Modelo de Datos: Módulo Base ERP
 
-**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM, Marketing y Postventa descritos en las Historias de Usuario 2, 3, 5, 6, 7, 16 a 21 y 25 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
+**Alcance**: Este documento describe el modelo de datos tal como lo implementa el módulo base (ver `plan.md` — aplicación Vite, sin backend, persistencia en `localStorage` del navegador) y cómo los perfiles CRM, Marketing y Postventa descritos en las Historias de Usuario 2, 3, 5, 6, 7, 11, 16 a 21, 22 y 25 lo reutilizan mediante configuración, sin introducir una estructura de almacenamiento distinta.
 
 Para la forma exacta de los campos y las operaciones de almacenamiento, ver `contracts/entity-storage.md`, que es la fuente autoritativa; este documento resume las relaciones y la extensión vía configuración.
 
@@ -36,6 +36,7 @@ Registro transaccional vinculado a exactamente una `Entidad` mediante `entity_id
 | `endDate`                 | string (ISO date)      | No                  | Fecha de fin opcional; no puede ser anterior a `startDate`.                                                                                                            |
 | `notes`                   | string                 | No                  | Notas o descripción libres del documento.                                                                                                                              |
 | `status`                  | string                 | No                  | Texto libre por defecto (FR-031); si `module-config.js` declara `statusLifecycle`, el valor queda restringido a transiciones válidas (FR-030, Historia de Usuario 13). |
+| `motivo_perdida`          | string                 | Condicional         | Campo personalizado del perfil CRM. Obligatorio solo cuando `status = cerrado perdido` y la entidad vinculada tiene `estado_comercial = prospecto`; se guarda con el documento y aparece en el historial (FR-113). |
 | `createdAt` / `updatedAt` | string (ISO timestamp) | Sí                  | Marcas de tiempo de auditoría.                                                                                                                                         |
 | _(campos personalizados)_ | según configuración    | según configuración | Declarados en `module-config.js` (Historia de Usuario 8).                                                                                                              |
 
@@ -54,6 +55,7 @@ Objeto de adaptación cargado desde `src/module-config.js` al arrancar (Historia
 | `entityDate`                                                      | object \| null  | Regla opcional para el campo base `targetDate`: `{ label, min, max, required }`. `max: "localToday"` se resuelve en tiempo de ejecución a la fecha local del dispositivo; `required: true` solo en el perfil de clientes. Ausente en perfiles no-clientes. (FR-047 a FR-050, FR-056). |
 | `fieldRules.entity` / `fieldRules.document`                       | object          | Reglas declarativas por clave de campo: `hidden`, `searchable`, `required`, `generated`, `unique`, `format`, `normalize`, `when`, `group`. Aplica a campos base y personalizados; ausente = comportamiento base (FR-051 a FR-055, FR-057, FR-059 a FR-061).                           |
 | `detailPolicy.entity`                                             | object          | `{ blockWhenInvalid: true, offerEditAction: true }` en el perfil de clientes; bloquea la ficha de registros incompletos y ofrece editarlos (FR-058).                                                                                                                                  |
+| `documentRules.lostReason`                                        | object \| null  | Regla opcional del perfil CRM: `{ status, entityStateField, entityState, customField, options }`. Hace obligatorio el motivo en documentos de prospectos que pasan a «Cerrado perdido» (FR-113).                                                                                              |
 | `placeholder` / `order` (en definiciones de campo o `fieldRules`) | string / number | Pista gris de ejemplo y posición opcional del campo en el formulario; no cambian el valor almacenado (FR-062, FR-065, FR-067).                                                                                                                                                        |
 | `options` (en campos `select`)                                    | array           | Cadenas u objetos `{ value, label }`; la etiqueta se muestra y el valor se persiste, de modo que «Llamada» guarda `llamada` (FR-063).                                                                                                                                                 |
 | `marketing`                                                       | object \| null  | Bloque opcional con `privacyNoticeVersion`, `captureFields`, `automationRules`, `salesTeams`, `faq` y `campaigns`; ausente = sin comportamiento de Marketing (FR-068 a FR-093).                                                                                                       |
@@ -367,3 +369,52 @@ El formulario de «Nuevo Ticket» sigue produciendo exactamente el `Documento` d
 | Tamaño de las tres tarjetas         | Ninguna      | Solo CSS con ámbito `.postventa-cards`; no altera etiquetas, valores, orden de nodos ni `computeTicketStats()` (FR-109).             |
 
 El guardado no modifica la forma del documento: `createTicketDocument()` escribe una sola vez en `erp_documents` y el `render()` normal de Postventa recalcula tabla y tarjetas desde el arreglo ya en memoria. No hay `StorageEvent`, `postMessage`, sondeo ni sincronización entre pestañas; retirar el listener `storage` tampoco cambia los datos persistidos. La presentación del formulario reutiliza las clases `.form-field`, `.client-form-section` y `.form-actions` del formulario de entidades para igualar tarjetas, etiquetas, espaciado, colores, pistas grises y botones sin adoptar campos ni reglas de clientes.
+
+## 10. Acceso, consulta rápida, tickets en clientes y cierre perdido (2026-11-27)
+
+### 10.1 Acceso por botones
+
+`erp_users` sigue siendo la única fuente de usuarios y de sus rangos; `erp_session` continúa guardando solo `userId` y marcas de tiempo. No se persisten contraseñas, hashes ni contadores de intentos. La vista de inicio deriva los botones de los usuarios activos: primero los cuatro semilla con etiquetas fijas y después los creados por Gerencia en orden de `createdAt`, sin reordenarse al recargar. Un usuario desactivado deja de ofrecer botón y su sesión se revoca. `login(userId)` crea la misma sesión que antes sin verificar contraseña; el bloqueo por intentos fallidos y los mensajes «Ingresa una contraseña» y «Usuario no encontrado» dejan de existir (FR-102, FR-110).
+
+### 10.2 Consulta rápida del cliente
+
+| Elemento                  | Persistencia | Regla observable                                                                                                                                                                                                 |
+| ------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state.quickViewEntityId` | Ninguna      | Estado local que identifica al cliente de la ventana superpuesta; se abre desde resultados de «Buscar» y desde la tabla «Clientes» (FR-111).                                                                    |
+| Ventana de consulta       | Ninguna      | Solo lectura; botones «Cerrar» y «Ver ficha completa». La ficha completa sigue siendo la vista editable y aplica la matriz vigente (FR-041, FR-094).                                                           |
+| Total comprado            | Ninguna      | Suma de importes de documentos «Cerrado ganado» del cliente, sin límite de fechas, expresada en USD; cada compra muestra su `startDate` (FR-035, FR-078).                                                      |
+| Historial y tickets       | Ninguna      | Documentos y tickets ya persistidos, ordenados cronológicamente y filtrados con `can()` antes de renderizarse; no se crean registros nuevos (FR-094, FR-106, FR-111).                                           |
+
+### 10.3 Tickets en la tabla de clientes
+
+Los tickets continúan siendo `Documento` con `ticket: true` y `entity_id` del cliente. La tabla de gestión calcula por fila, en una sola pasada sobre los tickets visibles, si existen estados «Abierto» o «En revisión» y muestra ambas alertas si coexisten. «Ticket abierto» usa naranja y «Ticket en revisión» azul. El botón «Abrir Ticket» no crea un documento por sí solo: solo navega a `?view=postventa`, abre el panel en línea y precarga `#ticket-client` con ese `entity_id`; la creación completa sigue en `createTicketDocument()` (FR-104, FR-106, FR-112).
+
+| Relación                            | Regla                                                                                                                                                                 |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Abrir Ticket` → `postventa:create` | Visible solo para N1 y N4; la capa de datos vuelve a comprobar el permiso si se invoca directamente.                                                                    |
+| Alerta → `postventa:view[_own]`     | Visible para N1/N4 sobre todos los tickets y para N2 solo sobre los clientes con `ejecutivo_asignado = user.id`; N3 y visitante no ven alertas.                         |
+| Cliente preseleccionado            | `state.ticketValues.entity_id` se precarga con `entity_id` de la fila; `#ticket-client` lo muestra como opción seleccionada sin modificar el documento hasta guardar. |
+
+### 10.4 Cierre perdido con motivo
+
+La regla declarativa del perfil CRM es:
+
+```js
+documentRules: {
+  lostReason: {
+    status: 'cerrado perdido',
+    entityStateField: 'estado_comercial',
+    entityState: 'prospecto',
+    customField: 'motivo_perdida',
+    options: ['Precio alto', 'Eligió competencia', 'Sin presupuesto', 'No responde'],
+  },
+}
+```
+
+- `statusLifecycle.states` ya incluye `cerrado perdido`; la regla NO lo añade a `pendingStates` ni a los estados activos usados por `pipelineTotal`.
+- `motivo_perdida` es opcional en el documento base y obligatorio solo cuando el documento pasa a `cerrado perdido` y la entidad vinculada tiene `estado_comercial = prospecto` (FR-113).
+- Sin motivo, `validateDocumentData()` devuelve un error y ni `addDocument()` ni `updateDocument()` escriben en `erp_documents`; por tanto el documento conserva su estado anterior.
+- El motivo elegido se guarda como campo personalizado y `document-list.js` lo muestra en el historial de la entidad.
+- «Cerrado ganado», `computeSalesTeamMetrics()` y `computeDashboardStats()` siguen ignoring el nuevo estado: no suma al real mensual, al total de ventas ni a pendientes; el estado solo aparece en el embudo por estados de documento (SC-043).
+
+La forma detallada de estas reglas y sus selectores está en `contracts/client-ui.md`, `contracts/auth.md`, `contracts/postventa.md` y `contracts/entity-storage.md`.
