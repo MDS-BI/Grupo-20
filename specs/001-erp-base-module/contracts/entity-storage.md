@@ -41,7 +41,7 @@ Cada registro de documento **base** debe incluir:
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. El perfil de Postventa declara `ticket` (discriminador booleano), `asunto`, `categoria`, `prioridad` y `nota_resolucion` opcional en `customFields.document`. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
+Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. El perfil de Postventa declara `ticket` (discriminador booleano), `asunto`, `categoria`, `prioridad` y `nota_resolucion` opcional en `customFields.document`. El perfil CRM declara además `motivo_perdida` en `customFields.document`, obligatorio solo según la regla `documentRules.lostReason` descrita abajo. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
 
 Operaciones:
 
@@ -78,7 +78,7 @@ Operaciones:
 - Un `endDate` presente debe ser igual o posterior a `startDate` cuando ambos están presentes.
 - Un entity_id debe generarse automáticamente y debe ser único.
 - Un documento sin un `entity_id` que coincida con una entidad existente debe rechazarse.
-- Eliminar una entidad también debe eliminar todos los documentos vinculados a su entity_id.
+- Eliminar una entidad solo debe proceder cuando no tenga documentos ni registros vinculados; con registros vinculados debe rechazarse con `EntityHasRecordsError`, sin borrar nada, y ofrecer archivar la entidad para conservar el historial (FR-003, FR-009, FR-103). `deleteDocumentsForEntity()` sigue siendo una operación explícita y distinta, no una consecuencia automática de borrar la entidad.
 - Las operaciones de almacenamiento deben preservar el orden actual de la lista y actualizar las marcas de tiempo.
 - Con `marketing` activo, una entidad capturada desde el formulario público requiere `consentimiento = true`, `consentimiento_fecha` y `consentimiento_version`; el guardado debe rechazarse sin ellos (FR-071, FR-085).
 - `estado_comercial` debe conservar su valor interno aunque no se renderice en Marketing (FR-068, FR-075).
@@ -88,6 +88,9 @@ Operaciones:
 - `nota_resolucion` es obligatoria cuando `status = Resuelto` y se descarta cuando el estado final es otro; ambos casos usan `Completa los campos obligatorios.` si falta el texto requerido (FR-108).
 - Cualquier transición entre `Abierto`, `En revisión` y `Resuelto` es válida, incluida `Resuelto → Abierto`; no se aplica el `statusLifecycle` global a los tickets (FR-109).
 - Las operaciones de Postventa no crean una clave nueva de `localStorage`; los tickets se eliminan con `deleteDocumentsForEntity()` al borrar el cliente vinculado.
+- Con `documentRules.lostReason` activo, un documento cuya entidad vinculada tenga `estado_comercial = prospecto` y cuyo `status` sea `cerrado perdido` debe incluir `motivo_perdida` con una de las cuatro opciones declaradas; sin ese valor, `addDocument()` y `updateDocument()` deben rechazar la escritura con `Completa los campos obligatorios.` antes de modificar `erp_documents` (FR-113).
+- Un cliente convertido (`estado_comercial = ganado`) u otro estado comercial distinto de `prospecto` no debe exigir motivo en un documento cerrado como perdido.
+- `cerrado perdido` no debe contarse como documento pendiente, venta ganada ni importe del real mensual; solo debe aparecer en el embudo por estados de documento (FR-035, FR-078, FR-113, SC-043).
 
 ## Contrato de Configuración `entityDate`
 
@@ -138,6 +141,29 @@ postventa: {
 - `transitions: []` permite cualquier cambio entre estados declarados; si se declaran pares explícitos, solo esos pares son válidos.
 - `cardMapping` asocia cada tarjeta con un estado exacto; no se cuentan dos veces los documentos que comparten estado.
 - Sin el bloque `postventa`, la ruta `?view=postventa` no se registra y el resto del módulo conserva su comportamiento.
+
+## Contrato de `documentRules.lostReason`
+
+Cuando `module-config.js` declara `documentRules.lostReason`, debe tener esta forma:
+
+```js
+documentRules: {
+  lostReason: {
+    status: 'cerrado perdido',
+    entityStateField: 'estado_comercial',
+    entityState: 'prospecto',
+    customField: 'motivo_perdida',
+    options: ['Precio alto', 'Eligió competencia', 'Sin presupuesto', 'No responde'],
+  },
+}
+```
+
+- `status` es el valor normalizado de `Documento.status` que activa la regla; coincide con un estado ya declarado en `statusLifecycle.states`.
+- `entityStateField` y `entityState` identifican la condición de la entidad vinculada; solo con ese valor se exige el motivo.
+- `customField` debe estar declarado en `customFields.document` y es la clave persistida en el documento.
+- `options` contiene las etiquetas exactas y canónicas; la comparación de validación ignora mayúsculas y acentos, pero el valor guardado es la opción declarada.
+- Sin la regla, el módulo base mantiene el comportamiento anterior: el motivo no existe y no se exige (XR-001).
+- La validación se ejecuta en `validateDocumentData()` con las entidades ya cargadas, por lo que también cubre llamadas directas desde consola o enlaces profundos (FR-095, FR-113).
 
 ## Contrato de `fieldRules` y `detailPolicy`
 

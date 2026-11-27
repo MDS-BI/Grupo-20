@@ -107,7 +107,7 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 - `?view=postventa` se resuelve solo para N1, N2 y N4; N3 y visitante reciben «Acceso denegado» o redirección a login según corresponda.
 - N2 ve únicamente tickets cuyo cliente tiene `ejecutivo_asignado` igual a su `id`; si cambia el asignado, la vista y `listTicketDocuments()` dejan de mostrarlos sin mutar los tickets.
 - N1 y N4 pueden crear tickets y cambiar cualquier estado, incluida la reapertura; N2 no puede crear ni cambiar estados y N3 no puede verlos aunque conozca el `entity_id`.
-- No se guardan contraseñas, hashes ni sales; el campo solo comprueba que no esté vacío.
+- No se guardan contraseñas, hashes ni sales, y no existe campo de contraseña en login ni en administración de usuarios.
 
 ## Integración
 
@@ -123,11 +123,11 @@ La aplicación usa un único documento HTML sin host ni ruta de servidor. La vis
 
 ## Mensajes exactos
 
-Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción`, `Acceso denegado`, `Ingresa una contraseña` y `Usuario no encontrado`; en validación de campos se usa `Completa los campos obligatorios.`. Cualquier variante de estos textos incumple el contrato.
+Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción` y `Acceso denegado`; en validación de campos se usa `Completa los campos obligatorios.`. Los mensajes `Ingresa una contraseña` y `Usuario no encontrado` NO DEBEN aparecer. Cualquier variante de estos textos incumple el contrato.
 
 ## Extensibilidad y límite
 
 - Agregar un rango requiere añadir una fila en `PERMISSION_MATRIX`; desde la interfaz no puede modificarse.
 - Un módulo personalizado puede reutilizar `can()` con nuevas acciones sin cambiar el núcleo de autenticación.
-- La autenticación es local y simulada en modo demostración: cualquier contraseña no vacía sirve para los cuatro usuarios, no hay hash ni bloqueo, y la expiración de la sesión sigue siendo demostrativa.
+- La autenticación es local y simulada en modo demostración: basta pulsar el botón de un usuario activo, no hay contraseña, hash ni bloqueo, y la expiración de la sesión sigue siendo demostrativa.
   Una implementación productiva requiere autenticación en servidor, tal como declara la especificación.
