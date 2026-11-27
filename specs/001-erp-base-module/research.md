@@ -266,23 +266,23 @@
 
 ## Decisiones de diseño (autenticación, sesión y permisos)
 
-### Decisión: `src/auth.js` concentra sesión, hash, bloqueo y expiración
+### Decisión: `src/auth.js` concentra sesión, usuarios y expiración (revisada el 2026-11-27)
 
-- **Decisión**: Crear `src/auth.js` con operaciones `login`, `logout`, `getCurrentUser`, `getCurrentSession`, `createUser`, `updateUser`, `deactivateUser`, `normalizeUsername`, `hashPassword` y `verifyPassword`. La sesión se guarda en `erp_session` con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`; los usuarios se guardan en `erp_users` con `id`, `username`, `usernameKey`, `passwordHash`, `salt`, `rank`, `active`, `failedAttempts`, `lockedUntil`, `createdAt` y `updatedAt`.
-- **Justificación**: El usuario pidió explícitamente sesión, hash, bloqueo y expiración. Un solo módulo evita que esas reglas se repartan entre `app.js`, `storage.js` y los componentes, y permite probar la lógica sin DOM. Guardar solo `userId` en la sesión permite resolver rango y estado activo desde `erp_users` en cada verificación.
-- **Alternativas consideradas**: Guardar rango y nombre en la sesión (deja permisos obsoletos tras un cambio); dividir sesión/hash/usuarios en tres módulos sin una fachada común (más superficie de importación); almacenar contraseñas en texto plano (inaceptable incluso en la demo).
+- **Decisión**: Crear `src/auth.js` con operaciones `login(userId)`, `logout`, `getCurrentUser`, `getCurrentSession`, `createUser`, `updateUser`, `deactivateUser` y `normalizeUsername`. La sesión se guarda en `erp_session` con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`; los usuarios se guardan en `erp_users` con `id`, `username`, `usernameKey`, `rank`, `active`, `createdAt` y `updatedAt`, sin campos de credenciales.
+- **Justificación**: Un solo módulo evita que la resolución de identidad se reparta entre `app.js`, `storage.js` y los componentes, y permite probar la lógica sin DOM. Guardar solo `userId` en la sesión permite resolver rango y estado activo desde `erp_users` en cada verificación.
+- **Alternativas consideradas**: Guardar rango y nombre en la sesión (deja permisos obsoletos tras un cambio); dividir sesión/usuarios en tres módulos sin una fachada común (más superficie de importación); pedir contraseña (contradice la clarificación de acceso por botones de 2026-11-27).
 
-### Decisión: Hash PBKDF2-SHA-256 con sal por usuario y Web Crypto API
+### Decisión: Acceso directo por botón sin hash de contraseña
 
-- **Decisión**: Derivar cada contraseña con `crypto.subtle.deriveBits` usando PBKDF2-SHA-256, sal aleatoria de 16 bytes, 100 000 iteraciones y codificación hexadecimal para `salt` y `passwordHash`. No se añade dependencia criptográfica; las pruebas inyectan o simulan la API cuando el entorno no expone `crypto.subtle`.
-- **Justificación**: Cumple la petición de «hash» sin ampliar la huella de librerías y evita el error frecuente de guardar contraseñas legibles en `localStorage`. La sal individual impide que dos usuarios con la misma contraseña compartan el mismo digest.
-- **Alternativas consideradas**: Almacenar contraseña en texto plano (rechazado); hash simple sin sal ni iteraciones (débil); añadir bcrypt/argon2 como dependencia (contradice la restricción de huella mínima y no aporta seguridad real sin backend).
+- **Decisión**: Cada usuario activo ofrece un botón que llama a `login(userId)` y crea la sesión con su rango vigente. No se derivan contraseñas con Web Crypto API, no hay `passwordHash`, `salt`, `failedAttempts` ni `lockedUntil`, y no aparecen los mensajes «Ingresa una contraseña» ni «Usuario no encontrado».
+- **Justificación**: La clarificación de 2026-11-27 sustituyó la captura de credenciales por una grilla de acceso demostrativo. Mantener campos o mensajes de contraseña dejaría reglas sin sentido en la interfaz y en la capa de datos.
+- **Alternativas consideradas**: Conservar el hash PBKDF2 original (añade campos y mensajes obsoletos); precargar contraseñas ocultas (reintroduce captura innecesaria); añadir bcrypt/argon2 como dependencia (contradice la restricción de huella mínima y no aporta seguridad real sin backend).
 
-### Decisión: Bloqueo temporal y expiración por inactividad con valores demostrativos
+### Decisión: Expiración por inactividad sin bloqueo por intentos
 
-- **Decisión**: Bloquear el usuario durante 15 minutos después de 5 intentos fallidos; un inicio de sesión correcto reinicia `failedAttempts` y `lockedUntil`. La sesión expira tras 8 horas de inactividad, actualizando `lastActivityAt` en cada acción verificada; «Cerrar sesión», la desactivación y la expiración eliminan `erp_session`.
-- **Justificación**: El usuario pidió bloqueo y expiración sin dar umbrales. Estos valores son suficientes para probar el comportamiento sin convertir la demo en un sistema de seguridad productivo, y se documentan como constantes de `src/auth.js`.
-- **Alternativas consideradas**: Sin bloqueo ni expiración (no cumple la petición); expiración absoluta desde el login sin renovación (cierra sesiones activas de forma sorpresiva); umbrales configurables desde la interfaz (amplían el alcance y permitirían debilitar la política).
+- **Decisión**: La sesión expira tras 8 horas de inactividad, actualizando `lastActivityAt` en cada acción verificada; «Cerrar sesión», la desactivación del usuario y la expiración eliminan `erp_session`. No existe bloqueo temporal ni contador de intentos porque no se validan credenciales.
+- **Justificación**: La expiración conserva el comportamiento demostrativo ya documentado, mientras que eliminar el bloqueo alinea la lógica con el acceso por botones sin dejar umbrales inalcanzables.
+- **Alternativas consideradas**: Mantener 5 intentos y 15 minutos de bloqueo (ya no hay intentos fallidos posibles); expiración absoluta desde el login sin renovación (cierra sesiones activas de forma sorpresiva); umbrales configurables desde la interfaz (amplían el alcance sin beneficio demostrativo).
 
 ### Decisión: Matriz de permisos única en `src/auth/permissions.js`
 
@@ -296,10 +296,10 @@
 - **Justificación**: FR-101 exige independencia del usuario conectado y la matriz debe seguir teniendo una fila por rango interactivo más el visitante. Mezclar `Sistema` como rango permitiría iniciar sesión con una identidad sin permisos definidos.
 - **Alternativas consideradas**: Usar el rango del usuario que disparó la regla (contradice FR-101); crear un rango «Sistema» con todos los permisos (amplía la matriz y la superficie de login); no registrar creador de campaña (rompe trazabilidad).
 
-### Decisión: Vistas `login.js` y `users-admin.js` con límites distintos
+### Decisión: Vistas `login.js` y `users-admin.js` con límites distintos (revisada el 2026-11-27)
 
-- **Decisión**: `src/components/login.js` renderiza «Usuario» y «Contraseña» sin barra superior ni lateral, conserva enlaces públicos a captura/chat y redirige a la vista solicitada tras autenticarse. `src/components/users-admin.js` se monta solo desde el menú del usuario de la barra superior y solo para Nivel 4; no se añade a `NAV_ITEMS`.
-- **Justificación**: US22 exige que sin sesión solo se vea el login excepto las rutas públicas, y FR-098 exige que la administración de usuarios no esté en la barra lateral. Separar ambos componentes permite probar sus flujos sin acoplarlos al marco ERP.
+- **Decisión**: `src/components/login.js` renderiza una grilla centrada de botones con `data-action="login-user"` y `data-user-id`, sin barra superior, lateral, campos «Usuario»/«Contraseña» ni mensajes obsoletos; conserva enlaces públicos a captura/chat y redirige a la vista solicitada tras autenticarse. `src/components/users-admin.js` se monta solo desde el menú del usuario de la barra superior y solo para Nivel 4, sin capturar contraseña; no se añade a `NAV_ITEMS`.
+- **Justificación**: US22 y FR-110 exigen que sin sesión solo se vea el acceso por botones excepto las rutas públicas, y FR-098 exige que la administración de usuarios no esté en la barra lateral. Separar ambos componentes permite probar sus flujos sin acoplarlos al marco ERP.
 - **Alternativas consideradas**: Mostrar login dentro del shell (filtra vistas protegidas); añadir «Usuarios» a la barra lateral (contradice FR-098); combinar login y administración en un único componente (acopla una vista pública con una privada).
 
 ### Decisión: Integración en almacenamiento y configuración existente
@@ -351,7 +351,7 @@
 ### Decisión: Los tickets son `Documento` vinculados a clientes existentes
 
 - **Decisión**: Cada ticket se persiste como un `Documento` con `entity_id` de una `Entidad` ya registrada y campos personalizados `ticket`, `asunto`, `categoria`, `prioridad` y `nota_resolucion`. No se crea la clave `support_tickets` ni un tipo de registro nuevo. El estado del ticket se guarda en `status` con los valores exactos `Abierto`, `En revisión` y `Resuelto`, gobernados por una configuración propia de Postventa y no por el `statusLifecycle` global.
-- **Justificación**: `data-model.md` ya descartó el esquema relacional con `support_tickets` por incompatible con la arquitectura sin backend; reutilizar `Documento` conserva la ficha del cliente, la integridad referencial y la eliminación en cascada sin migración (FR-009, FR-104).
+- **Justificación**: `data-model.md` ya descartó el esquema relacional con `support_tickets` por incompatible con la arquitectura sin backend; reutilizar `Documento` conserva la ficha del cliente, la integridad referencial y el bloqueo de baja con registros vinculados sin migración (FR-009, FR-103, FR-104).
 - **Alternativas consideradas**: Registros independientes con almacenamiento propio (rompe la ficha del cliente y añade un esquema); reutilizar solo las consultas del `chat` (no permite registrar tickets nuevos ni prioridad); añadir los estados al `statusLifecycle` global (altera todos los formularios y pendientes del panel).
 
 ### Decisión: Configuración declarativa propia dentro de `MODULE_CONFIG`
