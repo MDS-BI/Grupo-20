@@ -11,6 +11,9 @@ const DERIVED_KEYS = [
   'conversionRate',
   'pipelineTotal',
   'funnel',
+  'salesByMonth',
+  'ticketsByStatus',
+  'leadsByCampaign',
   'entityLabel',
   'entityPlural',
   'documentLabel',
@@ -69,7 +72,7 @@ function snapshot(selector) {
   return {
     values: [...root.querySelectorAll('.summary-cards .stat-value')].map((el) => el.textContent),
     labels: [...root.querySelectorAll('.summary-cards .stat-label')].map((el) => el.textContent),
-    funnel: [...root.querySelectorAll('.commercial-funnel .funnel-row')].map((row) =>
+    funnel: [...root.querySelectorAll('.chart-grid .funnel-row')].map((row) =>
       row.textContent.replace(/\s+/g, ' ').trim()
     ),
     recent: root.querySelector('.recent-interactions').textContent.replace(/\s+/g, ' ').trim(),
@@ -112,8 +115,25 @@ describe('Panel y Marketing comparten tarjetas y embudo (T086/T133)', () => {
     ]);
     expect(panel.values).toEqual(['5', '4', '1', '20%', '$350']);
     expect(panel.funnel).toHaveLength(8);
-    expect(panel.recent).toContain('Últimas Interacciones / Próximos Seguimientos');
+    expect(panel.recent).toContain('Últimas interacciones / próximos seguimientos');
     expect(panel.recent).toContain('Ver ficha');
+  });
+
+  it('muestra solo la tarjeta del embudo en Marketing, con título y recuento por fila', () => {
+    const cards = [...document.querySelectorAll('.marketing-view .chart-grid .chart-card')];
+    expect(cards.map((card) => card.querySelector('h3').textContent)).toEqual([
+      'Embudo comercial por estado',
+    ]);
+    expect(document.querySelectorAll('.marketing-view .kpi-card')).toHaveLength(0);
+    expect(document.querySelectorAll('.marketing-view canvas[data-chart]')).toHaveLength(0);
+    const rows = [...document.querySelectorAll('.marketing-view .chart-grid .funnel-row')];
+    expect(rows).toHaveLength(8);
+    for (const row of rows) {
+      const state = row.querySelector('.funnel-state').textContent;
+      const count = row.querySelector('.funnel-count').textContent;
+      expect(row.getAttribute('title')).toBe(`${state}: ${count}`);
+    }
+    expect(document.querySelector('.commercial-funnel')).toBeNull();
   });
 
   it('no muestra la torta, el selector de etapas ni el estado comercial', () => {

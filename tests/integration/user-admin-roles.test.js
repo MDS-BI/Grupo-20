@@ -267,7 +267,7 @@ describe('Atención al cliente (Nivel 1) y visitante', () => {
     await mountAs('atencion');
 
     expect(document.querySelector('#current-rank').textContent).toBe(
-      'Nivel 1 - Atencion al Cliente'
+      'Nivel 1 - Atención al Cliente'
     );
     expect(document.querySelector('[data-action="navigate"][data-view="users-admin"]')).toBeNull();
     app.navigate('search');

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { logout } from '../../src/auth.js';
@@ -245,5 +247,66 @@ describe('Mensajes exactos', () => {
     for (const text of ['Ingresa una contraseña', 'Usuario no encontrado']) {
       expect(document.body.textContent, text).not.toContain(text);
     }
+  });
+});
+
+describe('Ortografía visible corregida (T289)', () => {
+  function source(relativePath) {
+    return readFileSync(resolve(process.cwd(), relativePath), 'utf8');
+  }
+
+  it('usa «Portal del Cliente» y «Nivel 1 - Atención al Cliente»', () => {
+    expect(source('src/components/login.js')).toContain('Portal del Cliente');
+    expect(source('src/components/login.js')).not.toContain('Portal del cliente');
+    expect(source('src/app.js')).toContain('Nivel 1 - Atención al Cliente');
+    expect(source('src/components/users-admin.js')).toContain('Nivel 1 - Atención al Cliente');
+    expect(source('index.html')).not.toContain('Portal del cliente');
+  });
+
+  it('usa «Nuevo ticket» y «Abrir ticket» sin cambiar acciones', () => {
+    expect(source('src/components/postventa.js')).toContain(
+      'data-action="ticket-form">Nuevo ticket'
+    );
+    expect(source('src/components/ticket-form.js')).toContain('<h2>Nuevo ticket</h2>');
+    expect(source('src/components/entity-list.js')).toContain('data-action="open-ticket"');
+    expect(source('src/components/entity-list.js')).toContain('>Abrir ticket</button>');
+    expect(source('src/components/postventa.js')).not.toContain('Nuevo Ticket');
+    expect(source('src/components/entity-list.js')).not.toContain('Abrir Ticket');
+  });
+
+  it('usa «Ejecutivo asignado» y «Canal de contacto» sin renombrar claves', () => {
+    const entityFields = MODULE_CONFIG.customFields.entity;
+    expect(entityFields.find((field) => field.key === 'ejecutivo_asignado').label).toBe(
+      'Ejecutivo asignado'
+    );
+    expect(entityFields.find((field) => field.key === 'canal_contacto').label).toBe(
+      'Canal de contacto'
+    );
+    expect(MODULE_CONFIG.fieldRules.entity.canal_contacto.label).toBe('Canal de contacto');
+    expect(MODULE_CONFIG.statusLifecycle.labels['en negociacion']).toBe('En negociación');
+  });
+
+  it('mantiene los mensajes exactos ya contractuales', () => {
+    expect(MESSAGES.required).toBe('Completa los campos obligatorios.');
+    expect(MESSAGES.noResults).toBe('No se encontraron resultados.');
+    expect(MESSAGES.permissionDenied).toBe('No tienes permiso para realizar esta acción');
+  });
+
+  it('declara los mensajes ISO corregidos', () => {
+    const messages = source('src/utils/entity-date.js');
+    expect(messages).toContain('La fecha de inicio debe ser una fecha ISO.');
+    expect(messages).toContain('La fecha de fin debe ser una fecha ISO.');
+    expect(messages).toContain('La fecha de fin no puede ser anterior a la fecha de inicio.');
+    expect(messages).not.toContain('La fecha de inicio debe ser una fecha ISO válida.');
+    expect(messages).not.toContain('La fecha de fin debe ser una fecha ISO válida.');
+  });
+
+  it('corrige las etiquetas de semilla sin tocar valores internos', () => {
+    const seed = source('src/seed.js');
+    expect(seed).toContain("'Pyme'");
+    expect(seed).toContain("'Independiente formal'");
+    expect(seed).toContain("'Independiente informal'");
+    expect(seed).not.toContain("'PyME'");
+    expect(source('src/module-config.js')).toContain("'en negociacion': 'En negociación'");
   });
 });

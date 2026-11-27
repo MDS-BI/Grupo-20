@@ -94,7 +94,7 @@ describe('Inicio de sesión por botones y sesión persistente', () => {
     ['gerente', 'Nivel 4 - Gerente Comercial', 'Gerente'],
     ['marketing', 'Nivel 3 - Ejecutivo de Marketing', 'Marketing'],
     ['ventas', 'Nivel 2 - Ejecutivo de Ventas', 'Ventas'],
-    ['atencion', 'Nivel 1 - Atencion al Cliente', 'Atención al Cliente'],
+    ['atencion', 'Nivel 1 - Atención al Cliente', 'Atención al Cliente'],
   ])('el botón %s inicia sesión con su rango', async (usernameKey, rankLabel, buttonLabel) => {
     mount();
     const button = loginButtons().find((item) => item.textContent.trim() === buttonLabel);

@@ -48,9 +48,9 @@ La forma exacta de la regla está en [`contracts/entity-storage.md`](contracts/e
 
 1. Abra el formulario de registro y confirme que no aparecen «Código», «Categoría», «Descripción» ni «Nº de pedidos»; compruébelo también en la lista, la ficha y la búsqueda.
 2. Guarde un cliente y confirme que se le asignó un código interno único que no se ve en ninguna vista; repita el registro y compruebe que el código generado es distinto.
-3. Intente guardar sin «Fecha de nacimiento», sin «Canal de Contacto» o sin «RUT»: el sistema debe rechazarlo y explicar qué falta.
+3. Intente guardar sin «Fecha de nacimiento», sin «Canal de contacto» o sin «RUT»: el sistema debe rechazarlo y explicar qué falta.
 4. Introduzca un RUT con dígito verificador incorrecto y luego el RUT válido de otro cliente: ambos intentos deben rechazarse con un mensaje claro.
-5. Confirme que «Canal de Contacto» aparece sin selección y que, al elegir «llamada», «whatsapp», «correo» o «reunión», aparece respectivamente «Teléfono», «WhatsApp», «Correo electrónico» o «Lugar/Enlace de reunión».
+5. Confirme que «Canal de contacto» aparece sin selección y que, al elegir «llamada», «whatsapp», «correo» o «reunión», aparece respectivamente «Teléfono», «WhatsApp», «Correo electrónico» o «Lugar/Enlace de reunión».
 6. Deje vacía la casilla condicional o escriba un valor con formato incorrecto para el canal (p. ej. un correo sin `@`): el guardado debe fallar indicando el formato esperado.
 7. Cambie de canal después de rellenar la casilla, guarde y verifique que solo se conserva el dato del canal final.
 8. Busque por un valor de categoría, descripción o código interno de un cliente: no debe devolver resultados; busque por nombre, fecha de nacimiento, RUT o campo de contacto visible: debe encontrarlo, y el placeholder no debe mencionar campos ocultos.
@@ -62,11 +62,11 @@ La forma de las reglas está en [`contracts/entity-storage.md`](contracts/entity
 ## Validación del Perfil de Clientes (tercera tanda)
 
 1. Abra «Gestionar clientes» y su formulario de registro: el título debe decir «Nuevo Cliente»; el panel principal ya no muestra esa acción rápida.
-2. Compruebe que las casillas aparecen en este orden: «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de Contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo Asignado».
+2. Compruebe que las casillas aparecen en este orden: «Nombre de Cliente», «RUT», «Fecha de nacimiento», «Canal de contacto» con su casilla adicional, «Tipo de actividad» y «Ejecutivo asignado».
 3. En «RUT», confirme que la pista gris es `Ej: 11.111.111-1` y que no se guarda como valor; guarde un RUT con puntos (`12.345.678-9`) y luego el mismo RUT sin puntos (`12345678-9`) en otro cliente: el segundo debe rechazarse por repetido.
-4. Despliegue «Canal de Contacto» y verifique que las opciones son «Llamada», «Correo», «Reunión» y «WhatsApp», y que al guardar se conservan los valores internos `llamada`, `correo`, `reunion` y `whatsapp`.
+4. Despliegue «Canal de contacto» y verifique que las opciones son «Llamada», «Correo», «Reunión» y «WhatsApp», y que al guardar se conservan los valores internos `llamada`, `correo`, `reunion` y `whatsapp`.
 5. Al elegir cada canal, compruebe la pista gris de su casilla adicional: `Ej: +56 9 1234 5678` para «Llamada» y «WhatsApp», `Ej: nombre@ejemplo.cl` para «Correo» y `Ej: Sala 2 o enlace» para «Reunión». La pista no debe contarse como valor al guardar.
-6. Despliegue «Tipo de actividad» y confirme que ofrece solo «Dependiente», «Independiente Formal», «Independiente Informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante», y que la clave almacenada sigue siendo `rubro`.
+6. Despliegue «Tipo de actividad» y confirme que ofrece solo «Dependiente», «Independiente formal», «Independiente informal», «Jubilado», «Dueño/a de casa», «Estudiante», «FFAA», «Rentista», «Jubilado - FFAA» y «Cesante», y que la clave almacenada sigue siendo `rubro`.
 
 La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-presentación-del-formulario-de-clientes) y su efecto en el modelo en [`data-model.md`](data-model.md#22-reglas-de-campo-del-perfil-de-clientes).
 
@@ -75,7 +75,7 @@ La forma de estas reglas está en [`contracts/entity-storage.md`](contracts/enti
 1. Abra el panel principal y confirme que la barra lateral muestra Panel, Buscar, Resumen y Marketing; «Clientes» e «Interacciones» no aparecen y el panel ya no ofrece «Abrir Marketing».
 2. Compruebe que el panel ofrece exactamente tres acciones rápidas —«Gestionar clientes», «Gestionar interacciones» y «Buscar registros»—; verifique que las gestiones de entidades y documentos se alcanzan solo desde ahí y que la creación ocurre dentro de ellas.
 3. Abra Marketing y confirme las cinco tarjetas del panel —entidades, documentos, «Cerrado ganado», «Tasa de conversión» y «Pipeline (USD)»— y el mismo embudo por estados de documento, con idénticos valores que en el panel.
-4. Confirme que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas, y que la lista «Últimas Interacciones / Próximos Seguimientos» coincide con la del panel.
+4. Confirme que Marketing no muestra la torta «Estado comercial de la cartera» ni el selector de etapas, y que la lista «Últimas interacciones / próximos seguimientos» coincide con la del panel.
 5. Con cero registros, verifique que las tarjetas y el embudo muestran cero con un estado vacío claro.
 6. En la vista `?view=capture`, envíe el formulario sin marcar el consentimiento: no debe crearse el prospecto y debe mostrarse `Completa los campos obligatorios.`.
 7. Envíe el formulario con consentimiento y confirme que se creó una entidad con `estado_comercial = prospecto`, fecha y versión del aviso guardadas, y que el visitante ve exactamente `Prospecto registrado correctamente.`.
@@ -114,8 +114,8 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 
 ## Validación de Postventa
 
-1. Confirme que la barra lateral muestra «Postventa» como quinta opción, inmediatamente debajo de Marketing, y que abre `?view=postventa` con el marco ERP y «Nuevo Ticket» arriba.
-2. Pulse «Nuevo Ticket»: debe abrirse un panel dentro de la misma página de Postventa, sin pestaña nueva, sustituyendo temporalmente la tabla mientras las tres tarjetas permanecen visibles. Compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», con la misma presentación visual que el formulario «Nuevo Cliente».
+1. Confirme que la barra lateral muestra «Postventa» como quinta opción, inmediatamente debajo de Marketing, y que abre `?view=postventa` con el marco ERP y «Nuevo ticket» arriba.
+2. Pulse «Nuevo ticket»: debe abrirse un panel dentro de la misma página de Postventa, sin pestaña nueva, sustituyendo temporalmente la tabla mientras las tres tarjetas permanecen visibles. Compruebe el orden de las casillas: «Cliente», «Asunto», «Categoría», «Prioridad», «Estado» y «Nota de resolución», con la misma presentación visual que el formulario «Nuevo Cliente».
 3. En «Cliente», compruebe que el desplegable ofrece solo clientes existentes y que escribir en el buscador filtra por nombre sin crear un cliente nuevo.
 4. Despliegue «Categoría» y confirme exactamente «Soporte técnico», «Facturación», «Garantía» y «Consulta»; despliegue «Prioridad» y confirme «Baja», «Media» y «Alta» sin selección previa.
 5. Guarde sin elegir prioridad y luego con estado «Resuelto» sin nota: ambos intentos deben mostrar `Completa los campos obligatorios.` y no crear el ticket.
@@ -123,7 +123,7 @@ La forma de campañas, atribución e indicadores está en [`contracts/marketing.
 7. Cambie el estado a «En revisión» y luego a «Resuelto» escribiendo una nota; confirme que las tres tarjetas y la tabla se actualizan sin recarga y que «Resueltos» cuenta el ticket una sola vez.
 8. Reabra el ticket de «Resuelto» a «Abierto»; confirme que la transición se acepta, que «Tickets abiertos» vuelve a aumentar y que el ticket sigue en la ficha del cliente.
 9. Guarde un ticket en «Abierto» con texto en «Nota de resolución» y confirme que el texto no se conserva; guárdelo en «Resuelto» con nota y compruebe que sí se conserva.
-10. Inicie sesión como `atencion` (N1) y como `gerente` (N4): ambos deben crear tickets y cambiar cualquier estado. Inicie como `ventas` (N2): debe ver solo los tickets de sus clientes, sin botón «Nuevo Ticket» ni control de estado. Inicie como `marketing` (N3) o sin sesión: no debe acceder ni por enlace profundo, consola o llamada directa a `storage.js`.
+10. Inicie sesión como `atencion` (N1) y como `gerente` (N4): ambos deben crear tickets y cambiar cualquier estado. Inicie como `ventas` (N2): debe ver solo los tickets de sus clientes, sin botón «Nuevo ticket» ni control de estado. Inicie como `marketing` (N3) o sin sesión: no debe acceder ni por enlace profundo, consola o llamada directa a `storage.js`.
 11. Abra directamente `?view=postventa`, use Back/Forward y recargue: la vista debe resolverse con la matriz en cada caso y la denegación debe mostrar `No tienes permiso para realizar esta acción`.
 
 12. Guarde un ticket desde el panel y confirme que el panel se cierra, vuelve la tabla con la nueva fila y las tres tarjetas se recalculan sin pulsar recargar; no debe existir `?view=ticket-form` ni evento de sincronización entre pestañas.
@@ -187,9 +187,9 @@ La forma de estas reglas está en [`contracts/customer-portal.md`](contracts/cus
 2. Repita la apertura desde el nombre de un cliente en la tabla «Clientes» de gestión: debe mostrarse la misma información del mismo cliente, sin formularios de edición ni creación.
 3. Compare el total comprado con la suma de importes de los documentos «Cerrado ganado» de todas las fechas: debe coincidir y expresarse en USD; cada compra incluida debe mostrar su `startDate`.
 4. Inicie como `ventas` (N2) y compruebe que la ventana solo muestra sus documentos y tickets permitidos; pulse «Ver ficha completa» y confirme que se abre la ficha existente con los mismos permisos.
-5. En la tabla «Clientes», compruebe que «Abrir Ticket» solo aparece para `atencion` (N1) y `gerente` (N4), y que `marketing` (N3) no ve botón ni alertas.
+5. En la tabla «Clientes», compruebe que «Abrir ticket» solo aparece para `atencion` (N1) y `gerente` (N4), y que `marketing` (N3) no ve botón ni alertas.
 6. Para un cliente con ticket «Abierto», confirme la etiqueta naranja «Ticket abierto»; para otro con ticket «En revisión», confirme la etiqueta azul «Ticket en revisión»; si tiene ambos, deben verse las dos etiquetas.
-7. Pulse «Abrir Ticket» en una fila: debe abrirse el panel «Nuevo Ticket» dentro de `?view=postventa` con ese cliente preseleccionado. Cancelar sin guardar no debe crear ticket.
+7. Pulse «Abrir ticket» en una fila: debe abrirse el panel «Nuevo ticket» dentro de `?view=postventa` con ese cliente preseleccionado. Cancelar sin guardar no debe crear ticket.
 8. Cree una entidad prospecto con `estado_comercial = prospecto` y abra su formulario de interacción. Seleccione el estado «Cerrado perdido»: debe aparecer el desplegable de motivo con exactamente «Precio alto», «Eligió competencia», «Sin presupuesto» y «No responde», sin selección previa.
 9. Guarde sin elegir motivo: debe mostrarse `Completa los campos obligatorios.`, el documento debe conservar su estado anterior y no debe escribirse en `erp_documents`.
 10. Guarde con «Eligió competencia»: el documento debe pasar a «Cerrado perdido» y el motivo debe aparecer en el historial de la entidad.
@@ -213,13 +213,13 @@ La forma de la sesión y las operaciones están en [`contracts/auth.md`](contrac
 
 1. Con `atencion` (Nivel 1), busque «Comercial Andina SpA», vea su historial y registre una «Llamada»; confirme que no puede registrar una «Reunión», cambiar estados, eliminar clientes ni abrir Resumen, Marketing o «Equipo de ventas y logros».
 2. Abra `?view=summary` con `atencion`: debe ver «Acceso denegado» y volver al Panel sin ver los 47 seguimientos pendientes.
-3. Con `ventas` (Nivel 2), cree «Ferretería Central» con él como «Ejecutivo Asignado» y confirme que puede editarla; intente eliminar «Transportes del Norte Ltda.» y cambiar el estado de sus interacciones: todo debe rechazarse con `No tienes permiso para realizar esta acción`.
+3. Con `ventas` (Nivel 2), cree «Ferretería Central» con él como «Ejecutivo asignado» y confirme que puede editarla; intente eliminar «Transportes del Norte Ltda.» y cambiar el estado de sus interacciones: todo debe rechazarse con `No tienes permiso para realizar esta acción`.
 4. Desde la consola, intente eliminar «Transportes del Norte Ltda.» mediante una llamada directa a `storage.js`: la capa de datos debe rechazarla con el mismo mensaje y el cliente debe permanecer almacenado.
 5. Con `marketing` (Nivel 3), cree la «Campaña Primavera 2026», capture un prospecto y consulte el rendimiento; además, cree, edite y elimine una interacción de redes sociales de cualquier prospecto/cliente y responda una «Dudas y consultas». Intente eliminar «Comercial Andina SpA», abrir el resumen, detener una campaña de otro usuario, editar un documento de venta o cambiar su estado, y crear o cambiar un ticket: cada acción denegada debe bloquearse con `No tienes permiso para realizar esta acción`.
 6. Con `gerente` (Nivel 4), elimine «Comercial Andina SpA», vea los 47 seguimientos del equipo, detenga la campaña de `marketing` y gestione usuarios; confirme que no existe ninguna pantalla para editar la matriz de permisos.
-7. Despliegue «Ejecutivo Asignado» en un formulario de cliente: solo deben aparecer `ventas`, `ana.munoz` y `gerente`, nunca `atencion` ni `marketing`.
+7. Despliegue «Ejecutivo asignado» en un formulario de cliente: solo deben aparecer `ventas`, `ana.munoz` y `gerente`, nunca `atencion` ni `marketing`.
 8. Con `atencion` y `gerente`, abra Postventa, cree un ticket y cámbielo de «Resuelto» a «Abierto»; ambas acciones deben permitirse.
-9. Con `ventas`, abra Postventa: solo debe ver tickets de clientes con él como «Ejecutivo Asignado»; intente crear uno y cambiar un estado desde la consola: la capa de datos debe rechazarlo con `No tienes permiso para realizar esta acción`.
+9. Con `ventas`, abra Postventa: solo debe ver tickets de clientes con él como «Ejecutivo asignado»; intente crear uno y cambiar un estado desde la consola: la capa de datos debe rechazarlo con `No tienes permiso para realizar esta acción`.
 10. Con `marketing` y sin sesión, intente abrir `?view=postventa` y llamar a `createTicketDocument()` desde la consola: debe mostrarse «Acceso denegado» o redirección a login, sin crear ni modificar tickets.
 
 La matriz y las acciones están en [`contracts/auth.md`](contracts/auth.md#matriz-de-srcauthpermissionsjs) y la verificación en `storage.js` en [`contracts/entity-storage.md`](contracts/entity-storage.md#contrato-de-autorización-de-operaciones).
@@ -247,7 +247,7 @@ La forma de usuarios y reglas está en [`contracts/auth.md`](contracts/auth.md#c
 7. Pase el cursor por cada uno de los tres gráficos: el tooltip debe mostrar etiquetas y valores reales, con fondo y texto legibles en el tema activo; las filas del embudo deben mostrar estado y recuento (FR-120).
 8. Pulse el botón de tema de la barra superior: textos, ejes, cuadrículas, leyendas, tooltips y series cambian de color sin recarga y sin perder la vista; recargue la página y la preferencia debe conservarse (FR-123, SC-051).
 9. Derive las cuatro series a cero registros —por ejemplo, con un perfil sin ventas, tickets ni prospectos—: cada tarjeta debe mostrar `No hay registros para esta serie.` sin gráficos de ejemplo. Al crear el primer registro válido, la serie real aparece sin recarga (FR-124, SC-052).
-10. Revise el texto visible de login, panel, formularios, tablas, mensajes y datos de semilla: «Nivel 1 - Atención al cliente», «Portal del cliente», «Embudo comercial por estado», «Nuevo ticket» y «La fecha de inicio debe ser una fecha ISO.» deben estar corregidos, mientras `en negociacion` sigue siendo el valor interno y solo su etiqueta visible es «En negociación» (FR-119, SC-047).
+10. Revise el texto visible de login, panel, formularios, tablas, mensajes y datos de semilla: «Nivel 1 - Atención al Cliente», «Portal del Cliente», «Embudo comercial por estado», «Nuevo ticket» y «La fecha de inicio debe ser una fecha ISO.» deben estar corregidos, mientras `en negociacion` sigue siendo el valor interno y solo su etiqueta visible es «En negociación» (FR-119, SC-047).
 11. Confirme que las pruebas actualizadas cubren las diez comprobaciones anteriores, con especial atención a `tests/integration/dashboard.test.js`, `tests/integration/marketing-dashboard.test.js`, `tests/integration/workspace-shell.test.js` y la nueva suite unitaria de `dashboard-chart-data.js`.
 
 La forma observable de estas reglas está en [`contracts/dashboard-charts.md`](contracts/dashboard-charts.md) y en [`contracts/marketing.md`](contracts/marketing.md); su efecto en el modelo está en [`data-model.md`](data-model.md#12-panel-visual-gráficos-y-ortografía-visible-2026-11-27).

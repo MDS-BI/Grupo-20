@@ -35,7 +35,7 @@ export function renderTicketFormHtml(config, options = {}) {
     : '';
 
   return `<form id="ticket-form" class="ticket-form client-form-section">
-    <h2>Nuevo Ticket</h2>
+    <h2>Nuevo ticket</h2>
     ${formError}
     <div class="ticket-client-search">
       <label for="ticket-client-search">Buscar cliente</label>

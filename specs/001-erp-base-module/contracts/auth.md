@@ -46,27 +46,27 @@ Objeto único con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`. No conti
 
 Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin introducir identificadores adicionales: `panel:view`, `search:view`, `entity:view_any`, `entity:view_own`, `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `summary:view_all`, `summary:view_own`, `marketing:view`, `marketing:manage`, `team:view_all`, `team:view_own`, `team:manage`, `chat:view`, `chat:answer`, `chat:create_query`, `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `postventa:view`, `postventa:view_own`, `postventa:create`, `postventa:transition`, `users:manage`, `permissions:view` y `permissions:edit`.
 
-| Acción                                                                       | N4  | N3  | N2                 | N1  | Visitante                               |
-| ---------------------------------------------------------------------------- | --- | --- | ------------------ | --- | --------------------------------------- |
-| `panel:view`, `search:view`, `entity:view_any`, `document:read`              | Sí  | Sí  | Sí                 | Sí  | No                                      |
-| `entity:create`                                                              | Sí  | No  | Sí                 | No  | No                                      |
-| `entity:edit_own`, `document:edit_own`, `document:transition_own`            | Sí  | No  | Solo con `ownerId` | No  | No                                      |
-| `entity:edit_any`, `entity:delete`                                           | Sí  | No  | No                 | No  | No                                      |
+| Acción                                                                       | N4  | N3                                        | N2                 | N1  | Visitante                               |
+| ---------------------------------------------------------------------------- | --- | ----------------------------------------- | ------------------ | --- | --------------------------------------- |
+| `panel:view`, `search:view`, `entity:view_any`, `document:read`              | Sí  | Sí                                        | Sí                 | Sí  | No                                      |
+| `entity:create`                                                              | Sí  | No                                        | Sí                 | No  | No                                      |
+| `entity:edit_own`, `document:edit_own`, `document:transition_own`            | Sí  | No                                        | Solo con `ownerId` | No  | No                                      |
+| `entity:edit_any`, `entity:delete`                                           | Sí  | No                                        | No                 | No  | No                                      |
 | `document:edit_any`, `document:delete`                                       | Sí  | Solo documentos de interacciones de redes | No                 | No  | No                                      |
-| `document:create`                                                            | Sí  | Sí, solo interacciones de redes | Sí                 | Sí  | No                                      |
-| `summary:view_all`                                                           | Sí  | No  | No                 | No  | No                                      |
-| `summary:view_own`                                                           | Sí  | No  | Solo con `ownerId` | No  | No                                      |
-| `marketing:view`, `marketing:manage`                                         | Sí  | Sí  | No                 | No  | No                                      |
-| `team:view_all`, `team:manage`                                               | Sí  | No  | No                 | No  | No                                      |
-| `team:view_own`                                                              | Sí  | Sí  | Solo con `ownerId` | No  | No                                      |
-| `chat:view`, `chat:answer`                                                   | Sí  | Sí  | No                 | Sí  | No                                      |
-| `chat:create_query`                                                          | Sí  | Sí  | Sí                 | Sí  | Solo en ruta pública con consentimiento |
-| `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | Sí  | Sí  | No                 | No  | No                                      |
-| `campaign:stop_any`                                                          | Sí  | No  | No                 | No  | No                                      |
-| `postventa:view`, `postventa:create`, `postventa:transition`                 | Sí  | No  | No                 | Sí  | No                                      |
-| `postventa:view_own`                                                         | Sí  | No  | Solo con `ownerId` | No  | No                                      |
-| `users:manage`, `permissions:view`                                           | Sí  | No  | No                 | No  | No                                      |
-| `permissions:edit`                                                           | No  | No  | No                 | No  | No                                      |
+| `document:create`                                                            | Sí  | Sí, solo interacciones de redes           | Sí                 | Sí  | No                                      |
+| `summary:view_all`                                                           | Sí  | No                                        | No                 | No  | No                                      |
+| `summary:view_own`                                                           | Sí  | No                                        | Solo con `ownerId` | No  | No                                      |
+| `marketing:view`, `marketing:manage`                                         | Sí  | Sí                                        | No                 | No  | No                                      |
+| `team:view_all`, `team:manage`                                               | Sí  | No                                        | No                 | No  | No                                      |
+| `team:view_own`                                                              | Sí  | Sí                                        | Solo con `ownerId` | No  | No                                      |
+| `chat:view`, `chat:answer`                                                   | Sí  | Sí                                        | No                 | Sí  | No                                      |
+| `chat:create_query`                                                          | Sí  | Sí                                        | Sí                 | Sí  | Solo en ruta pública con consentimiento |
+| `campaign:create`, `campaign:view`, `campaign:edit_own`, `campaign:stop_own` | Sí  | Sí                                        | No                 | No  | No                                      |
+| `campaign:stop_any`                                                          | Sí  | No                                        | No                 | No  | No                                      |
+| `postventa:view`, `postventa:create`, `postventa:transition`                 | Sí  | No                                        | No                 | Sí  | No                                      |
+| `postventa:view_own`                                                         | Sí  | No                                        | Solo con `ownerId` | No  | No                                      |
+| `users:manage`, `permissions:view`                                           | Sí  | No                                        | No                 | No  | No                                      |
+| `permissions:edit`                                                           | No  | No                                        | No                 | No  | No                                      |
 
 Nota inmediata (2026-11-27): Nivel 3 crea, edita y elimina solo interacciones de redes de cualquier prospecto o cliente, y responde «Dudas y consultas» con `chat:answer`. No crea, edita, elimina ni cambia el estado de documentos de venta, otros documentos comerciales ni tickets. La restricción se aplica con `context.documentType = 'social'`, derivado del tipo de documento declarado y no de un permiso nuevo. `entity:edit_any` y `entity:delete` siguen denegados para N3.
 

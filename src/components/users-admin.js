@@ -4,7 +4,7 @@ export const RANK_OPTIONS = [
   ['n4_manager', 'Nivel 4 - Gerente Comercial'],
   ['n3_marketing', 'Nivel 3 - Ejecutivo de Marketing'],
   ['n2_sales', 'Nivel 2 - Ejecutivo de Ventas'],
-  ['n1_support', 'Nivel 1 - Atencion al Cliente'],
+  ['n1_support', 'Nivel 1 - Atención al Cliente'],
 ];
 
 export function collectUserData(form) {

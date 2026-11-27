@@ -20,7 +20,13 @@ export function formatPercent(value) {
 export function renderDashboardHtml(
   config,
   stats,
-  { title, sectionClass = 'dashboard', showQuickActions = true } = {}
+  {
+    title,
+    sectionClass = 'dashboard',
+    showQuickActions = true,
+    chartData = null,
+    funnelOnly = false,
+  } = {}
 ) {
   const entityPlural = stats.entityPlural || getLabel(config, 'entityPlural');
   const documentPlural = stats.documentPlural || getLabel(config, 'documentPlural');
@@ -41,12 +47,32 @@ export function renderDashboardHtml(
     .slice()
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
     .slice(0, 5);
+  const hasFunnelRecords = funnel.some((step) => Number(step.count) > 0);
+  const funnelHtml = `
+    <article class="chart-card chart-card--wide">
+      <h3>Embudo comercial por estado</h3>
+      <div class="funnel-rows">
+        ${funnel
+          .map((step) => {
+            const state = escapeHtml(step.label);
+            const count = Number(step.count) || 0;
+            return `
+            <div class="funnel-row" title="${escapeHtml(`${step.label}: ${count}`)}">
+              <span class="funnel-state">${state}</span>
+              <span class="funnel-count">${count}</span>
+              <div class="funnel-bar" style="width: ${documentCount > 0 ? (count / documentCount) * 100 : 0}%"></div>
+            </div>`;
+          })
+          .join('')}
+      </div>
+      ${hasFunnelRecords ? '' : '<p class="empty-state">No hay registros para esta serie.</p>'}
+    </article>`;
 
   return `
     <section class="${escapeHtml(sectionClass)}">
       <h1>${escapeHtml(viewTitle)}</h1>
       ${quickActions}
-      ${showQuickActions ? renderDashboardChartsHtml() : ''}
+      ${renderDashboardChartsHtml(chartData || {}, { funnelHtml, funnelOnly })}
       <div class="summary-cards">
         <div class="stat-card"><span class="stat-value">${Number(stats.entityCount) || 0}</span><span class="stat-label">${escapeHtml(entityPlural)}</span></div>
         <div class="stat-card"><span class="stat-value">${documentCount}</span><span class="stat-label">${escapeHtml(documentPlural)}</span></div>
@@ -54,23 +80,8 @@ export function renderDashboardHtml(
         <div class="stat-card"><span class="stat-value">${formatPercent(stats.conversionRate)}</span><span class="stat-label">Tasa de conversión</span></div>
         <div class="stat-card"><span class="stat-value">${formatCurrencyUsd(stats.pipelineTotal)}</span><span class="stat-label">Pipeline (USD)</span></div>
       </div>
-      <div class="commercial-funnel">
-        <h2>Embudo Comercial por Estado</h2>
-        <div class="funnel-rows">
-          ${funnel
-            .map(
-              (step) => `
-            <div class="funnel-row">
-              <span class="funnel-state">${escapeHtml(step.label)}</span>
-              <span class="funnel-count">${Number(step.count) || 0}</span>
-              <div class="funnel-bar" style="width: ${documentCount > 0 ? ((Number(step.count) || 0) / documentCount) * 100 : 0}%"></div>
-            </div>`
-            )
-            .join('')}
-        </div>
-      </div>
       <div class="recent-interactions">
-        <h2>Últimas Interacciones / Próximos Seguimientos</h2>
+        <h2>Últimas interacciones / próximos seguimientos</h2>
         ${
           lastInteractions.length > 0
             ? `

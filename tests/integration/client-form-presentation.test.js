@@ -27,8 +27,8 @@ function submit() {
 
 const ACTIVITY_OPTIONS = [
   'Dependiente',
-  'Independiente Formal',
-  'Independiente Informal',
+  'Independiente formal',
+  'Independiente informal',
   'Jubilado',
   'Dueño/a de casa',
   'Estudiante',

@@ -51,7 +51,7 @@ function canOpenTicket(ticketMeta, entity) {
 
 function openTicketHtml(ticketMeta, entity) {
   if (!canOpenTicket(ticketMeta, entity)) return '';
-  return `<button type="button" class="action-button" data-action="open-ticket" data-entity-id="${escapeHtml(entity.entity_id)}">Abrir Ticket</button>`;
+  return `<button type="button" class="action-button" data-action="open-ticket" data-entity-id="${escapeHtml(entity.entity_id)}">Abrir ticket</button>`;
 }
 
 function quickViewNameHtml(entity) {

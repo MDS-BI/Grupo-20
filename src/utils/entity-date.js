@@ -53,10 +53,10 @@ export function validateEntityDateRange(values = {}, config = {}, now = new Date
   const startDate = safeValues.startDate;
   const endDate = safeValues.endDate;
   if (startDate && !isValidISODate(startDate)) {
-    errors.startDate = 'La fecha de inicio debe ser una fecha ISO válida.';
+    errors.startDate = 'La fecha de inicio debe ser una fecha ISO.';
   }
   if (endDate && !isValidISODate(endDate)) {
-    errors.endDate = 'La fecha de fin debe ser una fecha ISO válida.';
+    errors.endDate = 'La fecha de fin debe ser una fecha ISO.';
   }
   if (isValidISODate(startDate) && isValidISODate(endDate) && endDate < startDate) {
     errors.endDate = 'La fecha de fin no puede ser anterior a la fecha de inicio.';

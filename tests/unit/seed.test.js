@@ -45,15 +45,15 @@ describe('utilidad de simulación CRM', () => {
     expect(new Set(clients.map((c) => c.rut)).size).toBe(SEED_COUNT);
     for (const client of clients) {
       expect(isValidRut(client.rut)).toBe(true);
-      expect(['Activo', 'Prospecto', 'Corporativo', 'PyME', 'VIP']).toContain(client.category);
+      expect(['Activo', 'Prospecto', 'Corporativo', 'Pyme', 'VIP']).toContain(client.category);
       expect(client.pedidos).toBeUndefined();
       expect(client.targetDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(client.targetDate >= '1910-01-01').toBe(true);
       expect(client.targetDate <= localTodayISO()).toBe(true);
       expect([
         'Dependiente',
-        'Independiente Formal',
-        'Independiente Informal',
+        'Independiente formal',
+        'Independiente informal',
         'Jubilado',
         'Dueño/a de casa',
         'Estudiante',

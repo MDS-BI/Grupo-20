@@ -27,6 +27,7 @@ function funnelFor(documents, config) {
     Array.isArray(config?.statusLifecycle?.states) && config.statusLifecycle.states.length
       ? config.statusLifecycle.states
       : FALLBACK_STATES;
+  const labels = config?.statusLifecycle?.labels || {};
   const counts = new Map(states.map((status) => [normalizeText(status), 0]));
   for (const document of documents) {
     const key = normalizeText(document?.status);
@@ -34,7 +35,7 @@ function funnelFor(documents, config) {
   }
   return states.map((status) => ({
     status,
-    label: statusLabel(status),
+    label: labels[status] || labels[normalizeText(status)] || statusLabel(status),
     count: counts.get(normalizeText(status)) || 0,
   }));
 }

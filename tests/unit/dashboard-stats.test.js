@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { MODULE_CONFIG, setActiveConfig } from '../../src/module-config.js';
 import { formatCurrencyUsd, formatPercent } from '../../src/components/dashboard.js';
+import { computeDashboardStats } from '../../src/utils/marketing-stats.js';
 import { addEntity, addDocument, archiveEntity } from '../../src/storage.js';
 import { initApp } from '../../src/app.js';
 
@@ -62,7 +63,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     ]);
     expect(document.querySelector('.demo-note')).toBeNull();
     expect(
-      [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
+      [...document.querySelectorAll('.chart-grid .funnel-count')].map((el) => el.textContent)
     ).toEqual(['0', '0', '0', '0', '0', '0', '0', '0']);
     app.destroy();
   });
@@ -87,7 +88,7 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
       { value: '$250', label: 'Pipeline (USD)' },
     ]);
     expect(
-      [...document.querySelectorAll('.commercial-funnel .funnel-count')].map((el) => el.textContent)
+      [...document.querySelectorAll('.chart-grid .funnel-count')].map((el) => el.textContent)
     ).toEqual(['0', '0', '1', '1', '0', '0', '0', '0']);
 
     archiveEntity(client.id);
@@ -96,3 +97,54 @@ describe('panel de CRM Comercial sin datos de demostración', () => {
     app.destroy();
   });
 });
+
+describe('etiquetas del embudo sin migrar estados persistidos (T270)', () => {
+  it('usa statusLifecycle.labels solo para la etiqueta visible', () => {
+    const config = {
+      ...MODULE_CONFIG,
+      statusLifecycle: {
+        ...MODULE_CONFIG.statusLifecycle,
+        labels: { 'en negociacion': 'En negociación' },
+      },
+    };
+    const documents = [{ status: 'en negociacion', importe: 250 }];
+
+    const stats = computeDashboardStats({ entities: [], documents, config });
+
+    expect(stats.funnel.find((step) => step.status === 'en negociacion').label).toBe(
+      'En negociación'
+    );
+    expect(stats.funnel.find((step) => step.status === 'en negociacion').count).toBe(1);
+    expect(stats.wonDocuments).toBe(0);
+    expect(stats.pipelineTotal).toBe(250);
+    expect(documents[0].status).toBe('en negociacion');
+    expect(config.statusLifecycle.pendingStates).toEqual(
+      MODULE_CONFIG.statusLifecycle.pendingStates
+    );
+  });
+
+  it('muestra la etiqueta corregida en el panel sin alterar el valor almacenado', () => {
+    const config = {
+      ...MODULE_CONFIG,
+      statusLifecycle: {
+        ...MODULE_CONFIG.statusLifecycle,
+        labels: { 'en negociacion': 'En negociación' },
+      },
+    };
+    const client = createClient();
+    addDocument({ entity_id: client.entity_id, status: 'en negociacion', importe: 250 });
+    const app = initApp(document.getElementById('app'), { rawConfig: config });
+
+    const states = [...document.querySelectorAll('.chart-grid .funnel-state')].map(
+      (el) => el.textContent
+    );
+    expect(states).toContain('En negociación');
+    expect(states).not.toContain('En negociacion');
+    expect(loadStoredStatuses()).toContain('en negociacion');
+    app.destroy();
+  });
+});
+
+function loadStoredStatuses() {
+  return JSON.parse(localStorage.getItem('erp_documents') || '[]').map((doc) => doc.status);
+}

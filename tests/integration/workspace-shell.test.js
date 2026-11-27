@@ -1,8 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initApp } from '../../src/app.js';
 import { signIn } from '../helpers/auth-session.js';
+
+const chartInstances = [];
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+const originalGetComputedStyle = globalThis.getComputedStyle;
+const originalCanvasRenderingContext2D = globalThis.CanvasRenderingContext2D;
+
+vi.mock('chart.js/auto', () => ({
+  default: class {
+    constructor(context, config) {
+      this.context = context;
+      this.config = config;
+      this.data = config.data;
+      this.options = config.options;
+      this.update = vi.fn();
+      this.destroy = vi.fn();
+      chartInstances.push(this);
+    }
+  },
+}));
 
 let app;
 
@@ -143,6 +162,9 @@ describe('Selector de tema claro y oscuro', () => {
     expect(document.querySelector('#theme-toggle').getAttribute('aria-label')).toBe(
       'Cambiar a tema claro'
     );
+    expect(document.querySelector('#theme-toggle').getAttribute('title')).toBe(
+      'Cambiar a tema claro'
+    );
   });
 
   it('recupera el tema guardado al volver a cargar la aplicación', () => {
@@ -153,6 +175,9 @@ describe('Selector de tema claro y oscuro', () => {
     expect(document.querySelector('#theme-toggle').getAttribute('aria-label')).toBe(
       'Cambiar a tema claro'
     );
+    expect(document.querySelector('#theme-toggle').getAttribute('title')).toBe(
+      'Cambiar a tema claro'
+    );
   });
 
   it('define variables de fondo, tarjetas, textos y bordes para ambos temas', () => {
@@ -161,6 +186,116 @@ describe('Selector de tema claro y oscuro', () => {
     expect(css).toMatch(/:root\s*\{[\s\S]*--bg:[\s\S]*--surface:[\s\S]*--text:[\s\S]*--border:/);
     expect(css).toMatch(/\[data-theme='dark'\]/);
     expect(css).toMatch(/\[data-theme='dark'\] \{[\s\S]*?--bg:/);
+  });
+});
+
+describe('Gráficos adaptados al cambio de tema sin recarga (T281)', () => {
+  const themeColors = {
+    light: {
+      '--text': '#111111',
+      '--text-muted': '#555555',
+      '--surface': '#ffffff',
+      '--border': '#cccccc',
+      '--accent-color': '#0000ff',
+    },
+    dark: {
+      '--text': '#eeeeee',
+      '--text-muted': '#aaaaaa',
+      '--surface': '#222222',
+      '--border': '#444444',
+      '--accent-color': '#00ffff',
+    },
+  };
+
+  beforeEach(() => {
+    chartInstances.length = 0;
+    localStorage.clear();
+    document.documentElement.dataset.theme = 'light';
+    globalThis.CanvasRenderingContext2D = class {};
+    HTMLCanvasElement.prototype.getContext = () => ({});
+    globalThis.getComputedStyle = () => ({
+      getPropertyValue: (name) => themeColors[document.documentElement.dataset.theme]?.[name] || '',
+    });
+    localStorage.setItem(
+      'erp_entities',
+      JSON.stringify([
+        { id: 'entity-1', entity_id: 'ent-1', name: 'Cliente real' },
+        { id: 'entity-2', entity_id: 'ent-2', name: 'Lead real', estado_comercial: 'prospecto' },
+      ])
+    );
+    localStorage.setItem(
+      'erp_documents',
+      JSON.stringify([
+        {
+          id: 'sale-1',
+          entity_id: 'ent-1',
+          status: 'cerrado ganado',
+          startDate: '2026-10-10',
+          importe: 500,
+        },
+        { id: 'ticket-1', entity_id: 'ent-1', status: 'Abierto', ticket: true },
+        { id: 'prospect-1', entity_id: 'ent-2', status: 'prospecto' },
+      ])
+    );
+    mount();
+  });
+
+  afterEach(() => {
+    app?.destroy();
+    app = null;
+    chartInstances.length = 0;
+    localStorage.clear();
+    document.documentElement.dataset.theme = 'light';
+    globalThis.CanvasRenderingContext2D = originalCanvasRenderingContext2D;
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  });
+
+  it('actualiza temas, etiquetas y series en sitio con chart.update("none")', () => {
+    expect(chartInstances).toHaveLength(3);
+    const initialLabels = chartInstances.map((chart) => chart.data.labels.slice());
+    const initialValues = chartInstances.map((chart) =>
+      chart.data.datasets.map((dataset) => dataset.data.slice())
+    );
+    const toggle = document.querySelector('[data-action="toggle-theme"]');
+    expect(toggle.getAttribute('aria-label')).toBe('Cambiar a tema oscuro');
+    expect(toggle.getAttribute('title')).toBe('Cambiar a tema oscuro');
+
+    toggle.click();
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('erp_theme')).toBe('dark');
+    expect(chartInstances).toHaveLength(3);
+    expect(chartInstances.every((chart) => chart.destroy.mock.calls.length === 0)).toBe(true);
+    expect(
+      chartInstances.every((chart) => chart.update.mock.calls.some((args) => args[0] === 'none'))
+    ).toBe(true);
+    expect(chartInstances.map((chart) => chart.data.labels)).toEqual(initialLabels);
+    expect(
+      chartInstances.map((chart) => chart.data.datasets.map((dataset) => dataset.data))
+    ).toEqual(initialValues);
+
+    for (const chart of chartInstances) {
+      expect(chart.options.plugins.legend.labels.color).toBe('#eeeeee');
+      expect(chart.options.plugins.tooltip.backgroundColor).toBe('#222222');
+      expect(chart.options.plugins.tooltip.titleColor).toBe('#eeeeee');
+      expect(chart.options.plugins.tooltip.bodyColor).toBe('#aaaaaa');
+      expect(chart.options.plugins.tooltip.borderColor).toBe('#444444');
+      for (const scale of Object.values(chart.options.scales || {})) {
+        expect(scale.ticks.color).toBe('#aaaaaa');
+        expect(scale.grid.color).toBe('#444444');
+        expect(scale.border.color).toBe('#444444');
+      }
+    }
+    expect(chartInstances[0].data.datasets[0].backgroundColor).toBe('#00ffff');
+    expect(chartInstances[1].data.datasets[0].borderColor).toBe('#222222');
+    expect(chartInstances[2].data.datasets[0].backgroundColor).toBe('#00ffff');
+    expect(
+      document.querySelector('[data-action="toggle-theme"]').getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(document.querySelector('[data-action="toggle-theme"]').getAttribute('title')).toBe(
+      'Cambiar a tema claro'
+    );
   });
 });
 

@@ -22,7 +22,7 @@ describe('Alertas de tickets en la tabla de clientes (T221)', () => {
     expect(html).toContain('ticket-alert ticket-alert--review');
     expect(html).toContain('Ticket en revisión');
     expect(html).toContain('data-action="open-ticket" data-entity-id="e-1"');
-    expect(html).toContain('>Abrir Ticket</button>');
+    expect(html).toContain('>Abrir ticket</button>');
   });
 
   it('oculta la columna Código cuando la regla la declara oculta', () => {

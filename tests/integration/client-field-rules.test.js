@@ -77,8 +77,8 @@ describe('Declaración de campos del perfil de clientes (T035)', () => {
     ];
     const activityOptions = [
       'Dependiente',
-      'Independiente Formal',
-      'Independiente Informal',
+      'Independiente formal',
+      'Independiente informal',
       'Jubilado',
       'Dueño/a de casa',
       'Estudiante',

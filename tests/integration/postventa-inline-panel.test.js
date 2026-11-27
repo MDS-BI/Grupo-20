@@ -65,7 +65,7 @@ describe('Panel en línea de Nuevo Ticket (T237)', () => {
     expect(document.querySelector('#ticket-form')).toBeNull();
     expect(document.querySelector('.client-management-table')).toBeTruthy();
     expect(document.querySelector('[data-action="ticket-form"]').textContent).toContain(
-      'Nuevo Ticket'
+      'Nuevo ticket'
     );
   });
 

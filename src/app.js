@@ -57,7 +57,12 @@ import { renderTicketFormHtml } from './components/ticket-form.js';
 import { isTicket } from './utils/postventa.js';
 import { renderMarketingChatHtml } from './components/marketing-chat.js';
 import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
-import { destroyDashboardCharts, mountDashboardCharts } from './utils/dashboard-charts.js';
+import { computeDashboardChartData } from './utils/dashboard-chart-data.js';
+import {
+  destroyDashboardCharts,
+  mountDashboardCharts,
+  refreshDashboardChartTheme,
+} from './utils/dashboard-charts.js';
 import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
 import { registerSocialInteraction } from './utils/marketing-social.js';
 import {
@@ -169,7 +174,7 @@ const RANK_LABELS = {
   n4_manager: 'Nivel 4 - Gerente Comercial',
   n3_marketing: 'Nivel 3 - Ejecutivo de Marketing',
   n2_sales: 'Nivel 2 - Ejecutivo de Ventas',
-  n1_support: 'Nivel 1 - Atencion al Cliente',
+  n1_support: 'Nivel 1 - Atención al Cliente',
 };
 
 const THEME_KEY = 'erp_theme';
@@ -297,6 +302,7 @@ export function initApp(rootEl = null, options = {}) {
     theme: initialTheme,
     entities: [],
     documents: [],
+    dashboardChartData: null,
     view: initialView,
     routeSync: initialAuth.enabled || initialRoute.route !== null,
     pendingRoute: null,
@@ -661,7 +667,9 @@ export function initApp(rootEl = null, options = {}) {
       documents: activeDocuments(),
       config: state.config,
     });
-    return renderDashboardHtml(state.config, stats);
+    return renderDashboardHtml(state.config, stats, {
+      chartData: state.dashboardChartData,
+    });
   }
 
   function renderManageView() {
@@ -870,6 +878,7 @@ export function initApp(rootEl = null, options = {}) {
     const canManageTeam = uiCan('team:manage');
     const canManageCampaigns = uiCan('marketing:manage');
     return renderMarketingHtml(state.config, stats, {
+      chartData: state.dashboardChartData,
       entities: visibleEntities,
       documents: visibleDocuments,
       marketingConfig: state.marketingConfig,
@@ -1143,6 +1152,11 @@ export function initApp(rootEl = null, options = {}) {
 
   function render() {
     refreshData();
+    state.dashboardChartData = computeDashboardChartData({
+      entities: activeEntities(),
+      documents: activeDocuments(),
+      config: state.config,
+    });
     const executiveUsers = listExecutiveUsers();
     migrateExecutiveAssignments(executiveUsers, state.authEnabled);
     const executiveField = state.config.customFields?.entity?.find(
@@ -1743,7 +1757,7 @@ export function initApp(rootEl = null, options = {}) {
         state.theme = state.theme === 'dark' ? 'light' : 'dark';
         applyTheme(state.theme);
         saveTheme(state.theme);
-        mountDashboardCharts(rootEl);
+        refreshDashboardChartTheme();
         const themeLabel =
           state.theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
         rootEl.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {

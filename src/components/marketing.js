@@ -160,6 +160,7 @@ function renderPerformanceHtml({
 
 export function renderMarketingHtml(config, stats, options = {}) {
   const {
+    chartData = null,
     entities = [],
     documents = [],
     marketingConfig = {},
@@ -185,6 +186,8 @@ export function renderMarketingHtml(config, stats, options = {}) {
     title: 'Marketing',
     sectionClass: 'marketing-view',
     showQuickActions: false,
+    chartData,
+    funnelOnly: true,
   });
   const navigation = `
     <div class="marketing-sections" role="tablist" aria-label="Secciones de Marketing">

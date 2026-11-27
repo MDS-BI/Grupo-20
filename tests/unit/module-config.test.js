@@ -321,3 +321,30 @@ describe('Validación autocontenida del bloque marketing (T169)', () => {
     ).toContain('event');
   });
 });
+
+describe('Etiquetas corregidas del perfil activo (T289)', () => {
+  it('conserva el valor persistido «en negociacion» y solo corrige su etiqueta', () => {
+    const { config, warning } = loadModuleConfig(MODULE_CONFIG);
+
+    expect(warning).toBeNull();
+    expect(config.statusLifecycle.states).toContain('en negociacion');
+    expect(config.statusLifecycle.pendingStates).toEqual(['pendiente']);
+    expect(config.statusLifecycle.labels['en negociacion']).toBe('En negociación');
+    expect(validateConfig(MODULE_CONFIG)).toEqual([]);
+  });
+
+  it('corrige etiquetas visibles sin renombrar claves ni campos', () => {
+    const entityFields = MODULE_CONFIG.customFields.entity;
+    const keys = entityFields.map((field) => field.key);
+
+    expect(entityFields.find((field) => field.key === 'ejecutivo_asignado').label).toBe(
+      'Ejecutivo asignado'
+    );
+    expect(entityFields.find((field) => field.key === 'canal_contacto').label).toBe(
+      'Canal de contacto'
+    );
+    expect(keys).toContain('estado_comercial');
+    expect(keys).toContain('campaña');
+    expect(MODULE_CONFIG.labels.document).toBe('Interacción');
+  });
+});

@@ -16,7 +16,7 @@ export const SEED_MARKER = '[SIMULACIÓN CRM]';
 export const SEED_CODE_PREFIX = 'CLI-';
 export const SEED_COUNT = 57;
 
-export const SEED_CATEGORIES = ['Activo', 'Prospecto', 'Corporativo', 'PyME', 'VIP'];
+export const SEED_CATEGORIES = ['Activo', 'Prospecto', 'Corporativo', 'Pyme', 'VIP'];
 
 const NAMES = [
   'Andes',
@@ -36,8 +36,8 @@ const SUFFIXES = ['Servicios', 'Comercial', 'Industrial', 'Tecnología', 'Logís
 const LEGAL_FORMS = ['SpA', 'S.A.', 'Ltda.'];
 const RUBROS = [
   'Dependiente',
-  'Independiente Formal',
-  'Independiente Informal',
+  'Independiente formal',
+  'Independiente informal',
   'Jubilado',
   'Dueño/a de casa',
   'Estudiante',

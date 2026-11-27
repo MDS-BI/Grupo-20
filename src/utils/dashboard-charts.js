@@ -1,5 +1,4 @@
 import Chart from 'chart.js/auto';
-import { ventasPorMes, ticketsPorEstado, leadsPorCampana } from '../mockData.js';
 
 const SERIES_COLORS = ['#1d4ed8', '#16a34a', '#f59e0b', '#8b5cf6', '#ec4899', '#0ea5e9'];
 
@@ -13,8 +12,11 @@ function cssColor(name, fallback) {
 function readColors() {
   return {
     text: cssColor('--text', '#1f2430'),
+    textMuted: cssColor('--text-muted', '#64748b'),
+    surface: cssColor('--surface', '#ffffff'),
     grid: cssColor('--border', '#d8dce3'),
     accent: cssColor('--accent-color', '#1d4ed8'),
+    palette: SERIES_COLORS,
   };
 }
 
@@ -25,36 +27,53 @@ function baseOptions(colors) {
     interaction: { intersect: false, mode: 'index' },
     plugins: {
       legend: { labels: { color: colors.text, usePointStyle: true } },
-      tooltip: { enabled: true },
+      tooltip: {
+        enabled: true,
+        backgroundColor: colors.surface,
+        titleColor: colors.text,
+        bodyColor: colors.textMuted,
+        borderColor: colors.grid,
+        borderWidth: 1,
+      },
     },
     scales: {
-      x: { ticks: { color: colors.text }, grid: { color: colors.grid } },
-      y: { ticks: { color: colors.text }, grid: { color: colors.grid } },
+      x: {
+        ticks: { color: colors.textMuted },
+        grid: { color: colors.grid },
+        border: { color: colors.grid },
+      },
+      y: {
+        ticks: { color: colors.textMuted },
+        grid: { color: colors.grid },
+        border: { color: colors.grid },
+      },
     },
   };
 }
 
-function salesConfig(colors) {
+function salesConfig(colors, data) {
+  const rows = Array.isArray(data.salesByMonth) ? data.salesByMonth : [];
   const options = baseOptions(colors);
   return {
     type: 'bar',
     data: {
-      labels: ventasPorMes.map((row) => row.mes),
+      labels: rows.map((row) => row.mes),
       datasets: [
         {
           type: 'bar',
           label: 'Ingresos (USD)',
-          data: ventasPorMes.map((row) => row.ingresos),
+          data: rows.map((row) => row.ingresos),
           backgroundColor: colors.accent,
+          borderColor: colors.accent,
           borderRadius: 6,
           yAxisID: 'y',
         },
         {
           type: 'line',
           label: 'Negocios cerrados',
-          data: ventasPorMes.map((row) => row.negocios),
-          borderColor: SERIES_COLORS[1],
-          backgroundColor: SERIES_COLORS[1],
+          data: rows.map((row) => row.negocios),
+          borderColor: colors.palette[1],
+          backgroundColor: colors.palette[1],
           pointRadius: 4,
           tension: 0.3,
           yAxisID: 'y1',
@@ -68,55 +87,58 @@ function salesConfig(colors) {
         y: {
           ...options.scales.y,
           ticks: {
-            color: colors.text,
+            ...options.scales.y.ticks,
             callback: (value) => `$${Number(value) / 1000}k`,
           },
         },
         y1: {
+          ticks: { color: colors.textMuted },
+          grid: { color: colors.grid },
+          border: { color: colors.grid },
           position: 'right',
-          ticks: { color: colors.text },
-          grid: { display: false },
         },
       },
     },
   };
 }
 
-function ticketsConfig(colors) {
+function ticketsConfig(colors, data) {
+  const rows = Array.isArray(data.ticketsByStatus) ? data.ticketsByStatus : [];
+  const options = baseOptions(colors);
   return {
     type: 'doughnut',
     data: {
-      labels: ticketsPorEstado.map((row) => row.estado),
+      labels: rows.map((row) => row.estado),
       datasets: [
         {
-          data: ticketsPorEstado.map((row) => row.total),
-          backgroundColor: SERIES_COLORS.slice(0, ticketsPorEstado.length),
+          data: rows.map((row) => row.total),
+          backgroundColor: colors.palette.slice(0, rows.length),
+          borderColor: colors.surface,
         },
       ],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: options.responsive,
+      maintainAspectRatio: options.maintainAspectRatio,
       cutout: '65%',
-      plugins: {
-        legend: { labels: { color: colors.text, usePointStyle: true } },
-        tooltip: { enabled: true },
-      },
+      plugins: options.plugins,
     },
   };
 }
 
-function leadsConfig(colors) {
+function leadsConfig(colors, data) {
+  const rows = Array.isArray(data.leadsByCampaign) ? data.leadsByCampaign : [];
   const options = baseOptions(colors);
   return {
     type: 'bar',
     data: {
-      labels: leadsPorCampana.map((row) => row.campana),
+      labels: rows.map((row) => row.campana),
       datasets: [
         {
           label: 'Leads generados',
-          data: leadsPorCampana.map((row) => row.leads),
-          backgroundColor: SERIES_COLORS[0],
+          data: rows.map((row) => row.leads),
+          backgroundColor: colors.accent,
+          borderColor: colors.accent,
           borderRadius: 6,
         },
       ],
@@ -124,15 +146,18 @@ function leadsConfig(colors) {
     options: {
       ...options,
       indexAxis: 'y',
-      plugins: { ...options.plugins, legend: { display: false } },
+      plugins: {
+        ...options.plugins,
+        legend: { display: false, labels: { color: colors.text, usePointStyle: true } },
+      },
     },
   };
 }
 
-function configFor(type, colors) {
-  if (type === 'sales') return salesConfig(colors);
-  if (type === 'tickets') return ticketsConfig(colors);
-  if (type === 'leads') return leadsConfig(colors);
+function configFor(type, colors, data = {}) {
+  if (type === 'sales') return salesConfig(colors, data);
+  if (type === 'tickets') return ticketsConfig(colors, data);
+  if (type === 'leads') return leadsConfig(colors, data);
   return null;
 }
 
@@ -145,7 +170,7 @@ export function destroyDashboardCharts() {
   }
 }
 
-export function mountDashboardCharts(root = document) {
+export function mountDashboardCharts(root = document, data = {}) {
   destroyDashboardCharts();
   const canvases = root?.querySelectorAll?.('canvas[data-chart]') || [];
   if (!canvases.length || typeof CanvasRenderingContext2D === 'undefined') return;
@@ -154,8 +179,37 @@ export function mountDashboardCharts(root = document) {
     try {
       const context = canvas.getContext('2d');
       if (!context) continue;
-      const config = configFor(canvas.dataset.chart, colors);
-      if (config) charts.push(new Chart(context, config));
+      const config = configFor(canvas.dataset.chart, colors, data);
+      if (!config) continue;
+      const chart = new Chart(context, config);
+      chart.$erpDashboardChartType = canvas.dataset.chart;
+      chart.$erpDashboardChartData = data;
+      charts.push(chart);
     } catch {}
+  }
+}
+
+export function refreshDashboardChartTheme() {
+  const colors = readColors();
+  for (const chart of charts) {
+    const config = configFor(chart.$erpDashboardChartType, colors, chart.$erpDashboardChartData);
+    if (!config) continue;
+    if (chart.data && config.data) {
+      chart.data.labels = config.data.labels;
+      chart.data.datasets?.forEach((dataset, index) => {
+        const fresh = config.data.datasets[index];
+        if (!fresh) return;
+        dataset.label = fresh.label;
+        dataset.data = fresh.data;
+        dataset.backgroundColor = fresh.backgroundColor;
+        dataset.borderColor = fresh.borderColor;
+      });
+    }
+    if (chart.options) {
+      chart.options.plugins = config.options.plugins;
+      chart.options.scales = config.options.scales || chart.options.scales;
+      chart.options.indexAxis = config.options.indexAxis;
+    }
+    chart.update?.('none');
   }
 }

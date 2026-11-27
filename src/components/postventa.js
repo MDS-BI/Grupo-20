@@ -88,7 +88,7 @@ export function renderPostventaHtml(config, options = {}) {
     <section class="postventa-view">
       ${
         canCreate && !ticketFormOpen
-          ? '<button type="button" class="primary" data-action="ticket-form">Nuevo Ticket</button>'
+          ? '<button type="button" class="primary" data-action="ticket-form">Nuevo ticket</button>'
           : ''
       }
       <div class="postventa-cards">

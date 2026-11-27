@@ -35,14 +35,14 @@ export const MODULE_CONFIG = {
       {
         key: 'ejecutivo_asignado',
         type: 'select',
-        label: 'Ejecutivo Asignado',
+        label: 'Ejecutivo asignado',
         options: 'executiveUsers',
         emptyLabel: 'Sin asignar',
       },
       {
         key: 'canal_contacto',
         type: 'select',
-        label: 'Canal de Contacto',
+        label: 'Canal de contacto',
         options: ['llamada', 'correo', 'reunion', 'whatsapp'],
       },
       { key: 'rut', type: 'text', label: 'RUT' },
@@ -97,6 +97,9 @@ export const MODULE_CONFIG = {
       'automatico',
       'respondida',
     ],
+    labels: {
+      'en negociacion': 'En negociación',
+    },
     transitions: {},
     pendingStates: ['pendiente'],
   },
@@ -181,7 +184,7 @@ export const MODULE_CONFIG = {
       },
       targetDate: { order: 3, searchable: true },
       canal_contacto: {
-        label: 'Canal de Contacto',
+        label: 'Canal de contacto',
         required: true,
         order: 4,
         options: [
@@ -233,8 +236,8 @@ export const MODULE_CONFIG = {
         order: 5,
         options: [
           'Dependiente',
-          'Independiente Formal',
-          'Independiente Informal',
+          'Independiente formal',
+          'Independiente informal',
           'Jubilado',
           'Dueño/a de casa',
           'Estudiante',

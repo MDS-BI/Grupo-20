@@ -23,7 +23,7 @@ export const ticketsPorEstado = Object.freeze([
 
 export const leadsPorCampana = Object.freeze([
   Object.freeze({ campana: 'Lanzamiento Q4', leads: 148 }),
-  Object.freeze({ campana: 'Captación PyME', leads: 96 }),
+  Object.freeze({ campana: 'Captación Pyme', leads: 96 }),
   Object.freeze({ campana: 'Retención VIP', leads: 74 }),
   Object.freeze({ campana: 'Email navideño', leads: 112 }),
   Object.freeze({ campana: 'Webinars', leads: 58 }),
