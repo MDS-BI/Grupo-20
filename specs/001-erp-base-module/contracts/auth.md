@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23), incluidas las acciones de Postventa de US25. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se verifica contraseña ni se bloquea por intentos fallidos.
+Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23), incluidas las acciones de Postventa de US25 y el acceso por botones de FR-110. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se captura contraseña ni se bloquea por intentos fallidos.
 
 ## Almacenamiento
 
@@ -26,12 +26,12 @@ Objeto único con `userId`, `issuedAt`, `lastActivityAt` y `expiresAt`. No conti
 ## Operaciones de `src/auth.js`
 
 - `normalizeUsername(value)`: recorta y convierte a minúsculas para comparar nombres de usuario.
-- `login(username, password)`: normaliza el usuario; exige contraseña no vacía; solo acepta los cuatro usuarios demostrativos activos; crea `erp_session` y devuelve el usuario resuelto. Lanza `Ingresa una contraseña` si el campo está vacío y `Usuario no encontrado` si el usuario no es uno de los cuatro o está inactivo. No verifica hashes, no hay contraseñas incorrectas y no cuenta intentos fallidos.
+- `login(userId)`: busca el usuario activo por `id` en `erp_users`; crea `erp_session` y devuelve el usuario resuelto con su rango vigente. No acepta contraseña, no cuenta intentos fallidos y no produce `Ingresa una contraseña` ni `Usuario no encontrado`. Si el usuario no existe o está inactivo, no crea sesión.
 - `logout()`: elimina `erp_session`.
 - `getCurrentSession()`: devuelve la sesión vigente o `null` si falta, expiró o su usuario ya no existe o está inactivo.
 - `getCurrentUser()`: devuelve el usuario resuelto de la sesión vigente, incluido su `rank` actual.
 - `touchSession()`: actualiza `lastActivityAt` y `expiresAt` mientras la sesión siga vigente.
-- `createUser(values)`: exige `username` único normalizado, contraseña no vacía y `rank` válido; la contraseña no se persiste ni se verifica; solo se invoca desde la vista de administración autorizada.
+- `createUser(values)`: exige `username` único normalizado y `rank` válido; no recibe ni persiste contraseña; solo se invoca desde la vista de administración autorizada.
 - `updateUser(id, updates)`: permite editar `username`, `rank` y `active`; mantiene `usernameKey` sincronizado y rechaza duplicados.
 - `deactivateUser(id)`: fija `active = false` y elimina la sesión de ese usuario.
 
@@ -75,12 +75,13 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 
 ### `src/components/login.js`
 
-- Muestra solo los campos «Usuario» y «Contraseña» y el botón de ingreso, sin barra superior ni lateral.
-- Mantiene accesibles las rutas públicas de formulario de captura y chat.
-- Con la contraseña vacía muestra exactamente `Ingresa una contraseña`; con un usuario distinto de los cuatro demostrativos muestra exactamente `Usuario no encontrado`.
-- Cualquier contraseña no vacía es válida para `gerente`, `marketing`, `ventas` y `atencion`, sin distinción de mayúsculas ni espacios en el usuario.
+- Muestra solo botones `data-action="login-user"` con `data-user-id`, sin barra superior, lateral, campos de usuario ni contraseña.
+- Los cuatro usuarios semilla aparecen primero con las etiquetas exactas «Gerente», «Marketing», «Ventas» y «Atención al Cliente»; los demás usuarios activos aparecen detrás con su `username`, en orden de registro y sin reordenarse al recargar.
+- Los botones están centrados y organizados en dos columnas, con una fila por cada dos usuarios y una fila final cuando el total sea impar.
+- Los usuarios desactivados no generan botón; los usuarios creados por Gerencia se incorporan sin intervención adicional.
+- Mantiene accesibles las rutas públicas de formulario de captura y «Dudas y consultas».
 - Tras autenticarse, redirige a la vista internamente solicitada; si no hay una vista pendiente, abre el Panel.
-- Nunca muestra el menú del usuario ni acciones de administración.
+- No existen los mensajes `Ingresa una contraseña` ni `Usuario no encontrado`, y nunca muestra el menú del usuario ni acciones de administración.
 
 ### `src/components/users-admin.js`
 
@@ -89,14 +90,16 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 - Lista usuarios con `username`, `rank` y estado activo/inactivo.
 - Permite crear, editar, desactivar y asignar rango; el `select` de rango ofrece solo los cuatro rangos de la matriz.
 - Rechaza nombres de usuario duplicados según `normalizeUsername()` y no ofrece edición de la matriz.
+- No muestra ni exige contraseña al crear o editar usuarios; el nuevo usuario queda listo para iniciar sesión con su botón.
 
 ## Expectativas de Validación
 
-- Sin sesión, abrir una vista interna redirige a login; el formulario público y el chat siguen disponibles.
+- Sin sesión, abrir una vista interna redirige a login; el formulario público y «Dudas y consultas» siguen disponibles.
+- La pantalla de login ofrece un botón por usuario activo; pulsarlo crea la sesión con el rango vigente sin pedir contraseña.
 - Un usuario autenticado sin permiso para una vista ve «Acceso denegado» y vuelve al Panel sin ejecutar la acción.
 - Una operación denegada responde con `No tienes permiso para realizar esta acción`, incluso cuando se invoca directamente desde `src/storage.js` o desde un enlace profundo.
 - Ocultar un botón nunca es la única barrera: la capa de datos valida con `assertPermission()`.
-- No existe bloqueo por intentos fallidos: la contraseña vacía y el usuario inexistente solo muestran su mensaje exacto y no crean sesión.
+- No existe bloqueo por intentos fallidos y no se captura contraseña: un usuario inexistente o desactivado simplemente no ofrece botón ni crea sesión.
 - La sesión expira tras 8 horas de inactividad; «Cerrar sesión», la desactivación y la expiración eliminan `erp_session`.
 - La sesión persiste al recargar y al reabrir el navegador mientras no haya logout, desactivación ni expiración.
 - Un cambio de rango se refleja en la siguiente acción o recarga; la desactivación se refleja de inmediato.
