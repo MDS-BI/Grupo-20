@@ -36,7 +36,7 @@ describe('User Story 5 - invalid configuration fallback', () => {
   });
 
   it('does not show the warning for a valid configuration', () => {
-    mount({ moduleName: 'Ventas' });
+    mount({ moduleName: 'Ventas', theme: { accentColor: '#1D4ED8' } });
     expect(qs('config-warning').hidden).toBe(true);
     expect(qs('brand-name').textContent).toBe('Ventas');
   });

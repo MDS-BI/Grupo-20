@@ -9,6 +9,11 @@ export const MESSAGES = Object.freeze({
   noCampaignRecords: 'Sin registros para esta campaña.',
   permissionDenied: 'No tienes permiso para realizar esta acción',
   accessDenied: 'Acceso denegado',
+  quoteRegistered: 'Solicitud registrada correctamente.',
+  ticketRegistered: 'Ticket registrado correctamente.',
+  clientNotFound: 'No encontramos un cliente con ese correo o teléfono.',
+  accentFallback:
+    'Configuración del módulo: color de acento ausente o inválido; se usa el color integrado.',
 });
 
 export function exactFormatMessage(key) {

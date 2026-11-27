@@ -23,6 +23,7 @@ import {
   saveMarketingConfig,
   listTicketDocuments,
   createTicketDocument,
+  createPortalTicketDocument,
   changeTicketStatus,
   ValidationError,
 } from './storage.js';
@@ -49,6 +50,7 @@ import { renderEntityDetailHtml } from './components/entity-detail.js';
 import { renderCommercialSummaryHtml } from './components/commercial-summary.js';
 import { renderCaptureFormHtml, collectCaptureFormData } from './components/capture-form.js';
 import { createProspectFromCapture, CaptureError } from './utils/capture-prospect.js';
+import { renderClientPortalHtml, collectPortalFormData } from './components/client-portal.js';
 import { renderMarketingHtml } from './components/marketing.js';
 import { renderPostventaHtml } from './components/postventa.js';
 import { renderTicketFormHtml } from './components/ticket-form.js';
@@ -86,6 +88,7 @@ import { collectUserData, RANK_OPTIONS, renderUsersAdminHtml } from './component
 
 const ROUTE_VIEWS = new Set([
   'capture',
+  'client-portal',
   'marketing',
   'postventa',
   'summary',
@@ -95,6 +98,7 @@ const ROUTE_VIEWS = new Set([
 const VIEW_ROUTES = {
   dashboard: '',
   capture: 'capture',
+  'client-portal': 'client-portal',
   marketing: 'marketing',
   postventa: 'postventa',
   summary: 'summary',
@@ -168,7 +172,7 @@ const RANK_LABELS = {
 };
 
 function canViewRoute(role, view, manageTab = 'entity', fromUrl = false) {
-  if (view === 'capture') return true;
+  if (view === 'capture' || view === 'client-portal') return true;
   if (role === 'visitor') return false;
   if (view === 'detail')
     return (
@@ -282,6 +286,10 @@ export function initApp(rootEl = null, options = {}) {
     captureErrors: {},
     captureSubmitted: false,
     captureEntityId: null,
+    portalTab: 'quote',
+    portalDrafts: { quote: {}, support: {} },
+    portalErrors: {},
+    portalConfirmation: '',
     marketingConfig: { salesTeams: [], faq: [], campaigns: [] },
     marketingSection: 'team',
     teamFormValues: {},
@@ -397,7 +405,12 @@ export function initApp(rootEl = null, options = {}) {
     }
     const forceReplace = replace || Boolean(target.legacyPanel);
     refreshAuth({ touch: touchAuth });
-    if (state.authEnabled && target.view !== 'capture' && !state.currentUser) {
+    if (
+      state.authEnabled &&
+      target.view !== 'capture' &&
+      target.view !== 'client-portal' &&
+      !state.currentUser
+    ) {
       state.pendingRoute = target;
       state.view = 'login';
       state.manageTab = target.manageTab || 'entity';
@@ -898,10 +911,154 @@ export function initApp(rootEl = null, options = {}) {
     return renderUsersAdminHtml({ users, error: state.usersAdminError, editing });
   }
 
+  function portalConfigForQuote(config) {
+    const entityRules = config?.fieldRules?.entity || {};
+    return {
+      ...config,
+      entityDate: null,
+      fieldRules: {
+        ...config?.fieldRules,
+        entity: {
+          ...entityRules,
+          rut: { ...entityRules.rut, required: false, hidden: true },
+          targetDate: { ...entityRules.targetDate, required: false, hidden: true },
+          canal_contacto: { ...entityRules.canal_contacto, required: false, hidden: true },
+          contacto_telefono: {
+            ...entityRules.contacto_telefono,
+            required: false,
+            hidden: false,
+            when: undefined,
+            group: undefined,
+            format: 'phone',
+          },
+          contacto_correo: {
+            ...entityRules.contacto_correo,
+            required: false,
+            hidden: false,
+            when: undefined,
+            group: undefined,
+            format: 'email',
+          },
+        },
+      },
+    };
+  }
+
+  function renderPortalView() {
+    const tab = state.portalTab === 'support' ? 'support' : 'quote';
+    const draft = state.portalDrafts[tab] || {};
+    const values =
+      tab === 'support'
+        ? { ...draft, categories: state.config.postventa?.categoryOptions || [] }
+        : draft;
+    return renderClientPortalHtml({
+      tab,
+      values,
+      errors: state.portalErrors,
+      confirmation: state.portalConfirmation,
+    });
+  }
+
+  function portalSubmitError(err) {
+    return err?.errors?._form || err?.message || MESSAGES.required;
+  }
+
+  function handlePortalQuoteSubmit(formEl) {
+    const values = collectPortalFormData(formEl);
+    state.portalDrafts.quote = values;
+    const requiredKeys = [
+      'name',
+      'empresa',
+      'correo',
+      'telefono',
+      'servicio_interes',
+      'monto_estimado',
+    ];
+    if (
+      requiredKeys.some((key) => !String(values[key] ?? '').trim()) ||
+      values.consentimiento !== true
+    ) {
+      state.portalErrors = { _form: MESSAGES.required };
+      state.portalConfirmation = '';
+      render();
+      return;
+    }
+    const previousConfig = state.config;
+    const portalConfig = portalConfigForQuote(previousConfig);
+    try {
+      setActiveConfig(portalConfig);
+      const prospect = createProspectFromCapture(
+        {
+          name: values.name,
+          empresa: values.empresa,
+          contacto_correo: values.correo,
+          contacto_telefono: values.telefono,
+          consentimiento: true,
+        },
+        portalConfig
+      );
+      setActiveConfig(previousConfig);
+      addDocument(
+        {
+          entity_id: prospect.entity_id,
+          status:
+            previousConfig.statusLifecycle?.defaultStatus ||
+            previousConfig.statusLifecycle?.initialStatus ||
+            'pendiente',
+          notes: '',
+          servicio_interes: values.servicio_interes,
+          monto_estimado: Number(values.monto_estimado),
+        },
+        {
+          customFieldDefs: previousConfig.customFields?.document,
+          statusLifecycle: previousConfig.statusLifecycle,
+          documentRules: previousConfig.documentRules,
+          actor: 'public',
+        }
+      );
+      state.portalDrafts = { quote: {}, support: {} };
+      state.portalErrors = {};
+      state.portalConfirmation = MESSAGES.quoteRegistered;
+      refreshData();
+      render();
+    } catch (err) {
+      setActiveConfig(previousConfig);
+      state.portalErrors = { _form: portalSubmitError(err) };
+      state.portalConfirmation = '';
+      render();
+    }
+  }
+
+  function handlePortalSupportSubmit(formEl) {
+    const values = collectPortalFormData(formEl);
+    state.portalDrafts.support = values;
+    const requiredKeys = ['correo_cliente', 'categoria', 'descripcion'];
+    if (requiredKeys.some((key) => !String(values[key] ?? '').trim())) {
+      state.portalErrors = { _form: MESSAGES.required };
+      state.portalConfirmation = '';
+      render();
+      return;
+    }
+    try {
+      createPortalTicketDocument(values);
+      state.portalDrafts = { quote: {}, support: {} };
+      state.portalErrors = {};
+      state.portalConfirmation = MESSAGES.ticketRegistered;
+      refreshData();
+      render();
+    } catch (err) {
+      state.portalErrors = { _form: portalSubmitError(err) };
+      state.portalConfirmation = '';
+      render();
+    }
+  }
+
   function renderCurrentView() {
     switch (state.view) {
       case 'login':
-        return renderLoginHtml(listUsers(), state.loginError);
+        return renderLoginHtml(listUsers(), state.loginError, { config: state.config });
+      case 'client-portal':
+        return renderPortalView();
       case 'users-admin':
         return renderUsersAdminView();
       case 'marketing':
@@ -980,7 +1137,9 @@ export function initApp(rootEl = null, options = {}) {
     ) {
       state.documentEntityId = activeEntities()[0]?.entity_id || null;
     }
-    const warningHtml = `<div id="config-warning" class="config-warning" role="alert" ${state.warning ? '' : 'hidden'}>${state.warning ? escapeHtml(state.warning) : ''}</div>`;
+    const warningText =
+      state.warning || (state.config.theme?.accentColor ? '' : MESSAGES.accentFallback);
+    const warningHtml = `<div id="config-warning" class="config-warning" role="alert" ${warningText ? '' : 'hidden'}>${warningText ? escapeHtml(warningText) : ''}</div>`;
     const noticeHtml = state.routeNotice
       ? `<div id="route-notice" class="config-warning" role="alert">${escapeHtml(state.routeNotice)}</div>`
       : '';
@@ -988,8 +1147,9 @@ export function initApp(rootEl = null, options = {}) {
       state.authEnabled && state.currentUser
         ? `<div class="user-meta"><span id="current-user">${escapeHtml(state.currentUser.username)}</span><span id="current-rank">${escapeHtml(RANK_LABELS[state.currentUser.rank] || state.currentUser.rank || '')}</span>${canViewRoute(state.role, 'users-admin') ? '<button type="button" data-action="navigate" data-view="users-admin">Gestionar usuarios</button>' : ''}<button type="button" data-action="logout">Cerrar sesión</button></div>`
         : '';
-    const bareStandalone = state.view === 'login' || state.view === 'capture';
-    const wrappedStandalone = bareStandalone && enableAuth;
+    const bareStandalone =
+      state.view === 'login' || state.view === 'capture' || state.view === 'client-portal';
+    const wrappedStandalone = enableAuth && (state.view === 'login' || state.view === 'capture');
     rootEl.innerHTML = bareStandalone
       ? `${warningHtml}${noticeHtml}${wrappedStandalone ? `<main id="view-root">${renderCurrentView()}</main>` : renderCurrentView()}`
       : `${warningHtml}${noticeHtml}${userHtml}${renderShellHtml(state.config, activeNavKey())}`;
@@ -1507,6 +1667,21 @@ export function initApp(rootEl = null, options = {}) {
       case 'login-user':
         handleLoginUser(target.dataset.userId);
         break;
+      case 'portal-link':
+        event.preventDefault();
+        navigate('client-portal');
+        break;
+      case 'portal-tab': {
+        const currentForm = rootEl.querySelector('#portal-quote-form, #portal-support-form');
+        if (currentForm) {
+          state.portalDrafts[state.portalTab] = collectPortalFormData(currentForm);
+        }
+        state.portalTab = target.dataset.tab === 'support' ? 'support' : 'quote';
+        state.portalErrors = {};
+        state.portalConfirmation = '';
+        render();
+        break;
+      }
       case 'open-client-quick-view':
         state.quickViewEntityId = target.dataset.entityId;
         render();
@@ -1786,6 +1961,12 @@ export function initApp(rootEl = null, options = {}) {
         state.captureErrors = err.errors;
         render();
       }
+    } else if (event.target.id === 'portal-quote-form') {
+      event.preventDefault();
+      handlePortalQuoteSubmit(event.target);
+    } else if (event.target.id === 'portal-support-form') {
+      event.preventDefault();
+      handlePortalSupportSubmit(event.target);
     } else if (event.target.id === 'search-form') {
       event.preventDefault();
     } else if (event.target.id === 'team-form') {
@@ -1830,7 +2011,19 @@ export function initApp(rootEl = null, options = {}) {
     }
   }
 
+  function rememberPortalDraft(event) {
+    const form = event.target.closest?.('#portal-quote-form, #portal-support-form');
+    if (!form || !event.target.name) return;
+    const tab = form.id === 'portal-quote-form' ? 'quote' : 'support';
+    state.portalDrafts[tab] = {
+      ...state.portalDrafts[tab],
+      ...collectPortalFormData(form),
+    };
+    state.portalErrors = {};
+  }
+
   function handleInput(event) {
+    rememberPortalDraft(event);
     if (event.target.id === 'search-input') {
       state.searchQuery = event.target.value;
       updateSearchResults();
@@ -1848,6 +2041,7 @@ export function initApp(rootEl = null, options = {}) {
   }
 
   function handleChange(event) {
+    rememberPortalDraft(event);
     if (event.target.dataset?.action === 'ticket-status-change') {
       onTicketStatusChange(event.target);
       return;

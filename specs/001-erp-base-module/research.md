@@ -447,3 +447,41 @@
 - **Decisión**: Se añaden suites de integración para login por botones, consulta rápida, alertas de ticket y cierre perdido, y pruebas unitarias para la utilidad `lost-reason.js` y el orden de usuarios. Se actualizan las pruebas existentes que esperaban `#login-form`, contraseñas o los mensajes retirados, usando el mismo patrón Vitest/jsdom y `npm test`.
 - **Justificación**: Los cambios son visibles y afectan a reglas de negocio; el Principio II exige cobertura automática antes de dar por completado el incremento. Reutilizar el entorno actual evita Playwright u otra dependencia no aprobada.
 - **Alternativas consideradas**: Solo pruebas manuales (no verificables en CI); snapshots completos de HTML (frágiles ante cambios de estilo); introducir Cypress/Playwright (dependencia y configuración nuevas).
+
+## Decisiones de diseño (rediseño de acceso y Portal del Cliente, sesión 2026-11-27)
+
+### Decisión: La pantalla de inicio es una tarjeta centrada con grilla de dos columnas
+
+- **Decisión**: `src/components/login.js` envuelve los botones existentes `data-action="login-user"` en `.login-card`, centrada con sombras suaves, espaciado uniforme y paleta base azul/gris oscuro. La grilla sigue siendo de dos columnas y el enlace «Portal del Cliente» se coloca dentro de la tarjeta, por debajo de los botones de acceso, con estilo discreto. `theme.accentColor` se aplica a botones y resaltados de la tarjeta; un valor ausente o inválido usa el color integrado y muestra la advertencia ya existente de configuración (FR-038, FR-110, FR-117, SC-045).
+- **Justificación**: El usuario pidió conservar los botones en dos columnas pero dentro de una tarjeta de aspecto limpio y profesional, sin competencia visual con el acceso. Reutilizar tokens y la validación de configuración evita una segunda paleta y mantiene el fallback declarado (Principio III).
+- **Alternativas consideradas**: Botones sueltos sin tarjeta (contradice FR-117); botón del portal con el mismo peso que los accesos (compite visualmente); paleta nueva fija por componente (duplica tokens y rompe `theme.accentColor`).
+
+### Decisión: El Portal del Cliente es una ruta pública con dos pestañas en estado local
+
+- **Decisión**: Se registra `?view=client-portal` en `ROUTE_VIEWS`/`VIEW_ROUTES` y `src/components/client-portal.js` renderiza esa vista sin marco ERP, como `?view=capture`. `state.portalTab` toma solo `quote` o `support` y controla las pestañas «Solicitar cotización» y «Soporte Postventa»; no hay sesión, entrada en `NAV_ITEMS` ni permiso nuevo (FR-114).
+- **Justificación**: Una ruta explícita permite enlazar y probar el portal sin mezclar lógica con el login ni con el formulario público de captura. El estado local evita persistir borradores y mantiene las dos pestañas como una sola superficie pública (FR-069, FR-114).
+- **Alternativas consideradas**: Modal dentro de `login.js` (acopla dos responsabilidades y dificulta enlaces profundos); reutilizar `?view=capture` (el usuario pidió dos pestañas específicas, no el formulario de captura); añadir entrada a la barra lateral (contradice el acceso público sin sesión).
+
+### Decisión: «Solicitar cotización» reutiliza prospecto y documento con consentimiento
+
+- **Decisión**: El formulario exige «Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto estimado y una casilla de consentimiento. Al enviar, `createProspectFromCapture()` crea la Entidad en estado «Prospecto» con `consentimiento`, `consentimiento_fecha` y `consentimiento_version`, y `addDocument()` crea un `Documento` de cotización vinculado con `servicio_interes` y `monto_estimado` como campos personalizados. Sin consentimiento o con casillas vacías no se escribe nada (FR-071, FR-115).
+- **Justificación**: FR-115 describe exactamente un prospecto más un documento, ya modelados por Marketing. Reutilizar esas funciones concentra la validación de consentimiento y evita una rama de creación paralela que pudiera olvidar la versión del aviso (SC-044).
+- **Alternativas consideradas**: Crear una entidad sin documento (pierde servicio y monto); guardar la cotización en el chat (mezcla canales); duplicar la lógica de consentimiento en el portal (dos fuentes de verdad).
+
+### Decisión: «Soporte Postventa» busca por correo o teléfono y usa una función pública dedicada
+
+- **Decisión**: `src/utils/customer-portal.js` expone `findClientByEmailOrPhone()` y `buildPortalTicketValues()` como funciones puras. `createPortalTicketDocument()` en `src/storage.js` valida «Correo del cliente», «Categoría» y «Descripción del problema», exige una coincidencia única por correo o teléfono sobre los clientes almacenados y escribe un `Documento` con `ticket: true`, `entity_id`, `asunto` derivado de la categoría, `categoria`, estado `Abierto` y prioridad `Media`. Es una ruta pública explícita, equivalente a `chat:create_query`, que no exige ni concede `postventa:*` (FR-094, FR-104, FR-106, FR-114).
+- **Justificación**: El visitante debe poder registrar incidencias sin entrar al CRM, pero la matriz de permisos no cambia. Separar la función pública de `createTicketDocument()` mantiene la barrera interna para N1/N4 y evita «desactivar» comprobaciones en la ruta existente (FR-106, SC-044).
+- **Alternativas consideradas**: Llamar a `createTicketDocument()` desde el portal (requeriría dar `postventa:create` al visitante); añadir un permiso `portal:ticket` (contradice que no hay acciones canónicas nuevas); no validar en la capa de datos (deja la Protección solo en el botón, vulnerando FR-095).
+
+### Decisión: Sin coincidencia se rechaza sin mutar y las vistas internas se actualizan en el siguiente render
+
+- **Decisión**: Si ningún cliente coincide por correo ni teléfono, el portal muestra «No encontramos un cliente con ese correo o teléfono.» y no crea Ticket, Entidad ni ningún otro registro. Con datos válidos, la mutación escrita por `storage.js` se lee desde el arreglo ya cargado en el siguiente `render()`, de modo que Marketing, Postventa, las tarjetas y la ficha del cliente reflejan el cambio al volver al CRM, sin recarga ni contadores derivados (FR-114, FR-115, FR-116, SC-044).
+- **Justificación**: FR-116 exige probar ambos criterios antes de decidir y no modificar nada en caso de rechazo. La aplicación ya renderiza desde memoria tras cada mutación, por lo que no hace falta evento entre pestañas, sondeo ni clave de sincronización (FR-032, SC-004).
+- **Alternativas consideradas**: Crear un cliente automáticamente con el correo (contradice FR-116); buscar solo por correo (ignora el teléfono); recargar la página al volver (contradice «sin recargar» y añade estado innecesario).
+
+### Decisión: Verificación del rediseño y del portal con las suites existentes
+
+- **Decisión**: Se añaden pruebas unitarias para `customer-portal.js` y pruebas de integración para la tarjeta de acceso, el enlace al portal, las dos pestañas, el consentimiento, la búsqueda por correo/teléfono, el rechazo sin coincidencia, la creación de prospecto/cotización/ticket, la actualización al volver al CRM y el fallback del color de acento. Se usan Vitest/jsdom y los comandos `npm test`, `npm run lint` y `npm run format:check` (SC-044, SC-045).
+- **Justificación**: Los criterios SC-044 y SC-045 son verificables y el Principio II exige cobertura automática de los flujos visibles antes de completar el incremento; reutilizar el entorno actual evita nuevas dependencias.
+- **Alternativas consideradas**: Solo revisión visual (no cubre reglas de negocio); snapshots completos de HTML (frágiles ante cambios de estilo); introducir un marco E2E nuevo (dependencia no aprobada).

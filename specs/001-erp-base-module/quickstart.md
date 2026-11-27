@@ -155,14 +155,31 @@ La generación de identidad, marcas de tiempo, integridad referencial entre enti
 
 ## Validación de Inicio de Sesión y Sesión
 
-1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: deben aparecer solo los botones «Gerente», «Marketing», «Ventas» y «Atención al Cliente», centrados en dos columnas, sin Panel, Buscar, Resumen, Marketing ni Postventa; el formulario público de `?view=capture` y «Dudas y consultas» deben seguir disponibles.
-2. No debe existir campo «Usuario» ni «Contraseña», y no deben aparecer `Ingresa una contraseña` ni `Usuario no encontrado` en ningún estado del inicio de sesión.
+1. Abra la URL raíz del mismo documento HTML, sin parámetro `?view=` y sin host ni ruta de servidor, sin sesión: los botones «Gerente», «Marketing», «Ventas» y «Atención al Cliente» deben estar centrados en dos columnas dentro de una tarjeta con sombras suaves, espaciado uniforme y paleta azul/gris oscuro, sin Panel, Buscar, Resumen, Marketing ni Postventa; el formulario público de `?view=capture`, «Dudas y consultas» y el botón «Portal del Cliente» deben seguir disponibles.
+2. No debe existir campo «Usuario» ni «Contraseña», y no deben aparecer `Ingresa una contraseña` ni `Usuario no encontrado` en ningún estado del inicio de sesión. El botón «Portal del Cliente» debe estar dentro de la tarjeta, debajo de los botones de acceso y con un peso visual menor (SC-045).
 3. Pulse «Gerente»: debe iniciarse sesión directamente, mostrar «Nivel 4 - Gerente Comercial» y ofrecer «Gestionar usuarios» y «Cerrar sesión» en el menú. Repita con los otros tres botones para comprobar los rangos N3, N2 y N1.
 4. Como `gerente`, cree un usuario `ana.munoz` con rango Nivel 2: debe aparecer un quinto botón con ese nombre detrás de los cuatro iniciales. Recargue y confirme que el orden no cambia.
 5. Desactive `ana.munoz`: su botón debe desaparecer y, si tenía sesión, la siguiente acción o recarga debe redirigir a login.
 6. Recargue la página y luego cierre y vuelva a abrir el navegador con un usuario activo: la sesión debe conservarse mientras no haya logout, desactivación ni expiración.
 7. Abra directamente `?view=summary` sin sesión: debe redirigir a login y, tras pulsar «Gerente», debe abrirse el resumen solicitado.
 8. Pulse «Cerrar sesión»: la barra superior desaparece y vuelven a mostrarse los botones. No hay bloqueo por intentos fallidos; simule 8 horas de inactividad: la sesión debe expirar y redirigir a login.
+9. Configure `theme.accentColor` con un valor válido y compruebe que tiñe botones y resaltados de la tarjeta; deje el valor ausente o inválido y compruebe que vuelve al color integrado con advertencia visible (FR-038, FR-117, SC-045).
+10. Sin iniciar sesión, pulse «Portal del Cliente»: debe abrir `?view=client-portal` sin marco ERP y con exactamente las pestañas «Solicitar cotización» y «Soporte Postventa» (FR-114).
+
+## Validación del Portal del Cliente
+
+1. En `?view=client-portal`, confirme que el estado inicial muestra «Solicitar cotización» con «Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto estimado y casilla de consentimiento, todas obligatorias (FR-114, FR-115).
+2. Cambie a «Soporte Postventa»: deben aparecer solo «Correo del cliente», «Categoría» y «Descripción del problema», con las categorías declaradas en la configuración de Postventa (FR-114).
+3. En «Solicitar cotización», envíe sin consentimiento y luego con una casilla vacía: debe mostrarse `Completa los campos obligatorios.` y no deben crearse entidades ni documentos (FR-006, FR-115, SC-044).
+4. Envíe la cotización con datos válidos: debe aparecer `Solicitud registrada correctamente.`, crearse un prospecto con consentimiento fechado y versionado, y guardarse un `Documento` vinculado con el servicio y el monto estimado (FR-071, FR-115).
+5. Inicie sesión como `marketing` (N3) y abra Marketing: el prospecto y su cotización deben estar visibles sin recarga, junto con el resto de tarjetas y del embudo (SC-044).
+6. En «Soporte Postventa», envíe un correo y teléfono que no coincidan con ningún cliente: debe mostrarse `No encontramos un cliente con ese correo o teléfono.`, sin crear Ticket ni Entidad y sin modificar registros (FR-116).
+7. Envíe con el correo de un cliente existente y luego con su teléfono: cada envío debe mostrar `Ticket registrado correctamente.` y crear un `Documento` con `ticket: true`, estado `Abierto` y prioridad `Media` vinculado a ese cliente (FR-104, FR-114).
+8. Inicie sesión como `atencion` (N1) y abra Postventa: las dos tarjetas «Tickets abiertos» y la tabla deben incluir los tickets del portal; la ficha del cliente debe mostrarlos en su historial sin recarga (SC-044).
+9. Desde la consola, intente abrir `?view=postventa` sin sesión o llamar a `createTicketDocument()`: debe mostrar «Acceso denegado» o `No tienes permiso para realizar esta acción`; el portal no concedió permisos internos (FR-106).
+10. Recargue `?view=client-portal`: no debe conservarse la pestaña ni el borrador; las dos pestañas vuelven a su estado inicial (FR-114).
+
+La forma de estas reglas está en [`contracts/customer-portal.md`](contracts/customer-portal.md), [`contracts/auth.md`](contracts/auth.md), [`contracts/postventa.md`](contracts/postventa.md) y [`contracts/marketing.md`](contracts/marketing.md), y su efecto en el modelo en [`data-model.md`](data-model.md#11-rediseño-de-acceso-y-portal-del-cliente-2026-11-27).
 
 ## Validación de Consulta Rápida, Tickets en Clientes y Cierre Perdido
 
@@ -179,14 +196,14 @@ La generación de identidad, marcas de tiempo, integridad referencial entre enti
 11. Repita en un cliente convertido (`estado_comercial = ganado`): el motivo no debe exigirse.
 12. Compare panel y Marketing antes y después del cierre perdido: el embudo debe incluir el nuevo estado, pero «Cerrado ganado», «Pipeline (USD)», pendientes y real mensual no deben cambiar por ese documento.
 
-La forma de estas reglas está en [`contracts/client-ui.md`](contracts/client-ui.md), [`contracts/auth.md`](contracts/auth.md), [`contracts/postventa.md`](contracts/postventa.md) y [`contracts/entity-storage.md`](contracts/entity-storage.md), y su efecto en el modelo en [`data-model.md`](data-model.md#10-acceso-consulta-rápida-tickets-en-clientes-y-cierre-perdido).
+La forma de estas reglas está en [`contracts/client-ui.md`](contracts/client-ui.md), [`contracts/auth.md`](contracts/auth.md), [`contracts/postventa.md`](contracts/postventa.md), [`contracts/customer-portal.md`](contracts/customer-portal.md) y [`contracts/entity-storage.md`](contracts/entity-storage.md), y su efecto en el modelo en [`data-model.md`](data-model.md#10-acceso-consulta-rápida-tickets-en-clientes-y-cierre-perdido) y [`data-model.md`](data-model.md#11-rediseño-de-acceso-y-portal-del-cliente-2026-11-27).
 
 ## Validación de Mensajes Exactos y Rutas
 
 1. Busque un término sin coincidencias: la vista debe mostrar exactamente `No se encontraron resultados.` y no modificar registros.
 2. Guarde un cliente con RUT inválido y luego con un RUT repetido: debe mostrar `El RUT es inválido.` y `El RUT ya está registrado.`, respectivamente, sin crear ni modificar el registro.
 3. Deje vacía la casilla adicional de contacto o introduzca un formato inválido para el canal elegido: debe mostrar `Revisa el dato de contacto según el canal elegido.`.
-4. Abra `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, use Back/Forward y recargue: la vista solicitada debe resolverse desde `location.search` con la matriz de permisos; no existe `?view=panel` y el Panel se abre quitando el parámetro `view`.
+4. Abra `?view=summary`, `?view=capture`, `?view=client-portal`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`, use Back/Forward y recargue: la vista solicitada debe resolverse desde `location.search` con la matriz de permisos; `?view=capture` y `?view=client-portal` son públicas, no existe `?view=panel` y el Panel se abre quitando el parámetro `view`.
 5. En `?view=capture`, envíe el formulario con consentimiento y compruebe que el visitante ve exactamente `Prospecto registrado correctamente.`; en el chat sin coincidencia con una pregunta frecuente compruebe exactamente `Consulta registrada; un ejecutivo hará seguimiento.`.
 6. En «Rendimiento de campañas», seleccione una campaña sin registros y compruebe el mensaje exacto `Sin registros para esta campaña.`; una operación denegada debe mostrar exactamente `No tienes permiso para realizar esta acción`.
 

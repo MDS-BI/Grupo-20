@@ -1,4 +1,5 @@
 import { sanitizeText } from './utils/sanitize.js';
+import { buildPortalTicketValues } from './utils/customer-portal.js';
 import { matchesAny, matchesQuery, normalizeText } from './utils/search.js';
 import { isValidISODate, resolveEntityDateRule } from './utils/entity-date.js';
 import { isValidFormat, normalizeFieldValue } from './utils/field-formats.js';
@@ -829,6 +830,33 @@ export function createTicketDocument(values = {}) {
     createdAt: now,
     updatedAt: now,
     ownerId: values.ownerId || currentUser()?.id || null,
+  };
+  const documents = loadDocuments();
+  documents.push(ticket);
+  writeDocuments(documents);
+  return ticket;
+}
+
+export function createPortalTicketDocument(values = {}) {
+  const config = postventaConfig();
+  const result = buildPortalTicketValues(values, { entities: loadEntities(), config });
+  if (Object.keys(result.errors).length) throw new ValidationError(result.errors);
+  const now = new Date().toISOString();
+  const ticket = {
+    id: generateRecordId(),
+    entity_id: result.values.entity_id,
+    ticket: true,
+    startDate: '',
+    endDate: '',
+    notes: result.values.notes,
+    status: result.values.status,
+    asunto: result.values.asunto,
+    categoria: result.values.categoria,
+    prioridad: result.values.prioridad,
+    nota_resolucion: '',
+    createdAt: now,
+    updatedAt: now,
+    ownerId: null,
   };
   const documents = loadDocuments();
   documents.push(ticket);

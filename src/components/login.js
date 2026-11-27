@@ -7,7 +7,8 @@ const SEED_LABELS = {
   'user-atencion': 'Atención al Cliente',
 };
 
-export function renderLoginHtml(users = [], error = '') {
+export function renderLoginHtml(users = [], error = '', options = {}) {
+  const accentColor = options.config?.theme?.accentColor || '#1D4ED8';
   const message = error || 'Selecciona una opción para continuar.';
   const buttons = (Array.isArray(users) ? users : [])
     .filter((user) => user?.active === true)
@@ -17,10 +18,13 @@ export function renderLoginHtml(users = [], error = '') {
     })
     .join('');
   return `
-    <section class="login-view">
-      <h1>Iniciar sesión</h1>
-      <p id="login-message" role="alert">${escapeHtml(message)}</p>
-      <div class="login-grid" role="group">${buttons}</div>
+    <section class="login-card" style="--accent-color:${escapeHtml(accentColor)}">
+      <section class="login-view">
+        <h1>Iniciar sesión</h1>
+        <p id="login-message" role="alert">${escapeHtml(message)}</p>
+        <div class="login-grid" role="group">${buttons}</div>
+      </section>
+      <a class="portal-link" data-action="portal-link" href="?view=client-portal">Portal del Cliente</a>
     </section>
   `;
 }

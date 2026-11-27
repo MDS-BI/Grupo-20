@@ -17,7 +17,9 @@
 
 **Incremento anterior (2026-11-27, identidad visual y bloqueo de borrado)**: alinear `plan.md` y `data-model.md` con los cambios recientes de `spec.md`: iconos SVG monocromáticos uniformes en los cinco botones de la barra lateral (US14b), fondo `#F8FAFC` con tarjetas `#FFFFFF` y jerarquía visual de los tres botones del panel (US15a), con el color de acento aplicado también a la barra superior, la opción activa, la acción principal y los acentos de KPI (FR-038); y ajustar la baja definitiva de entidades para que solo proceda sin registros vinculados, con bloqueo `EntityHasRecordsError` y oferta de archivado cuando los haya (FR-003, FR-009, FR-103). La arquitectura, los módulos y las claves de almacenamiento existentes no cambian.
 
-**Incremento actual (2026-11-27, acceso, consulta rápida, tickets y cierre perdido)**: sustituir el login por botones de usuario activo; abrir una ficha rápida de solo lectura desde el nombre del cliente en «Buscar» y en la tabla «Clientes»; mostrar «Abrir Ticket» y alertas de ticket abierto/en revisión en esa tabla; y exigir un motivo rápido al pasar un documento de un prospecto a «Cerrado perdido». Se reutilizan `Entidad`, `Documento`, `erp_users`, `erp_session`, la matriz de permisos y las agregaciones existentes, sin nuevas dependencias, backend ni claves de `localStorage`.
+**Incremento anterior (2026-11-27, acceso, consulta rápida, tickets y cierre perdido)**: sustituir el login por botones de usuario activo; abrir una ficha rápida de solo lectura desde el nombre del cliente en «Buscar» y en la tabla «Clientes»; mostrar «Abrir Ticket» y alertas de ticket abierto/en revisión en esa tabla; y exigir un motivo rápido al pasar un documento de un prospecto a «Cerrado perdido». Se reutilizan `Entidad`, `Documento`, `erp_users`, `erp_session`, la matriz de permisos y las agregaciones existentes, sin nuevas dependencias, backend ni claves de `localStorage`.
+
+**Incremento actual (2026-11-27, rediseño de acceso y Portal del Cliente)**: presentar el login como una tarjeta centrada con paleta azul/gris oscuro, sombras suaves, botones en dos columnas y un botón discreto «Portal del Cliente»; abrir desde ahí una interfaz pública con «Solicitar cotización» y «Soporte Postventa». La cotización crea un prospecto con consentimiento y un `Documento` con servicio y monto estimado; el soporte localiza al cliente por correo o teléfono y crea un ticket `Abierto`/`Media`, visible de inmediato al volver al CRM, sin conceder acceso interno ni añadir dependencias, backend ni claves de almacenamiento.
 
 ## Resumen
 
@@ -114,6 +116,22 @@ Postventa es una vista adicional para atender a clientes que ya compraron. Cada 
 **Cierre perdido**: `module-config.js` declara `customFields.document.motivo_perdida` y un bloque opcional `documentRules.lostReason` con estado destino `cerrado perdido`, campo de entidad `estado_comercial`, valor `prospecto` y las cuatro opciones exactas. `src/utils/lost-reason.js` concentra la regla pura; `validateDocumentData()` la ejecuta antes de escribir y `document-form.js` muestra el desplegable solo cuando corresponda. El estado ya existe en `statusLifecycle.states`; no se añade a `pendingStates`, al conjunto activo de `marketing-stats.js` ni a `sales-team-metrics.js`.
 
 **Sin cambios de esquema**: ninguna de estas decisiones crea almacenamiento nuevo; el motivo es un campo personalizado del `Documento`, los tickets siguen siendo `Documento` con `ticket: true`, y la consulta rápida es estado local en memoria.
+
+### Contexto Técnico del incremento de rediseño de acceso y Portal del Cliente (2026-11-27)
+
+**Tarjeta de acceso**: `src/components/login.js` envuelve el contenido en `.login-card`, centrada en la pantalla con sombras suaves, espaciado uniforme y paleta base azul/gris oscuro; `src/styles.css` concentra los tokens de la tarjeta y aplica `theme.accentColor` solo a botones/resaltados, con retorno al valor integrado y advertencia visible si la configuración falta o es inválida (FR-038, FR-117).
+
+**Botones y portal**: los botones de usuario siguen en una grilla de dos columnas centrada (`data-action="login-user"`); «Portal del Cliente» se añade como enlace discreto dentro de `.login-card`, por debajo de esa grilla, sin competir visualmente con los accesos y sin cambiar `erp_users`, `erp_session`, `auth.js` ni la matriz de permisos (FR-110, FR-114, FR-117).
+
+**Ruta pública**: `?view=client-portal` se registra en `ROUTE_VIEWS`/`VIEW_ROUTES` y se renderiza sin marco ERP, igual que `?view=capture`; `state.portalTab` controla las pestañas «Solicitar cotización» y «Soporte Postventa», sin sesión ni entrada en `NAV_ITEMS` (FR-114).
+
+**Cotización del portal**: `src/components/client-portal.js` reutiliza `createProspectFromCapture()` para la Entidad en estado «Prospecto» con consentimiento explícito, fecha y versión del aviso, y llama a `addDocument()` para el `Documento` de cotización con `servicio_interes` y `monto_estimado` como campos personalizados; sin consentimiento o con casillas vacías no se escribe nada (FR-071, FR-115).
+
+**Soporte del portal**: `src/utils/customer-portal.js` concentra la búsqueda pura por correo o teléfono y la construcción de valores del ticket; `createPortalTicketDocument()` en `src/storage.js` valida los campos, exige una coincidencia y escribe un `Documento` con `ticket: true`, `entity_id` del cliente encontrado, estado `Abierto` y prioridad `Media`. Es un camino público explícito, análogo a `chat:create_query`, y NO concede `postventa:*` ni acceso a la vista interna (FR-094, FR-104, FR-106, FR-114).
+
+**Sin coincidencia y actualización inmediata**: si no hay coincidencia por correo ni teléfono se muestra «No encontramos un cliente con ese correo o teléfono.» y no se muta nada; cuando hay coincidencia, la mutación pasa por `storage.js` y el siguiente render lee el mismo arreglo en memoria, de modo que al volver al CRM el prospecto, Marketing, Postventa y la ficha del cliente reflejan los cambios sin recarga (FR-114, FR-115, FR-116, SC-044).
+
+**Sin esquema nuevo**: no se añaden claves de `localStorage`, permisos canónicos ni dependencias; las dos pestañas son estado local, el prospecto es `Entidad`, la cotización y el ticket son `Documento`, y la búsqueda de cliente recorre una sola vez el arreglo ya cargado (FR-032, SC-004).
 
 ### Aclaraciones integradas (sesión 2026-11-01)
 
@@ -234,6 +252,14 @@ Postventa es una vista adicional para atender a clientes que ya compraron. Cada 
 - La tabla «Clientes» ofrece «Abrir Ticket» para N1/N4 y alertas «Ticket abierto» en naranja y «Ticket en revisión» en azul para los rangos que pueden consultar los tickets de cada cliente; el botón navega a Postventa con el cliente preseleccionado (FR-112).
 - «Cerrado perdido» es un estado de `Documento`. Solo cuando la entidad esté en `estado_comercial = prospecto`, la transición exige uno de «Precio alto», «Eligió competencia», «Sin presupuesto» o «No responde»; sin selección no se guarda. El motivo se guarda en el documento, aparece en el historial y el estado solo se muestra en el embudo, sin afectar ventas, real mensual ni pendientes (FR-113).
 
+### Aclaraciones integradas (sesión 2026-11-27, rediseño de acceso y Portal del Cliente)
+
+- «Portal del Cliente» abre una interfaz pública sin sesión con exactamente dos pestañas: «Solicitar cotización» (Nombre, Empresa, Correo, Teléfono y Servicio de interés con monto estimado, todas obligatorias) y «Soporte Postventa» (Correo del cliente, Categoría y Descripción del problema); los cambios se reflejan al volver al CRM (FR-114).
+- «Solicitar cotización» crea un prospecto con los datos capturados y guarda el servicio y el monto estimado como un `Documento` de cotización, con consentimiento explícito registrado con fecha y versión del aviso; sin consentimiento o con casillas vacías no se crea ningún registro (FR-071, FR-115).
+- «Soporte Postventa» busca el cliente por correo o teléfono y guarda un ticket vinculado en estado `Abierto` y prioridad `Media`; sin coincidencia por ambos criterios se rechaza con un mensaje visible y claro, sin crear ni modificar registros (FR-104, FR-114, FR-116).
+- La pantalla de inicio conserva los botones de acceso en dos columnas, ahora dentro de una tarjeta centrada con sombras suaves, espaciado uniforme y paleta azul/gris oscuro; el botón del portal queda por debajo, de forma discreta (FR-110, FR-117).
+- El color de acento configurable se aplica a botones y resaltados de la tarjeta; el resto de la paleta permanece fijo y un valor ausente o inválido retrocede al color integrado con la advertencia de configuración (FR-038, FR-117).
+
 ### Ajustes posteriores al análisis (2026-11-24)
 
 - FR-005 se limita a búsqueda/ficha; la pantalla de gestión sigue sin lista de entidades conforme a FR-016.
@@ -287,9 +313,16 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 - Seguridad (consulta rápida y tickets): interacciones y tickets se filtran con `can()` antes de renderizarse, y «Abrir Ticket» solo se ofrece con `postventa:create`; `createTicketDocument()` sigue validando en la capa de datos (FR-094, FR-095, FR-106).
 - Calidad (cierre perdido): `documentRules.lostReason` y `src/utils/lost-reason.js` mantienen la regla declarada y verificable; `validateDocumentData()` es el único punto que bloquea la escritura y `document-form.js` deriva de la misma regla la visibilidad del campo (FR-113).
 - Pruebas (cierre perdido): se cubren opciones exactas, cliente prospecto frente a cliente convertido, ausencia de motivo, persistencia en el historial y no alteración de ventas, real mensual, embudo ni pendientes (SC-043).
-- Rendimiento (incremento actual): las alertas y la consulta rápida derivan de los arreglos ya cargados en memoria en una sola pasada por vista, sin contadores persistidos ni recálculos redundantes (FR-032, SC-004).
+- Rendimiento (incremento anterior): las alertas y la consulta rápida derivan de los arreglos ya cargados en memoria en una sola pasada por vista, sin contadores persistidos ni recálculos redundantes (FR-032, SC-004).
+- Gobernanza: no existe `.specify/memory/constitution.md`; se aplican los principios ya registrados en esta sección como restricciones del proyecto, sin inventar una constitución externa.
+- Calidad (rediseño y portal): `login.js` concentra la tarjeta y el enlace al portal, `client-portal.js` concentra las dos pestañas y `customer-portal.js` mantiene la búsqueda y la construcción del ticket como funciones puras, sin duplicar reglas ni añadir dependencias (FR-114, FR-117).
+- Pruebas (rediseño y portal): se cubren las dos pestañas, todas las casillas obligatorias, el consentimiento, la búsqueda por correo y por teléfono, la ausencia de coincidencia, la creación de prospecto/cotización/ticket, la actualización al volver al CRM y el fallback del color de acento (SC-044, SC-045).
+- Experiencia de Usuario (rediseño y portal): la tarjeta mantiene los botones centrados en dos columnas sin campos de usuario/contraseña, el botón del portal es discreto, los mensajes de error usan texto claro y las vistas públicas conservan estados vacíos y sanitización (FR-110, FR-114, FR-117).
+- Seguridad (portal): `createPortalTicketDocument()` valida en la capa de datos sin exigir `postventa:create` porque el actor es `visitor`, pero no modifica la matriz ni habilita la vista interna; `createTicketDocument()` sigue exigiendo `postventa:create` para Atención al Cliente y Gerencia (FR-094, FR-106, FR-114).
+- Rendimiento (rediseño y portal): la búsqueda de cliente y la revalidación de la tarjeta recorren una sola vez los arreglos ya cargados y no escriben resultados derivados ni contadores (FR-032, SC-004).
 
-**Reverificación post-diseño (Fase 1)**: APROBADA. Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación explícita y bloquean la baja con `EntityHasRecordsError` cuando hay registros vinculados. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. La tercera tanda añade presentación declarativa (`order`, `placeholder` y opciones con `{ value, label }`) reutilizando el mismo `module-config.js` y el registro de formatos existente: los valores almacenados, las condiciones `when` y la clave `rubro` no cambian, las pistas grises son solo atributos de ejemplo y la unicidad del RUT sigue una sola regla normalizada. No se introducen dependencias ni violaciones de la constitución.
+**Reverificación post-diseño (Fase 1)**: APROBADA.
+Los artefactos de diseño (research, data-model, contratos, quickstart) mantienen la separación entre almacenamiento base y dominio, validan la unicidad de `code`, preservan los valores huérfanos de campos personalizados, documentan el fallback con advertencia ante configuración inválida y exigen confirmación explícita y bloquean la baja con `EntityHasRecordsError` cuando hay registros vinculados. La regla de fecha y las nuevas reglas de perfil se declaran en `module-config.js` mediante `entityDate.required`, `fieldRules` y `detailPolicy`; la validación de RUT reutiliza la lógica ya existente en la semilla, extraída a un registro local de formatos, sin añadir dependencias. El comportamiento base permanece intacto cuando no hay reglas, los borradores del formulario se conservan al cambiar de día y de canal, y se mantienen pruebas unitarias/de integración para los flujos visibles. La tercera tanda añade presentación declarativa (`order`, `placeholder` y opciones con `{ value, label }`) reutilizando el mismo `module-config.js` y el registro de formatos existente: los valores almacenados, las condiciones `when` y la clave `rubro` no cambian, las pistas grises son solo atributos de ejemplo y la unicidad del RUT sigue una sola regla normalizada. No se introducen dependencias ni violaciones de la constitución.
 
 **Reverificación post-diseño del incremento de Marketing**: APROBADA. El marketing reutiliza `Entidad` y `Documento` con un campo `estado_comercial` declarado y reglas `marketing.automationRules`, sin esquema nuevo ni dependencias: las agregaciones se calculan en una utilidad pura y el embudo se reutiliza del panel. La captura pública se resuelve como vista autónoma en la misma aplicación sin backend, documentando la limitación de mismo origen. La barra lateral incluye Marketing; solo se retiran Clientes e Interacciones y se compensa con acciones rápidas, de modo que la navegación y el marco siguen siendo consistentes. Las pruebas unitarias y de integración cubren contadores, embudo, consentimiento, automatización y navegación; los estados vacíos y la leyenda accesible del embudo cumplen el Principio III.
 
@@ -307,6 +340,8 @@ _COMPROBACIÓN: Debe pasar antes de la investigación de la Fase 0. Reverificar 
 
 **Reverificación post-diseño del incremento de acceso, consulta rápida, tickets y cierre perdido (2026-11-27)**: APROBADA. El login reutiliza `erp_users` y `erp_session`, y elimina la captura de contraseña sin cambiar la resolución del rango ni la expiración. La consulta rápida y las alertas derivan de los arreglos ya cargados, filtran con la matriz de permisos y reutilizan componentes, estados vacíos y sanitización existentes. El motivo de cierre perdido se declara en `module-config.js`, se valida en `validateDocumentData()` antes de escribir y se persiste como campo personalizado del `Documento`, sin nueva clave ni esquema; las métricas siguen leyendo solo «Cerrado ganado», el conjunto activo y `pendingStates`, por lo que el estado nuevo no altera cifras. No hay dependencias nuevas ni violaciones de la constitución.
 
+**Reverificación post-diseño del incremento de rediseño de acceso y Portal del Cliente (2026-11-27)**: APROBADA. El rediseño es presentacional y reutiliza `theme.accentColor`, `erp_users` y `erp_session`, sin tocar autenticación, expiración ni matriz de permisos. La nueva ruta pública renderiza el portal sin marco ERP; la cotización reutiliza `createProspectFromCapture()` y `addDocument()` con consentimiento, y el soporte escribe un `Documento` de ticket mediante una función dedicada de `storage.js` que valida la coincidencia por correo o teléfono sin conceder `postventa:*` al visitante. No hay claves de `localStorage`, acciones canónicas, dependencias ni esquemas nuevos; las actualizaciones se leen del arreglo ya cargado en el siguiente render. La búsqueda y la validación son puras y verificables, y los contratos y `quickstart.md` cubren los casos de FR-114, FR-115, FR-116, FR-117, SC-044 y SC-045.
+
 ## Estructura del Proyecto
 
 ### Documentación (esta funcionalidad)
@@ -320,6 +355,7 @@ specs/001-erp-base-module/
 ├── contracts/
 │   ├── auth.md
 │   ├── client-ui.md
+│   ├── customer-portal.md
 │   ├── entity-storage.md
 │   ├── marketing.md
 │   └── postventa.md
@@ -355,7 +391,8 @@ src/
 │   ├── marketing-campaigns.js (campañas, atribución, acciones y solapamientos)
 │   ├── marketing-performance.js (indicadores globales y por campaña)
 │   ├── postventa.js (discriminador de tickets, agregaciones y validaciones puras del formulario)
-│   └── lost-reason.js (regla pura del motivo obligatorio en cierres perdidos de prospectos)
+│   ├── lost-reason.js (regla pura del motivo obligatorio en cierres perdidos de prospectos)
+│   └── customer-portal.js (búsqueda pura de cliente por correo/teléfono y valores del ticket público)
 └── components/
     ├── shell.js        (marco del espacio de trabajo: barra superior, logotipo SVG, barra lateral con iconos SVG monocromáticos, estado de módulo activo)
     ├── dashboard.js    (vista de inicio: tres acciones rápidas en una fila con jerarquía visual + tarjetas en vivo; opción para ocultar solo las acciones rápidas en Marketing)
@@ -367,15 +404,16 @@ src/
     ├── capture-form.js (formulario público autónomo con consentimiento, «Dudas y consultas» y creación de prospecto)
     ├── marketing-social.js (registro y consulta de interacciones en redes)
     ├── marketing-chat.js   («Dudas y consultas»: preguntas frecuentes, respuestas rápidas y consultas de seguimiento)
-    ├── login.js            (pantalla de inicio de sesión sin marco ERP; rutas públicas de captura y «Dudas y consultas»)
+    ├── login.js            (tarjeta de acceso centrada con botones en dos columnas y enlace discreto al Portal del Cliente; sin marco ERP)
     ├── users-admin.js      (alta, edición, desactivación y asignación de rango solo para Nivel 4)
     ├── postventa.js        (vista de Postventa: «Nuevo Ticket», tarjetas, tabla y cambios de estado)
     ├── ticket-form.js      (único formulario de «Nuevo Ticket», renderizado dentro del panel en línea de Postventa)
-    └── client-quick-view.js (consulta rápida de solo lectura del cliente con compras, historial y tickets permitidos)
+    ├── client-quick-view.js (consulta rápida de solo lectura del cliente con compras, historial y tickets permitidos)
+    └── client-portal.js    (interfaz pública con pestañas «Solicitar cotización» y «Soporte Postventa»)
 
 tests/
-├── unit/          (incluye entity-date, validación de rango, marketing-stats, postventa, orden de usuarios y lost-reason)
-├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública, postventa, panel en línea del ticket, cancelación con cambios, tres acciones rápidas del panel, iconos SVG de navegación, jerarquía visual, login por botones, consulta rápida, alertas de ticket y cierre perdido)
+├── unit/          (incluye entity-date, validación de rango, marketing-stats, postventa, orden de usuarios, lost-reason y customer-portal)
+├── integration/   (incluye etiqueta, min/max, cambio de día, marketing, captura pública, postventa, panel en línea del ticket, cancelación con cambios, tres acciones rápidas del panel, iconos SVG de navegación, jerarquía visual, login por botones, tarjeta de acceso, Portal del Cliente, consulta rápida, alertas de ticket y cierre perdido)
 └── setup/
 ```
 
@@ -401,6 +439,8 @@ tests/
 
 **Decisión adicional (sesión 2026-11-27, acceso, consulta rápida, tickets y cierre perdido)**: el login pasa a una grilla de botones derivada de `erp_users`, conservando la sesión y la matriz; no quedan campos ni mensajes de contraseña. La consulta rápida se resuelve con un componente nuevo de solo lectura y estado local, y las alertas de tickets se derivan de los documentos visibles en una sola pasada, sin nueva persistencia. Para el cierre perdido se conserva el estado `cerrado perdido` ya declarado en `statusLifecycle.states` y se añade `customFields.document.motivo_perdida` más un bloque opcional `documentRules.lostReason`; la validación vive en una utilidad pura y se ejecuta desde `validateDocumentData()`, por lo que una llamada directa a `storage.js` tampoco puede guardar el cambio sin motivo. La regla se limita a entidades con `estado_comercial = prospecto` y el estado nuevo no se agrega a agregaciones de ventas, pipeline ni pendientes.
 
+**Decisión adicional (sesión 2026-11-27, rediseño de acceso y Portal del Cliente)**: `login.js` pasa a renderizar una tarjeta centrada con tokens de color ya existentes y un enlace discreto a `?view=client-portal`, sin alterar la identidad ni la matriz. El nuevo `client-portal.js` usa `state.portalTab` para alternar dos formularios públicos: el de cotización reutiliza `createProspectFromCapture()` y `addDocument()` con consentimiento, y el de soporte usa `customer-portal.js` para buscar al cliente por correo o teléfono y `createPortalTicketDocument()` para escribir un ticket `Abierto`/`Media`. Esta última función es una ruta pública deliberada que no exige ni concede `postventa:create`; la vista interna de Postventa y `createTicketDocument()` conservan sus comprobaciones. No hay nuevas claves, dependencias ni acciones canónicas; las vistas internas solo observan los mismos arreglos en memoria tras la mutación.
+
 ## Seguimiento de Complejidad
 
 Este plan no introdujo violaciones de la constitución. La sesión 2026-11-23 tampoco añade dependencias: reutiliza `Date` nativo, el sistema de configuración existente, la lógica de RUT ya presente en la semilla y el mismo patrón de pruebas Vitest/jsdom. Las contrapartidas registradas son un temporizador de baja frecuencia (una vez al día) para mantener el límite visible actualizado, y una capa declarativa adicional (`fieldRules`/`detailPolicy`) que se resuelve en un único punto y no modifica el comportamiento de los módulos que no la declaran. El bloqueo de ficha reutiliza el validador de guardado, por lo que no añade una segunda fuente de verdad. La tercera tanda tampoco añade dependencias: `order`, `placeholder` y `options` con valor y etiqueta se resuelven en el mismo punto de configuración, las pistas son texto de ejemplo sin persistencia, y la aceptación de dos formatos de RUT aprovecha el normalizador ya existente en `field-formats.js`.
@@ -421,6 +461,8 @@ El incremento de identidad visual y borrado no añade dependencias ni claves: re
 
 El incremento de acceso, consulta rápida, tickets y cierre perdido no añade dependencias ni claves de almacenamiento. La contrapartida principal es que el orden de los botones de login depende del orden de creación en `erp_users` y debe hacerse estable con los cuatro usuarios semilla primero; que la consulta rápida y las alertas recalculan desde el arreglo en memoria en cada vista, evitando contadores persistidos pero exigiendo una sola pasada; y que la regla de cierre perdido añade una validación condicional a `validateDocumentData()`, con una utilidad pura compartida por formulario y capa de datos para no duplicar opciones ni mensajes.
 
+El incremento de rediseño de acceso y Portal del Cliente no añade dependencias, claves ni permisos. La contrapartida es que la tarjeta depende de `theme.accentColor` y debe conservar su fallback con advertencia; que el portal público es una ruta sin marco ERP que comparte el mismo `localStorage` del navegador, con la limitación de same-origin ya documentada para la captura; y que la creación pública de tickets exige una función dedicada en `storage.js` para no relajar `postventa:create`, manteniendo una sola estructura de `Documento` y una sola pasada de búsqueda por correo/teléfono.
+
 ## Revisión de la Lista de Verificación Pendiente
 
 Los cuatro elementos marcados como pendientes en `checklists/requirements.md` se revisaron el 2026-11-24: «Sin detalles de implementación», «Escrita para partes interesadas no técnicas», «Los criterios de éxito son agnósticos a la tecnología» y «No hay filtración de detalles de implementación». Se aceptaron por instrucción del usuario porque las referencias técnicas (`storage.js`, `localStorage`, `select`, `permissions:edit`) y la estructura de archivos concreta se solicitaron explícitamente, y SC-003 es una prueba de usabilidad no automatizable. Esta decisión no bloquea la implementación: los detalles se concentran en `plan.md` y en los contratos de Phase 1, mientras que la especificación conserva los escenarios de usuario y los criterios medibles como fuente funcional.
@@ -434,3 +476,4 @@ Los cuatro elementos marcados como pendientes en `checklists/requirements.md` se
 | 2026-11-26 | Se actualizan `research.md`, `data-model.md`, `contracts/postventa.md`, `contracts/marketing.md`, `contracts/entity-storage.md` y `quickstart.md` para reflejar ambas decisiones.                                                                  | Alinear Phase 0/Phase 1 con la especificación aclarada antes de regenerar tareas.                                                           |
 | 2026-11-27 | Se actualizan `plan.md` y `data-model.md` con los iconos SVG uniformes de la barra lateral, el fondo `#F8FAFC` con tarjetas `#FFFFFF` y la jerarquía de botones del panel, además del bloqueo de borrado de entidades con registros vinculados.    | Reflejar en los artefactos de diseño los cambios recientes de `spec.md` (FR-003, FR-009, FR-038, US14b, US15a) sin alterar la arquitectura. |
 | 2026-11-27 | Se planifican login por botones, ficha rápida del cliente, «Abrir Ticket» con alertas en la tabla de clientes y motivo obligatorio para «Cerrado perdido»; se actualizan Phase 0 y Phase 1.                                                        | Alinear el plan con las cinco clarificaciones de la sesión 2026-11-27 antes de regenerar tareas.                                            |
+| 2026-11-27 | Se planifica la tarjeta de acceso centrada con color de acento configurable y el Portal del Cliente con cotización, ticket público `Abierto`/`Media` y rechazo sin coincidencia; se actualizan Phase 0 y Phase 1.                                  | Alinear el plan con las cinco clarificaciones adicionales de la sesión 2026-11-27 (FR-114 a FR-117, SC-044, SC-045).                        |

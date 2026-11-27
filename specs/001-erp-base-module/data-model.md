@@ -413,3 +413,46 @@ documentRules: {
 - «Cerrado ganado», `computeSalesTeamMetrics()` y `computeDashboardStats()` siguen ignorando el nuevo estado: no suma al real mensual, al total de ventas ni a pendientes; el estado solo aparece en el embudo por estados de documento (SC-043).
 
 La forma detallada de estas reglas y sus selectores está en `contracts/client-ui.md`, `contracts/auth.md`, `contracts/postventa.md` y `contracts/entity-storage.md`.
+
+## 11. Rediseño de acceso y Portal del Cliente (2026-11-27)
+
+### 11.1 Tarjeta de acceso sin persistencia nueva
+
+La pantalla de inicio sigue derivando los botones de `erp_users` y creando `erp_session` con `login(userId)`. La única novedad estructural es de presentación: `.login-card` centra la grilla de dos columnas y sitúa por debajo el enlace «Portal del Cliente». `theme.accentColor` se aplica a botones y resaltados de la tarjeta; si falta o es inválido se usa el color integrado y se muestra la advertencia de configuración. No se guardan estilos, posiciones ni preferencias: no hay clave nueva de `localStorage` y la sesión, expiración y matriz de permisos permanecen intactas (FR-038, FR-110, FR-117).
+
+### 11.2 Estado local del portal
+
+| Elemento                   | Persistencia | Regla observable                                                                                                                           |
+| -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `?view=client-portal`      | Ninguna      | Ruta pública sin marco ERP ni sesión; se resuelve desde `location.search` en carga, recarga y Back/Forward (FR-114).                       |
+| `state.portalTab`          | Ninguna      | Solo `quote` o `support`, con etiquetas «Solicitar cotización» y «Soporte Postventa»; no se conserva al recargar (FR-114).                 |
+| Borradores de las pestañas | Ninguna      | Los valores viven en el formulario hasta el envío; un envío rechazado no escribe en `erp_entities` ni en `erp_documents` (FR-115, FR-116). |
+
+### 11.3 Cotización desde el portal
+
+El envío válido de «Solicitar cotización» produce exactamente dos registros ya conocidos:
+
+| Registro            | Campos escritos                                                                                                                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Entidad` prospecto | `name`, `code` generado, `estado_comercial = 'prospecto'`, `consentimiento = true`, `consentimiento_fecha`, `consentimiento_version` y los campos configurados `email`/`phone`/`empresa` cuando el perfil los declare. |
+| `Documento`         | `entity_id` del prospecto, `servicio_interes`, `monto_estimado`, `notes` opcional con la descripción libre y `status` inicial del ciclo configurado; `ticket` no se marca.                                             |
+
+`createProspectFromCapture()` crea la entidad y `addDocument()` crea la cotización con la misma validación de consentimiento de FR-071. Si falta alguna casilla obligatoria —«Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto o consentimiento— no se crea ninguno de los dos registros y se muestra `Completa los campos obligatorios.` (FR-006, FR-115).
+
+### 11.4 Ticket público de soporte
+
+`createPortalTicketDocument(values)` es una operación pública explícita de `src/storage.js`, equivalente a la ruta de `chat:create_query`, y no sustituye a `createTicketDocument()`:
+
+| Paso                 | Regla                                                                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Campos obligatorios  | «Correo del cliente», «Categoría» y «Descripción del problema»; sin ellos se rechaza con `Completa los campos obligatorios.` y no se muta nada (FR-006, FR-114).                                              |
+| Búsqueda de cliente  | `findClientByEmailOrPhone()` compara correo y teléfono de los clientes almacenados, en una sola pasada, sin distinguir mayúsculas ni espacios; con varios coincidentes se usa el primero por `createdAt`.     |
+| Sin coincidencia     | Se muestra `No encontramos un cliente con ese correo o teléfono.` y no se crea Ticket, Entidad ni ningún otro registro (FR-116).                                                                              |
+| Escritura del ticket | `Documento` con `ticket: true`, `entity_id` del cliente encontrado, `asunto` derivado de la categoría, `categoria`, `descripcion` en `notes`, `status = 'Abierto'` y `prioridad = 'media'`.                   |
+| Permisos             | No exige `postventa:create` porque el actor es `visitor`, pero no añade esa acción a la matriz ni habilita `?view=postventa`; `createTicketDocument()` sigue exigiéndola para N1/N4 (FR-094, FR-106, FR-114). |
+
+El ticket se agrega al mismo `erp_documents` y aparece en el historial de la entidad, en las tarjetas de Postventa y en las alertas de la tabla de clientes según los permisos ya vigentes. No hay `createdByUserId` de un usuario interno: la auditoría se limita a las marcas de tiempo del documento, igual que en otras rutas públicas (FR-104, FR-111, FR-112).
+
+### 11.5 Actualización inmediata y relaciones
+
+Toda mutación del portal pasa por `storage.js` y el siguiente `render()` lee los arreglos ya cargados en `state`; por eso, al volver al CRM, Marketing muestra el prospecto y su cotización, y Postventa, sus tarjetas y la ficha del cliente muestran el ticket sin recarga ni `StorageEvent`. Ninguna vista persiste un contador derivado. Las relaciones siguen siendo `Documento.entity_id → Entidad.entity_id` y `Ticket → ficha de entidad`, sin nueva estructura de almacenamiento (FR-032, FR-104, FR-114, SC-004, SC-044).

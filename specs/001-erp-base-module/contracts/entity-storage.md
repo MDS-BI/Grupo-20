@@ -41,7 +41,7 @@ Cada registro de documento **base** debe incluir:
 - `createdAt`: cadena de marca de tiempo ISO
 - `updatedAt`: cadena de marca de tiempo ISO
 
-Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. El perfil de Postventa declara `ticket` (discriminador booleano), `asunto`, `categoria`, `prioridad` y `nota_resolucion` opcional en `customFields.document`. El perfil CRM declara además `motivo_perdida` en `customFields.document`, obligatorio solo según la regla `documentRules.lostReason` descrita abajo. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
+Un módulo personalizado declara campos adicionales mediante `customFields.document` — por ejemplo `series`/`folio` (número de documento) o `subtotal`/`discount`/`taxAmount`/`totalAmount` para un módulo de Ventas, o `interactionType` para el perfil CRM (Historia de Usuario 8). El perfil de Marketing declara `plataforma` o `canal`, `tipo_interaccion`, `nota`/`mensaje`, `enlace`, `automation_key`, `campaignId` y `campaña` opcional. El perfil de Postventa declara `ticket` (discriminador booleano), `asunto`, `categoria`, `prioridad` y `nota_resolucion` opcional en `customFields.document`. El perfil CRM declara además `motivo_perdida` en `customFields.document`, obligatorio solo según la regla `documentRules.lostReason` descrita abajo. El Portal del Cliente declara `empresa` en entidades y `servicio_interes` y `monto_estimado` en documentos para la cotización; el ticket público reutiliza `ticket`, `asunto`, `categoria`, `prioridad` y `notes` sin campos nuevos. La validación "`discount` no puede superar `subtotal`" aplica solo cuando el módulo declara ambos campos.
 
 Operaciones:
 
@@ -57,6 +57,7 @@ Operaciones:
 - `listTicketDocuments({ documents, entities, user })`: devuelve solo documentos con `ticket: true` visibles para el usuario resuelto; sin `postventa:view` ni `postventa:view_own` devuelve una lista vacía o lanza la denegación, sin filtrar por texto de `notes`.
 - `createTicketDocument(values)`: valida `entity_id` existente, `asunto`, `categoria`, `prioridad`, `status` y `nota_resolucion` condicional, comprueba `postventa:create` y delega en la ruta interna de creación de `Documento`.
 - `changeTicketStatus(documentId, nextStatus, resolutionNote)`: comprueba `postventa:transition`, acepta cualquier par de estados declarados, actualiza `updatedAt` y persiste o descarta `nota_resolucion` según el estado final.
+- `createPortalTicketDocument(values)`: operación pública separada que valida correo, categoría y descripción, exige cliente por correo o teléfono y crea el `Documento` de ticket con `status = 'Abierto'` y `prioridad = 'media'`; no exige `postventa:create` y no altera la matriz (FR-106, FR-114, FR-116).
 
 ## Expectativas de Validación
 
@@ -91,6 +92,9 @@ Operaciones:
 - Con `documentRules.lostReason` activo, un documento cuya entidad vinculada tenga `estado_comercial = prospecto` y cuyo `status` sea `cerrado perdido` debe incluir `motivo_perdida` con una de las cuatro opciones declaradas; sin ese valor, `addDocument()` y `updateDocument()` deben rechazar la escritura con `Completa los campos obligatorios.` antes de modificar `erp_documents` (FR-113).
 - Un cliente convertido (`estado_comercial = ganado`) u otro estado comercial distinto de `prospecto` no debe exigir motivo en un documento cerrado como perdido.
 - `cerrado perdido` no debe contarse como documento pendiente, venta ganada ni importe del real mensual; solo debe aparecer en el embudo por estados de documento (FR-035, FR-078, FR-113, SC-043).
+- Una cotización del Portal del Cliente debe rechazarse con `Completa los campos obligatorios.` si falta «Nombre», «Empresa», «Correo», «Teléfono», «Servicio de interés» con monto o consentimiento; con datos válidos crea una entidad `prospecto` y un `Documento` vinculado con `servicio_interes` y `monto_estimado` (FR-071, FR-115).
+- Un ticket desde «Soporte Postventa» debe localizar al cliente por correo o teléfono en una sola pasada; sin coincidencia, debe mostrar `No encontramos un cliente con ese correo o teléfono.` y no debe escribir en `erp_entities` ni `erp_documents` (FR-116).
+- El ticket público se persiste con `ticket: true`, `entity_id` existente, `status = 'Abierto'`, `prioridad = 'media'` y `notes` con la descripción; no crea `createdByUserId` interno ni ajusta la visibilidad de N2/N3 (FR-104, FR-106, FR-114).
 
 ## Contrato de Configuración `entityDate`
 
@@ -212,6 +216,7 @@ Desde la octava tanda, `src/storage.js` depende de `src/auth/permissions.js` ant
 - Las acciones son las del catálogo canónico de `spec.md` y [`auth.md`](auth.md): `entity:create`, `entity:edit_any`, `entity:edit_own`, `entity:delete`, `document:create`, `document:read`, `document:edit_any`, `document:edit_own`, `document:transition_own`, `document:delete`, `campaign:create`, `campaign:edit_own`, `campaign:stop_own`, `campaign:stop_any`, `postventa:view`, `postventa:view_own`, `postventa:create`, `postventa:transition`, `team:manage` y `users:manage`, entre otras. No se introducen identificadores propios como `entity:edit` o `interaction:manage`.
 - `context.ownerId` se compara con el `id` del usuario resuelto para las reglas «solo mis clientes»; `context.campaignOwnerId` cumple la misma función para campañas.
 - Una operación denegada se rechaza con el mensaje exacto `No tienes permiso para realizar esta acción` y no escribe en `localStorage`; esto cubre también llamadas directas desde consola o enlaces profundos (FR-095, FR-096, SC-035).
+- Las rutas públicas son la excepción declarada, no una relajación de la matriz: `createProspectFromCapture()` y `createPortalTicketDocument()` validan sus propios campos y consentimiento/coincidencia sin `assertPermission()`, pero no devuelven sesión ni permisos al visitante; `createTicketDocument()` y el resto de operaciones internas siguen usando `assertPermission()` (FR-069, FR-084, FR-106, FR-114).
 - `Sistema` está exento del rango del usuario conectado únicamente para las automatizaciones declaradas; cada ejecución conserva la identidad «Sistema» y el creador de la campaña.
 - La resolución del usuario se hace desde `erp_users`, no desde una copia caches en la sesión, para que desactivaciones y cambios de rango se apliquen de inmediato (FR-102).
 - Ocultar botones en `app.js`, `shell.js` o `dashboard.js` es una ayuda de experiencia de usuario, no el mecanismo de seguridad; la capa de datos sigue siendo la última barrera.
@@ -229,8 +234,8 @@ FR-004 es la única lista de campos buscables: nombre, código, categoría, desc
 
 ## Rutas relativas
 
-Las vistas se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor: sin parámetro `view` es Panel; las rutas relativas son `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`. No existe `?view=panel`. Carga, recarga y Back/Forward aplican la matriz de permisos en cada resolución.
+Las vistas se resuelven desde `location.search` en un mismo documento HTML sin host ni ruta de servidor: sin parámetro `view` es Panel; las rutas relativas son `?view=summary`, `?view=capture`, `?view=client-portal`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin`. No existe `?view=panel`. Carga, recarga y Back/Forward aplican la matriz de permisos en cada resolución; `?view=capture` y `?view=client-portal` son públicas.
 
 ## Mensajes exactos de validación
 
-Los guardados rechazados usan `Completa los campos obligatorios.`, `El RUT es inválido.`, `El RUT ya está registrado.` y `Revisa el dato de contacto según el canal elegido.`; una operación denegada usa `No tienes permiso para realizar esta acción`. No se aceptan paráfrasis ni mensajes por campo que sustituyan estos textos (FR-006).
+Los guardados rechazados usan `Completa los campos obligatorios.`, `El RUT es inválido.`, `El RUT ya está registrado.`, `Revisa el dato de contacto según el canal elegido.` y, en «Soporte Postventa» sin coincidencia, `No encontramos un cliente con ese correo o teléfono.`; una operación denegada usa `No tienes permiso para realizar esta acción`. No se aceptan paráfrasis ni mensajes por campo que sustituyan estos textos (FR-006, FR-116).

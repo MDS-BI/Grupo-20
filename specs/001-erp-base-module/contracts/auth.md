@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23), incluidas las acciones de Postventa de US25 y el acceso por botones de FR-110. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se captura contraseña ni se bloquea por intentos fallidos.
+Definir la forma de los datos y las operaciones de la autenticación local en modo demostración, la sesión persistente y la matriz única de permisos (FR-094 a FR-102, US22, US23), incluidas las acciones de Postventa de US25, el acceso por botones de FR-110 y la tarjeta de acceso con enlace al Portal del Cliente de FR-114 a FR-117. La fuente funcional es [`../spec.md`](../spec.md); el modelo resumido está en [`../data-model.md`](../data-model.md#8-autenticación-sesión-y-permisos). No se introduce backend ni dependencia nueva; no se captura contraseña ni se bloquea por intentos fallidos.
 
 ## Almacenamiento
 
@@ -67,7 +67,7 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 | `users:manage`, `permissions:view`                                           | Sí  | No  | No                 | No  | No                                      |
 | `permissions:edit`                                                           | No  | No  | No                 | No  | No                                      |
 
-`ownerId` identifica al usuario asignado, al creador de la campaña, al integrante vinculado o al ejecutivo a cargo del cliente en `postventa:view_own`; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. La captura pública de FR-069 y los mensajes del chat de FR-084 son rutas públicas con consentimiento, no acciones de la matriz interactiva.
+`ownerId` identifica al usuario asignado, al creador de la campaña, al integrante vinculado o al ejecutivo a cargo del cliente en `postventa:view_own`; `campaignOwnerId` identifica al creador de la campaña. Las acciones con sufijo `_own` fallan si falta el contexto o si el usuario autenticado no coincide. Toda acción no listada se deniega por defecto. La captura pública de FR-069, los mensajes del chat de FR-084 y las dos pestañas del Portal del Cliente de FR-114 son rutas públicas con validación propia, no acciones de la matriz interactiva; el visitante no recibe `postventa:create` por crear tickets desde el portal.
 
 `Sistema` no aparece en `ROLES`: es la identidad de auditoría de las automatizaciones y no inicia sesión. Las campañas creadas por usuarios conservan al creador real en `createdByUserId`.
 
@@ -75,11 +75,13 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 
 ### `src/components/login.js`
 
-- Muestra solo botones `data-action="login-user"` con `data-user-id`, sin barra superior, lateral, campos de usuario ni contraseña.
+- Muestra los botones `data-action="login-user"` con `data-user-id` dentro de `.login-card`, sin barra superior, lateral, campos de usuario ni contraseña.
+- La tarjeta está centrada, con sombras suaves, espaciado uniforme y paleta base azul/gris oscuro; `theme.accentColor` tiñe botones y resaltados de la tarjeta y un valor ausente o inválido usa el color integrado con advertencia visible (FR-038, FR-117, SC-045).
 - Los cuatro usuarios semilla aparecen primero con las etiquetas exactas «Gerente», «Marketing», «Ventas» y «Atención al Cliente»; los demás usuarios activos aparecen detrás con su `username`, en orden de registro y sin reordenarse al recargar.
-- Los botones están centrados y organizados en dos columnas, con una fila por cada dos usuarios y una fila final cuando el total sea impar.
+- Los botones están centrados y organizados en dos columnas dentro de la tarjeta, con una fila por cada dos usuarios y una fila final cuando el total sea impar (FR-110).
+- Incluye un enlace discreto «Portal del Cliente» dentro de `.login-card`, por debajo de los botones de acceso, que abre `?view=client-portal` sin iniciar sesión y sin competir visualmente con los accesos (FR-114).
 - Los usuarios desactivados no generan botón; los usuarios creados por Gerencia se incorporan sin intervención adicional.
-- Mantiene accesibles las rutas públicas de formulario de captura y «Dudas y consultas».
+- Mantiene accesibles las rutas públicas de formulario de captura, «Dudas y consultas» y Portal del Cliente.
 - Tras autenticarse, redirige a la vista internamente solicitada; si no hay una vista pendiente, abre el Panel.
 - No existen los mensajes `Ingresa una contraseña` ni `Usuario no encontrado`, y nunca muestra el menú del usuario ni acciones de administración.
 
@@ -94,7 +96,7 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 
 ## Expectativas de Validación
 
-- Sin sesión, abrir una vista interna redirige a login; el formulario público y «Dudas y consultas» siguen disponibles.
+- Sin sesión, abrir una vista interna redirige a login; el formulario público, «Dudas y consultas» y el Portal del Cliente siguen disponibles.
 - La pantalla de login ofrece un botón por usuario activo; pulsarlo crea la sesión con el rango vigente sin pedir contraseña.
 - Un usuario autenticado sin permiso para una vista ve «Acceso denegado» y vuelve al Panel sin ejecutar la acción.
 - Una operación denegada responde con `No tienes permiso para realizar esta acción`, incluso cuando se invoca directamente desde `src/storage.js` o desde un enlace profundo.
@@ -119,11 +121,11 @@ Este contrato replica el «Catálogo canónico de acciones» de `spec.md` sin in
 
 ## Rutas relativas y resolución de vista
 
-La aplicación usa un único documento HTML sin host ni ruta de servidor. La vista se resuelve desde `location.search` en carga inicial, recarga y Back/Forward: sin parámetro `view` es Panel; `?view=summary`, `?view=capture`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` son las siete rutas relativas soportadas. No existe `?view=panel`; el Panel se abre quitando el parámetro. Cada resolución aplica la matriz: sin sesión, una ruta interna conserva la ruta solicitada y redirige a login; con sesión sin permiso muestra «Acceso denegado» y vuelve al Panel; `?view=capture` permanece pública.
+La aplicación usa un único documento HTML sin host ni ruta de servidor. La vista se resuelve desde `location.search` en carga inicial, recarga y Back/Forward: sin parámetro `view` es Panel; `?view=summary`, `?view=capture`, `?view=client-portal`, `?view=marketing`, `?view=postventa`, `?view=manage-entity`, `?view=manage-document` y `?view=users-admin` son las ocho rutas relativas soportadas. No existe `?view=panel`; el Panel se abre quitando el parámetro. Cada resolución aplica la matriz: sin sesión, una ruta interna conserva la ruta solicitada y redirige a login; con sesión sin permiso muestra «Acceso denegado» y vuelve al Panel; `?view=capture` y `?view=client-portal` permanecen públicas.
 
 ## Mensajes exactos
 
-Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción` y `Acceso denegado`; en validación de campos se usa `Completa los campos obligatorios.`. Los mensajes `Ingresa una contraseña` y `Usuario no encontrado` NO DEBEN aparecer. Cualquier variante de estos textos incumple el contrato.
+Los textos de retroalimentación son los de FR-006. En autenticación y permisos se usan exactamente `No tienes permiso para realizar esta acción` y `Acceso denegado`; en validación de campos, incluidas las dos pestañas del portal, se usa `Completa los campos obligatorios.`. El rechazo de «Soporte Postventa» sin coincidencia usa `No encontramos un cliente con ese correo o teléfono.`. Los mensajes `Ingresa una contraseña` y `Usuario no encontrado` NO DEBEN aparecer. Cualquier variante de estos textos incumple el contrato.
 
 ## Extensibilidad y límite
 

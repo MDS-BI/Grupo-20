@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Definir la forma de los datos y las operaciones del apartado de Marketing y su integración con autenticación y permisos (FR-068 a FR-102, Historias de Usuario 16 a 23). Marketing reutiliza `Entidad` y `Documento` del módulo base: no crea un tipo de registro nuevo ni modifica el contrato descrito en [`entity-storage.md`](entity-storage.md).
+Definir la forma de los datos y las operaciones del apartado de Marketing y su integración con autenticación y permisos (FR-068 a FR-102, Historias de Usuario 16 a 23), incluida la cotización pública creada desde «Solicitar cotización» del Portal del Cliente (FR-115). Marketing reutiliza `Entidad` y `Documento` del módulo base: no crea un tipo de registro nuevo ni modifica el contrato descrito en [`entity-storage.md`](entity-storage.md).
 
 ## Forma de los Datos
 
@@ -35,7 +35,7 @@ Un documento de campaña omitida por solapamiento conserva `campaignId`, entidad
 ## Operaciones
 
 - `computeMarketingStats({ entities, documents })`: devuelve las cinco tarjetas del panel y el embudo por estados de documento, sin escribir en `localStorage` (FR-072 a FR-074).
-- `createProspectFromCapture(values, config)`: crea una entidad con `estado_comercial = 'prospecto'` y los datos de consentimiento; falla si `consentimiento` no es `true`.
+- `createProspectFromCapture(values, config)`: crea una entidad con `estado_comercial = 'prospecto'` y los datos de consentimiento; falla si `consentimiento` no es `true`. La pestaña «Solicitar cotización» del Portal del Cliente reutiliza esta operación y añade un `Documento` con `servicio_interes` y `monto_estimado`, sin otra ruta de captura (FR-115).
 - `runAutomationRules(event, entity, config, documents, context)`: evalúa reglas y campañas aplicables; devuelve los documentos a persistir en el historial de la entidad. `context` aporta `from`/`to` en `stage_changed` y `campaignId` cuando aplica (FR-070, FR-086, FR-089, FR-090).
 - `computeSalesTeamMetrics(team, entities, documents, now)`: devuelve `realMensual` y `objetivoMensual` por integrante con las fórmulas de FR-078 y FR-079.
 - `answerFaq(question, config)`: normaliza la pregunta y devuelve la respuesta de `marketing.faq` o `null` cuando no hay coincidencia (FR-082).
@@ -47,6 +47,7 @@ Un documento de campaña omitida por solapamiento conserva `campaignId`, entidad
 
 - Sin consentimiento explícito no se crea el prospecto ni se registra el primer mensaje de «Dudas y consultas»; se muestra una explicación clara con esa etiqueta visible y, cuando el motivo es información obligatoria, el mensaje exacto `Completa los campos obligatorios.` (FR-006, FR-071, FR-085, FR-092, SC-018, SC-024).
 - La fecha y la versión del aviso se guardan con la entidad y no se derivan del reloj al mostrar la ficha.
+- El prospecto creado desde el portal aparece en Marketing con su cotización al volver al CRM; la cotización usa el mismo `Documento` del historial y no crea un tipo de registro especial (FR-105, FR-115, SC-044).
 - Marketing muestra las mismas cinco tarjetas y el mismo embudo que el panel; no muestra la torta «Estado comercial de la cartera» ni el selector de etapas (FR-072 a FR-075, SC-020, SC-021).
 - Una transición a `ganado` conserva `id`, `entity_id`, documentos y campos personalizados de la entidad y produce «Cliente ganado» como resultado visible; no modifica el estado «Cerrado ganado» de los documentos (FR-068).
 - Las reglas y campañas activas se ejecutan una sola vez por evento; cada ejecución queda registrada en el historial de la entidad (FR-070, FR-086).
@@ -97,6 +98,7 @@ marketing: {
 - El panel ofrece exactamente tres acciones rápidas: «Gestionar clientes», «Gestionar interacciones» y «Buscar registros»; ya no ofrece «Nuevo Cliente», «Nueva interacción» ni «Abrir Marketing» (FR-033). La creación de clientes e interacciones se realiza dentro de las respectivas pantallas de gestión (FR-034). Esas tres acciones rápidas solo se renderizan en el panel: Marketing las omite aunque reutilice el componente de tarjetas y embudo (FR-091, SC-027).
 - Marketing ofrece exactamente cinco atajos de sección, en este orden y con estos textos visibles: «Equipos de ventas y logros», «Campañas», «Rendimiento de campañas», «Dudas y consultas» y «Redes sociales». Sus claves internas permanecen `team`, `campaigns`, `performance`, `chat` y `social` (FR-093, SC-029).
 - Clientes e Interacciones se alcanzan desde el panel o mediante enlaces profundos (`?view=manage-entity`, `?view=manage-document`); no figuran en la barra lateral (SC-020).
+- El enlace «Portal del Cliente» vive en la tarjeta de acceso y abre `?view=client-portal` sin sesión; no es una entrada de Marketing ni de la barra lateral (FR-114).
 - «Dudas y consultas» está disponible en `?view=capture` y en Marketing con los mismos mensajes y documentos; el encabezado, la pestaña, la casilla y el error de consentimiento usan esa etiqueta visible, mientras `data-section="chat"`, `#chat-form`, `.chat-*`, `canal: 'chat'` y `ChatConsentError` siguen siendo identificadores internos (FR-084, FR-092, SC-028).
 
 ## Expectativas de Extensibilidad

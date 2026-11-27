@@ -31,6 +31,7 @@ export const MODULE_CONFIG = {
   customFields: {
     entity: [
       { key: 'rubro', type: 'text', label: 'Rubro' },
+      { key: 'empresa', type: 'text', label: 'Empresa' },
       {
         key: 'ejecutivo_asignado',
         type: 'select',
@@ -62,6 +63,8 @@ export const MODULE_CONFIG = {
     ],
     document: [
       { key: 'importe', type: 'number', label: 'Importe (USD)' },
+      { key: 'servicio_interes', type: 'text', label: 'Servicio de interés' },
+      { key: 'monto_estimado', type: 'number', label: 'Monto estimado' },
       { key: 'automation_key', type: 'text', label: 'Clave de automatización' },
       {
         key: 'plataforma',
@@ -101,6 +104,7 @@ export const MODULE_CONFIG = {
     privacyNoticeVersion: '2026-11-23',
     captureFields: [
       'name',
+      'empresa',
       'targetDate',
       'rut',
       'canal_contacto',
@@ -165,6 +169,7 @@ export const MODULE_CONFIG = {
       },
       category: { hidden: true, searchable: false },
       description: { hidden: true, searchable: false },
+      empresa: { hidden: true, searchable: false },
       rut: {
         label: 'RUT',
         required: true,
