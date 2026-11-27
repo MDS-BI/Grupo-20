@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { initApp } from '../../src/app.js';
+import { signIn } from '../helpers/auth-session.js';
 
 let app;
 
@@ -115,5 +116,89 @@ describe('Marco de espacio de trabajo ERP con marca (T043/T045)', () => {
   it('aplica el color de acento configurado como propiedad CSS', () => {
     mount({ theme: { accentColor: '#112233' } });
     expect(document.getElementById('app').style.getPropertyValue('--accent-color')).toBe('#112233');
+  });
+});
+
+describe('Selector de tema claro y oscuro', () => {
+  afterEach(() => {
+    localStorage.removeItem('erp_theme');
+    document.documentElement.dataset.theme = 'light';
+  });
+
+  it('cambia entre temas desde la barra superior y guarda la preferencia', () => {
+    localStorage.removeItem('erp_theme');
+    mount();
+    const toggle = document.querySelector('#theme-toggle');
+
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(toggle.querySelector('.theme-icon--sun')).toBeTruthy();
+    expect(toggle.querySelector('.theme-icon--moon')).toBeTruthy();
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('erp_theme')).toBe('dark');
+    expect(document.querySelector('#theme-toggle').getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('#theme-toggle').getAttribute('aria-label')).toBe(
+      'Cambiar a tema claro'
+    );
+  });
+
+  it('recupera el tema guardado al volver a cargar la aplicación', () => {
+    localStorage.setItem('erp_theme', 'dark');
+    mount();
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.querySelector('#theme-toggle').getAttribute('aria-label')).toBe(
+      'Cambiar a tema claro'
+    );
+  });
+
+  it('define variables de fondo, tarjetas, textos y bordes para ambos temas', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(css).toMatch(/:root\s*\{[\s\S]*--bg:[\s\S]*--surface:[\s\S]*--text:[\s\S]*--border:/);
+    expect(css).toMatch(/\[data-theme='dark'\]/);
+    expect(css).toMatch(/\[data-theme='dark'\] \{[\s\S]*?--bg:/);
+  });
+});
+
+describe('Tarjeta del usuario en la barra lateral', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    signIn('gerente');
+    mount();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('muestra el nombre en negrita y el rol debajo dentro de una tarjeta al pie de la barra lateral', () => {
+    const card = document.querySelector('.sidebar .user-meta');
+    expect(card).toBeTruthy();
+
+    const name = card.querySelector('.user-identity #current-user');
+    const role = card.querySelector('.user-identity #current-rank');
+    expect(name.tagName.toLowerCase()).toBe('strong');
+    expect(name.textContent).toBe('gerente');
+    expect(role.textContent).toBe('Nivel 4 - Gerente Comercial');
+    expect(card.querySelector('.user-role')).toBeTruthy();
+
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    expect(css).toMatch(/\.user-meta\s*\{[\s\S]*?margin-top:\s*auto/);
+    expect(css).toMatch(/\.user-actions\s*\{[\s\S]*?flex-direction:\s*column/);
+    expect(css).toMatch(/\.user-actions button\s*\{[\s\S]*?width:\s*100%/);
+  });
+
+  it('diferencia la acción de gestión de la de cierre de sesión', () => {
+    const secondary = document.querySelector('.user-action--secondary');
+    const logout = document.querySelector('.user-action--logout');
+
+    expect(secondary.textContent).toContain('Gestionar usuarios');
+    expect(secondary.dataset.view).toBe('users-admin');
+    expect(logout.textContent).toContain('Cerrar sesión');
+    expect(logout.dataset.action).toBe('logout');
   });
 });

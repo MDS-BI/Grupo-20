@@ -57,6 +57,7 @@ import { renderTicketFormHtml } from './components/ticket-form.js';
 import { isTicket } from './utils/postventa.js';
 import { renderMarketingChatHtml } from './components/marketing-chat.js';
 import { computeDashboardStats, computeMarketingStats } from './utils/marketing-stats.js';
+import { destroyDashboardCharts, mountDashboardCharts } from './utils/dashboard-charts.js';
 import { computeSalesTeamMetrics } from './utils/sales-team-metrics.js';
 import { registerSocialInteraction } from './utils/marketing-social.js';
 import {
@@ -171,6 +172,27 @@ const RANK_LABELS = {
   n1_support: 'Nivel 1 - Atencion al Cliente',
 };
 
+const THEME_KEY = 'erp_theme';
+
+function readTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+function saveTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {}
+}
+
+function applyTheme(theme) {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  document.documentElement.dataset.theme = theme;
+}
+
 function canViewRoute(role, view, manageTab = 'entity', fromUrl = false) {
   if (view === 'capture' || view === 'client-portal') return true;
   if (role === 'visitor') return false;
@@ -264,12 +286,15 @@ export function initApp(rootEl = null, options = {}) {
 
   const initialRoute = routeFromSearch();
   const initialAuth = resolveAuthState();
+  const initialTheme = readTheme();
   const initialView =
     initialRoute.view === 'marketing' && !config.marketing ? 'dashboard' : initialRoute.view;
+  applyTheme(initialTheme);
 
   const state = {
     config,
     warning,
+    theme: initialTheme,
     entities: [],
     documents: [],
     view: initialView,
@@ -1145,14 +1170,23 @@ export function initApp(rootEl = null, options = {}) {
       : '';
     const userHtml =
       state.authEnabled && state.currentUser
-        ? `<div class="user-meta"><span id="current-user">${escapeHtml(state.currentUser.username)}</span><span id="current-rank">${escapeHtml(RANK_LABELS[state.currentUser.rank] || state.currentUser.rank || '')}</span>${canViewRoute(state.role, 'users-admin') ? '<button type="button" data-action="navigate" data-view="users-admin">Gestionar usuarios</button>' : ''}<button type="button" data-action="logout">Cerrar sesión</button></div>`
+        ? `<div class="user-meta">
+            <div class="user-identity">
+              <strong id="current-user" class="user-name">${escapeHtml(state.currentUser.username)}</strong>
+              <span id="current-rank" class="user-role">${escapeHtml(RANK_LABELS[state.currentUser.rank] || state.currentUser.rank || '')}</span>
+            </div>
+            <div class="user-actions">
+              ${canViewRoute(state.role, 'users-admin') ? '<button type="button" class="user-action user-action--secondary" data-action="navigate" data-view="users-admin">Gestionar usuarios</button>' : ''}
+              <button type="button" class="user-action user-action--logout" data-action="logout">Cerrar sesión</button>
+            </div>
+          </div>`
         : '';
     const bareStandalone =
       state.view === 'login' || state.view === 'capture' || state.view === 'client-portal';
     const wrappedStandalone = enableAuth && (state.view === 'login' || state.view === 'capture');
     rootEl.innerHTML = bareStandalone
       ? `${warningHtml}${noticeHtml}${wrappedStandalone ? `<main id="view-root">${renderCurrentView()}</main>` : renderCurrentView()}`
-      : `${warningHtml}${noticeHtml}${userHtml}${renderShellHtml(state.config, activeNavKey())}`;
+      : `${warningHtml}${noticeHtml}${renderShellHtml(state.config, activeNavKey(), { theme: state.theme, userHtml })}`;
     const accent = state.config.theme?.accentColor || '#1D4ED8';
     rootEl.style.setProperty('--accent-color', state.config.theme?.accentColor || '');
     if (typeof document !== 'undefined' && document.documentElement?.style) {
@@ -1161,6 +1195,7 @@ export function initApp(rootEl = null, options = {}) {
     }
     const viewRoot = rootEl.querySelector('#view-root');
     if (viewRoot && !bareStandalone) viewRoot.innerHTML = renderCurrentView();
+    mountDashboardCharts(rootEl);
     renderQuickViewOverlay();
 
     applyPermissionFilters();
@@ -1704,6 +1739,20 @@ export function initApp(rootEl = null, options = {}) {
         }
         navigate(target.dataset.view);
         break;
+      case 'toggle-theme': {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        applyTheme(state.theme);
+        saveTheme(state.theme);
+        mountDashboardCharts(rootEl);
+        const themeLabel =
+          state.theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+        rootEl.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {
+          button.setAttribute('aria-label', themeLabel);
+          button.setAttribute('aria-pressed', String(state.theme === 'dark'));
+          button.setAttribute('title', themeLabel);
+        });
+        break;
+      }
       case 'ticket-form':
         if (!uiCan('postventa:create')) {
           showPermissionDenied();
@@ -2149,6 +2198,7 @@ export function initApp(rootEl = null, options = {}) {
     getState: () => state,
     destroy: () => {
       stopEntityDateWatcher();
+      destroyDashboardCharts();
       rootEl.removeEventListener('click', handleClick);
       rootEl.removeEventListener('submit', handleSubmit);
       rootEl.removeEventListener('input', handleInput);

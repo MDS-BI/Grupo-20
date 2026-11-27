@@ -103,3 +103,43 @@ describe('Panel de inicio con tres acciones rápidas (T229/T232)', () => {
     ).toEqual(['1', '1', '1', '100%', '$0']);
   });
 });
+
+describe('Panel visual del resumen con datos de mockData.js', () => {
+  beforeEach(() => mount());
+
+  it('muestra cuatro KPI con los valores del archivo de datos', () => {
+    const panel = document.querySelector('.dashboard-analytics');
+    expect(panel).toBeTruthy();
+
+    const cards = [...panel.querySelectorAll('.kpi-card')];
+    expect(cards).toHaveLength(4);
+    expect(cards.map((card) => card.querySelector('.kpi-value').textContent)).toEqual([
+      '$184,500',
+      '128',
+      '6',
+      '14',
+    ]);
+    expect(cards.map((card) => card.querySelector('.kpi-label').textContent.trim())).toEqual([
+      'Ingresos totales del mes',
+      'Clientes activos',
+      'Campañas activas',
+      'Tickets abiertos',
+    ]);
+    expect(cards[2].textContent).toContain('Conversión promedio: 24.8%');
+  });
+
+  it('prepara tres gráficos interactivos con sus datos accesibles', () => {
+    const canvases = [...document.querySelectorAll('.dashboard-analytics canvas[data-chart]')];
+    expect(canvases.map((canvas) => canvas.dataset.chart)).toEqual(['sales', 'tickets', 'leads']);
+    expect(canvases[0].getAttribute('aria-label')).toContain('$184,500');
+    expect(canvases[0].getAttribute('aria-label')).toContain('27 negocios');
+    expect(canvases[1].getAttribute('aria-label')).toContain('Abierto: 14');
+    expect(canvases[1].getAttribute('aria-label')).toContain('Resuelto: 32');
+    expect(canvases[2].getAttribute('aria-label')).toContain('Lanzamiento Q4: 148');
+  });
+
+  it('no muestra el panel visual dentro de la sección de Marketing', () => {
+    app.navigate('marketing');
+    expect(document.querySelector('.dashboard-analytics')).toBeNull();
+  });
+});

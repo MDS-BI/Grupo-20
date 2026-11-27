@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils/sanitize.js';
 import { getLabel } from '../module-config.js';
+import { renderDashboardChartsHtml } from './dashboard-charts.js';
 
 export function formatCurrencyUsd(value) {
   const amount = Number(value) || 0;
@@ -45,6 +46,7 @@ export function renderDashboardHtml(
     <section class="${escapeHtml(sectionClass)}">
       <h1>${escapeHtml(viewTitle)}</h1>
       ${quickActions}
+      ${showQuickActions ? renderDashboardChartsHtml() : ''}
       <div class="summary-cards">
         <div class="stat-card"><span class="stat-value">${Number(stats.entityCount) || 0}</span><span class="stat-label">${escapeHtml(entityPlural)}</span></div>
         <div class="stat-card"><span class="stat-value">${documentCount}</span><span class="stat-label">${escapeHtml(documentPlural)}</span></div>

@@ -85,13 +85,29 @@ export function renderShellHtml(config, activeNavKey, options = {}) {
     })
     .join('');
 
+  const darkTheme = options?.theme === 'dark';
+  const themeLabel = darkTheme ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+
   return `
     <header class="topbar">
       ${monogramSvg(config.moduleName)}
       <span id="brand-name" class="module-name">${escapeHtml(config.moduleName)}</span>
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        type="button"
+        data-action="toggle-theme"
+        aria-label="${themeLabel}"
+        aria-pressed="${darkTheme}"
+        title="${themeLabel}"
+      >
+        <svg class="theme-icon theme-icon--sun" ${NAV_ICON_ATTRS} aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+        <svg class="theme-icon theme-icon--moon" ${NAV_ICON_ATTRS} aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" /></svg>
+      </button>
     </header>
     <nav class="sidebar" aria-label="Navegación de módulos">
       ${navButtons}
+      ${options?.userHtml || ''}
     </nav>
     <main id="view-root" class="view-root"></main>
   `;
